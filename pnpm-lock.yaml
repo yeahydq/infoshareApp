@@ -132,6 +132,9 @@ importers:
       '@uni-helper/uni-types':
         specifier: 1.0.0-alpha.3
         version: 1.0.0-alpha.3(@uni-helper/uni-app-types@1.0.0-alpha.3(typescript@5.7.2)(vue@3.4.21(typescript@5.7.2)))(@uni-helper/uni-cloud-types@1.0.0-alpha.3(typescript@5.7.2)(vue@3.4.21(typescript@5.7.2)))(@uni-helper/uni-ui-types@1.0.0-alpha.3(@uni-helper/uni-app-types@1.0.0-alpha.3(typescript@5.7.2)(vue@3.4.21(typescript@5.7.2)))(typescript@5.7.2)(vue@3.4.21(typescript@5.7.2)))(typescript@5.7.2)(vue@3.4.21(typescript@5.7.2))
+      '@uni-helper/vite-plugin-uni-components':
+        specifier: ^0.0.8
+        version: 0.0.8(rollup@4.28.0)
       '@uni-helper/vite-plugin-uni-layouts':
         specifier: ^0.1.10
         version: 0.1.10(rollup@4.28.0)
@@ -1888,6 +1891,9 @@ packages:
       '@uni-helper/uni-app-types': 1.0.0-alpha.3
       typescript: ^5.5.4
       vue: ^3.4.21
+
+  '@uni-helper/vite-plugin-uni-components@0.0.8':
+    resolution: {integrity: sha512-8TkL7PeHlbXcGK3urL3SkfSgontrihgLsJaveQ4p0Gy4sPz/7cXpBJX+zkBIGS/vODHjJhCvXP2NyBcmUvtEdQ==}
 
   '@uni-helper/vite-plugin-uni-layouts@0.1.10':
     resolution: {integrity: sha512-RJdGmJjZtpKNVfShiKYZrualMxdi+i8uh7zpPG+X3lzf6wyKSJgWwVAj3GUdqeE/QUEncNPmj2sqwuyeLXPxbA==}
@@ -4125,6 +4131,10 @@ packages:
     resolution: {integrity: sha512-FMJTLMXfCLMLfJxcX9PFqX5qD88Z5MRGaZCVzfuqeZSPsyiBzs+pahDQjbIWz2QIzPZz0NX9Zy4FX3lmK6YHIg==}
     engines: {node: '>= 12.13.0'}
 
+  local-pkg@0.4.3:
+    resolution: {integrity: sha512-SFppqq5p42fe2qcZQqqEOiVRXl+WCP1MdT6k7BDEW1j++sp5fIY+/fdRQitvKgB5BrBcmrs5m/L0v2FrU5MY1g==}
+    engines: {node: '>=14'}
+
   local-pkg@0.5.1:
     resolution: {integrity: sha512-9rrA30MRRP3gBD3HTGnC6cDFpaE1kVDWxWgqWJUN0RvDNAo+Nz/9GxB+nHOH0ifbVFy0hSA1V6vFDvnx54lTEQ==}
     engines: {node: '>=14'}
@@ -4337,6 +4347,10 @@ packages:
 
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
+
+  minimatch@8.0.4:
+    resolution: {integrity: sha512-W0Wvr9HyFXZRGIDgCicunpQ299OKXs9RgZfaukz4qAW/pJhcpUfupc9c+OObPOFueNy8VSrZgEmDtk6Kh4WzDA==}
+    engines: {node: '>=16 || 14 >=14.17'}
 
   minimatch@9.0.3:
     resolution: {integrity: sha512-RHiac9mvaRw0x3AYRgDC1CxAP7HTcNrrECeA8YYJeWnpo+2Q5CegtZjaotWTWxDG3UeGA1coE05iH1mPjT/2mg==}
@@ -8439,6 +8453,21 @@ snapshots:
       typescript: 5.7.2
       vue: 3.4.21(typescript@5.7.2)
 
+  '@uni-helper/vite-plugin-uni-components@0.0.8(rollup@4.28.0)':
+    dependencies:
+      '@antfu/utils': 0.7.10
+      '@rollup/pluginutils': 5.1.3(rollup@4.28.0)
+      chokidar: 3.6.0
+      debug: 4.3.7
+      fast-glob: 3.3.2
+      local-pkg: 0.4.3
+      magic-string: 0.30.14
+      minimatch: 8.0.4
+      resolve: 1.22.8
+    transitivePeerDependencies:
+      - rollup
+      - supports-color
+
   '@uni-helper/vite-plugin-uni-layouts@0.1.10(rollup@4.28.0)':
     dependencies:
       '@babel/types': 7.26.0
@@ -11261,6 +11290,8 @@ snapshots:
 
   loader-utils@3.3.1: {}
 
+  local-pkg@0.4.3: {}
+
   local-pkg@0.5.1:
     dependencies:
       mlly: 1.7.3
@@ -11439,6 +11470,10 @@ snapshots:
   minimatch@3.1.2:
     dependencies:
       brace-expansion: 1.1.11
+
+  minimatch@8.0.4:
+    dependencies:
+      brace-expansion: 2.0.1
 
   minimatch@9.0.3:
     dependencies:

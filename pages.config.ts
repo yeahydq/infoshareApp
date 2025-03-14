@@ -29,9 +29,27 @@ export default defineUniPages({
       {
         iconPath: 'static/tabbar/home.png',
         selectedIconPath: 'static/tabbar/homeHL.png',
-        pagePath: 'pages/shareinfo/index/index',
-        text: '首页',
+        pagePath: 'pages/shareinfo/studentList/studentList',
+        text: '市场',
       },
+      {
+        iconPath: 'static/tabbar/home.png',
+        selectedIconPath: 'static/tabbar/homeHL.png',
+        pagePath: 'pages/shareinfo/recommend/recommend',
+        text: 'AI推荐',
+      },
+      {
+        iconPath: 'static/tabbar/example.png',
+        selectedIconPath: 'static/tabbar/exampleHL.png',
+        pagePath: 'pages/shareinfo/account/account',
+        text: '我的',
+      },
+      // {
+      //   iconPath: 'static/tabbar/home.png',
+      //   selectedIconPath: 'static/tabbar/homeHL.png',
+      //   pagePath: 'pages/index/index',
+      //   text: '首页old',
+      // },
       {
         iconPath: 'static/tabbar/example.png',
         selectedIconPath: 'static/tabbar/exampleHL.png',
@@ -41,8 +59,9 @@ export default defineUniPages({
       {
         iconPath: 'static/tabbar/example.png',
         selectedIconPath: 'static/tabbar/exampleHL.png',
-        pagePath: 'pages/shareinfo/account/account',
-        text: '我的',
+        pagePath: 'pages/shareinfo/applyTeacher/applyTeacher',
+        // pagePath: 'pages/shareinfo/useHelp/useHelp',
+        text: 'test',
       },
     ],
   },
