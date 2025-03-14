@@ -1,75 +1,77 @@
 <template>
-  <view :class="'weui-navigation-bar ' + extClass">
-    <view
-      :class="'weui-navigation-bar__inner ' + (ios ? 'ios' : 'android')"
-      :style="
-        'color: ' +
-        color +
-        '; background: ' +
-        background +
-        '; ' +
-        displayStyle +
-        '; ' +
-        innerPaddingRight +
-        '; ' +
-        safeAreaTop +
-        ';'
-      "
-    >
-      <!-- 左侧按钮 -->
-      <view class="weui-navigation-bar__left" :style="leftWidth + ';'">
-        <block v-if="back || homeButton">
-          <!-- 返回上一页 -->
-          <block v-if="back">
-            <view class="weui-navigation-bar__buttons weui-navigation-bar__buttons_goback">
-              <view
-                @tap="backFun"
-                class="weui-navigation-bar__btn_goback_wrapper"
-                hover-class="weui-active"
-                hover-stay-time="100"
-                aria-role="button"
-                aria-label="返回"
-              >
-                <view class="weui-navigation-bar__button weui-navigation-bar__btn_goback"></view>
+  <view>
+    <view :class="'weui-navigation-bar ' + extClass">
+      <view
+        :class="'weui-navigation-bar__inner ' + (ios ? 'ios' : 'android')"
+        :style="
+          'color: ' +
+          color +
+          '; background: ' +
+          background +
+          '; ' +
+          displayStyle +
+          '; ' +
+          innerPaddingRight +
+          '; ' +
+          safeAreaTop +
+          ';'
+        "
+      >
+        <!-- 左侧按钮 -->
+        <view class="weui-navigation-bar__left" :style="leftWidth + ';'">
+          <block v-if="back || homeButton">
+            <!-- 返回上一页 -->
+            <block v-if="back">
+              <view class="weui-navigation-bar__buttons weui-navigation-bar__buttons_goback">
+                <view
+                  @tap="backFun"
+                  class="weui-navigation-bar__btn_goback_wrapper"
+                  hover-class="weui-active"
+                  hover-stay-time="100"
+                  aria-role="button"
+                  aria-label="返回"
+                >
+                  <view class="weui-navigation-bar__button weui-navigation-bar__btn_goback"></view>
+                </view>
               </view>
-            </view>
-          </block>
-          <!-- 返回首页 -->
-          <block v-if="homeButton">
-            <view class="weui-navigation-bar__buttons weui-navigation-bar__buttons_home">
-              <view
-                @tap="home"
-                class="weui-navigation-bar__btn_home_wrapper"
-                hover-class="weui-active"
-                aria-role="button"
-                aria-label="首页"
-              >
-                <view class="weui-navigation-bar__button weui-navigation-bar__btn_home"></view>
+            </block>
+            <!-- 返回首页 -->
+            <block v-if="homeButton">
+              <view class="weui-navigation-bar__buttons weui-navigation-bar__buttons_home">
+                <view
+                  @tap="home"
+                  class="weui-navigation-bar__btn_home_wrapper"
+                  hover-class="weui-active"
+                  aria-role="button"
+                  aria-label="首页"
+                >
+                  <view class="weui-navigation-bar__button weui-navigation-bar__btn_home"></view>
+                </view>
               </view>
-            </view>
+            </block>
           </block>
-        </block>
-        <block v-else>
-          <slot name="left"></slot>
-        </block>
-      </view>
-
-      <!-- 标题 -->
-      <view class="weui-navigation-bar__center">
-        <view v-if="loading" class="weui-navigation-bar__loading" aria-role="alert">
-          <view class="weui-loading" aria-role="img" aria-label="加载中"></view>
+          <block v-else>
+            <slot name="left"></slot>
+          </block>
         </view>
-        <block v-if="title">
-          <text>{{ title }}</text>
-        </block>
-        <block v-else>
-          <slot name="center"></slot>
-        </block>
-      </view>
 
-      <!-- 右侧留空 -->
-      <view class="weui-navigation-bar__right">
-        <slot name="right"></slot>
+        <!-- 标题 -->
+        <view class="weui-navigation-bar__center">
+          <view v-if="loading" class="weui-navigation-bar__loading" aria-role="alert">
+            <view class="weui-loading" aria-role="img" aria-label="加载中"></view>
+          </view>
+          <block v-if="title">
+            <text>{{ title }}</text>
+          </block>
+          <block v-else>
+            <slot name="center"></slot>
+          </block>
+        </view>
+
+        <!-- 右侧留空 -->
+        <view class="weui-navigation-bar__right">
+          <slot name="right"></slot>
+        </view>
       </view>
     </view>
   </view>

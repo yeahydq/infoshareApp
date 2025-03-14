@@ -47,7 +47,7 @@ export default {
       collect_list: [],
       has_more: true,
       pageIndex: 0,
-      judgeCollect: true,
+      judgeCollect: false,
     }
   },
   onLoad: function () {

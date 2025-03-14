@@ -30,7 +30,7 @@
 
     <view @tap="aboutUs" class="aboutUs">
       <image class="icon" src="/static/image/aboutUs.png"></image>
-      <text class="text">关于我们</text>
+      <text class="text">关于系统</text>
     </view>
   </view>
 </template>

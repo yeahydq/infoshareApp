@@ -1,3 +1,12 @@
+<route lang="json5" type="home">
+{
+  style: {
+    navigationStyle: 'custom',
+    navigationBarTitleText: '首页',
+  },
+}
+</route>
+
 <template>
   <view class="page">
     <!-- 头部选择 -->
