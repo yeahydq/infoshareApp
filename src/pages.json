@@ -34,6 +34,12 @@
         "selectedIconPath": "static/tabbar/exampleHL.png",
         "pagePath": "pages/about/about",
         "text": "关于"
+      },
+      {
+        "iconPath": "static/tabbar/example.png",
+        "selectedIconPath": "static/tabbar/exampleHL.png",
+        "pagePath": "pages/shareinfo/account/account",
+        "text": "我的"
       }
     ]
   },
@@ -52,6 +58,14 @@
       "style": {
         "navigationBarTitleText": "关于"
       }
+    },
+    {
+      "path": "pages/shareinfo/aboutUs/aboutUs",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/account/account",
+      "type": "page"
     }
   ],
   "subPackages": []
