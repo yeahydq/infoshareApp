@@ -26,7 +26,7 @@
       {
         "iconPath": "static/tabbar/home.png",
         "selectedIconPath": "static/tabbar/homeHL.png",
-        "pagePath": "pages/index/index",
+        "pagePath": "pages/shareinfo/index/index",
         "text": "首页"
       },
       {
@@ -93,6 +93,10 @@
     },
     {
       "path": "pages/shareinfo/feedback/feedback",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/index/index",
       "type": "page"
     },
     {

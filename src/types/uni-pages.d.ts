@@ -15,6 +15,7 @@ interface NavigateToOptions {
        "/pages/shareinfo/complaintStudent/complaintStudent" |
        "/pages/shareinfo/complaintTeacher/complaintTeacher" |
        "/pages/shareinfo/feedback/feedback" |
+       "/pages/shareinfo/index/index" |
        "/pages/shareinfo/modifyStudent/modifyStudent" |
        "/pages/shareinfo/modifyTeacher/modifyTeacher" |
        "/pages/shareinfo/recommend/recommend" |
@@ -31,7 +32,7 @@ interface NavigateToOptions {
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/index/index" | "/pages/about/about" | "/pages/shareinfo/account/account"
+  url: "/pages/shareinfo/index/index" | "/pages/about/about" | "/pages/shareinfo/account/account"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;
