@@ -14,3 +14,11 @@ subject:文档变更
 
 git commit -m 'fix(scope): fix ie6 margin bug'
 git commit -m 'docs: update readme'
+git commit -m 'fix: update readme'
+git commit -m 'feat: add basic pages'
+
+import { getTime } from '@service/util/util.ts'
+
+import { getTime } from '@service/util/util'
+
+feat: add basic pages

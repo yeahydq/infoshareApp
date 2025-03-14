@@ -1,0 +1,81 @@
+page {
+  height: 100%;
+}
+.page {
+  height: 100%;
+
+  padding-top: 50rpx;
+  font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Droid Sans Fallback', 'Microsoft Yahei',
+    sans-serif;
+}
+
+.collect-teacher {
+  display: flex;
+  width: 80%;
+  height: 300rpx;
+  margin: 0 auto;
+  margin-bottom: 50rpx;
+  background-color: #fe4c40;
+  border-radius: 30rpx;
+  box-shadow: 10rpx 10rpx 20rpx #c9c9c9;
+}
+
+.left {
+  float: left;
+  width: 42%;
+  height: 300rpx;
+  text-align: center;
+  border-right: 2px dotted #fff;
+}
+
+.right {
+  float: right;
+  width: 53%;
+  padding-left: 40rpx;
+  color: #fff;
+}
+
+.teacherPhoto {
+  width: 150rpx;
+  height: 150rpx;
+  margin: 50rpx 0rpx 10rpx 0rpx;
+  border: 2px solid #fff;
+}
+
+.left text {
+  display: block;
+  color: #fff;
+}
+
+.teacher-university {
+  padding-top: 80rpx;
+  margin-bottom: 40rpx;
+}
+
+.teach-course text {
+  margin-right: 20rpx;
+}
+
+.delete {
+  z-index: 99;
+  float: right;
+  width: 60rpx;
+  height: 60rpx;
+  margin: 10rpx;
+}
+
+.noCollect {
+  text-align: center;
+}
+
+.noCollect {
+  margin-top: 80rpx;
+  line-height: 150%;
+  color: transparent;
+  text-align: center;
+  text-shadow:
+    rgba(255, 255, 255, 0.5) 0 5px 6px,
+    rgba(255, 255, 255, 0.2) 1px 3px 3px;
+  background-color: #a1a0a0;
+  -webkit-background-clip: text;
+}

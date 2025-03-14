@@ -1,0 +1,153 @@
+page {
+  height: 100%;
+}
+.page {
+  height: 100%;
+  font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Droid Sans Fallback', 'Microsoft Yahei',
+    sans-serif;
+  background: #fff;
+}
+
+.chose {
+  display: flex;
+  justify-content: center;
+  margin: 50rpx 0rpx 30rpx 0rpx;
+}
+
+.find-teacher,
+.become-teacher {
+  display: inline-block;
+  width: 140px;
+  height: 38px;
+  padding-top: 28rpx;
+  margin: 20rpx;
+  font-size: 40rpx;
+  color: #fff;
+  text-align: center;
+}
+
+.find-teacher {
+  background: #fe4c40;
+}
+
+.become-teacher {
+  background: #c4c4c4;
+}
+
+.column {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 95%;
+  padding: 15rpx 0rpx 15rpx 0rpx;
+  margin: 40rpx 0rpx 0rpx 2.5%;
+  border: 1rpx solid #fe4c40;
+  border-radius: 50rpx;
+}
+
+.addressColumn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 15rpx 0rpx 15rpx 0rpx;
+  margin: 40rpx 15rpx 0rpx 15rpx;
+}
+
+.registerIcon {
+  width: 50rpx;
+  height: 50rpx;
+  margin: 0rpx 10rpx 0rpx 20rpx;
+}
+
+.tip-photo {
+  width: 150rpx;
+  height: 50rpx;
+  padding: 10rpx 15rpx 10rpx 30rpx;
+  font-size: 35rpx;
+  color: #fff;
+  background: linear-gradient(to right, #fe8300, #fe4c40);
+  background-color: #fe4c40;
+  border-radius: 0rpx 35rpx 35rpx 0rpx;
+}
+
+.inputColumn {
+  width: 55%;
+  font-size: 35rpx;
+}
+
+.tip {
+  width: 180rpx;
+  font-size: 35rpx;
+  color: #fe4c40;
+}
+
+.inputRemark {
+  float: right;
+  width: 100%;
+  padding: 0rpx 15rpx 0rpx 15rpx;
+  font-size: 35rpx;
+}
+
+textarea {
+  width: 80%;
+}
+
+.inputRemark textarea {
+  width: 95%;
+}
+
+.course-check {
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.courseItem {
+  display: inline;
+  float: left;
+  margin: 8rpx;
+  color: #c6c4c4;
+  /* padding: 15rpx 25rpx 15rpx 25rpx; */
+  background-color: #efefef;
+  border-radius: 40rpx;
+}
+
+.scroll {
+  display: inline;
+}
+
+.grey {
+  color: #545454;
+}
+
+.submitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80%;
+  height: 90rpx;
+  margin: auto;
+  margin-bottom: 30rpx;
+
+  color: #fff;
+  background-color: #fe4c40;
+  border-radius: 30px;
+}
+
+.mapIcon {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.getAddress {
+  margin: 15rpx 0rpx 0rpx 50rpx;
+  font-size: 35rpx;
+}
+
+.rightArrow {
+  position: absolute;
+  right: 15rpx;
+  float: right;
+  width: 35rpx;
+  height: 35rpx;
+}

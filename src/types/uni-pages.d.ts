@@ -7,7 +7,26 @@ interface NavigateToOptions {
   url: "/pages/index/index" |
        "/pages/about/about" |
        "/pages/shareinfo/aboutUs/aboutUs" |
-       "/pages/shareinfo/account/account";
+       "/pages/shareinfo/account/account" |
+       "/pages/shareinfo/applyStudent/applyStudent" |
+       "/pages/shareinfo/applyTeacher/applyTeacher" |
+       "/pages/shareinfo/collectStudent/collectStudent" |
+       "/pages/shareinfo/collectTeacher/collectTeacher" |
+       "/pages/shareinfo/complaintStudent/complaintStudent" |
+       "/pages/shareinfo/complaintTeacher/complaintTeacher" |
+       "/pages/shareinfo/feedback/feedback" |
+       "/pages/shareinfo/modifyStudent/modifyStudent" |
+       "/pages/shareinfo/modifyTeacher/modifyTeacher" |
+       "/pages/shareinfo/recommend/recommend" |
+       "/pages/shareinfo/releaseStudent/releaseStudent" |
+       "/pages/shareinfo/releaseTeacher/releaseTeacher" |
+       "/pages/shareinfo/student-register/student-register" |
+       "/pages/shareinfo/studentDetail/studentDetail" |
+       "/pages/shareinfo/studentList/studentList" |
+       "/pages/shareinfo/teacher-register/teacher-register" |
+       "/pages/shareinfo/teacherDetail/teacherDetail" |
+       "/pages/shareinfo/teacherList/teacherList" |
+       "/pages/shareinfo/useHelp/useHelp";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 

@@ -66,6 +66,82 @@
     {
       "path": "pages/shareinfo/account/account",
       "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/applyStudent/applyStudent",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/applyTeacher/applyTeacher",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/collectStudent/collectStudent",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/collectTeacher/collectTeacher",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/complaintStudent/complaintStudent",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/complaintTeacher/complaintTeacher",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/feedback/feedback",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/modifyStudent/modifyStudent",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/modifyTeacher/modifyTeacher",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/recommend/recommend",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/releaseStudent/releaseStudent",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/releaseTeacher/releaseTeacher",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/student-register/student-register",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/studentDetail/studentDetail",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/studentList/studentList",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/teacher-register/teacher-register",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/teacherDetail/teacherDetail",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/teacherList/teacherList",
+      "type": "page"
+    },
+    {
+      "path": "pages/shareinfo/useHelp/useHelp",
+      "type": "page"
     }
   ],
   "subPackages": []

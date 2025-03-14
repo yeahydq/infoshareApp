@@ -1,0 +1,313 @@
+page {
+  height: 100%;
+}
+.page {
+  height: 100%;
+  font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Droid Sans Fallback', 'Microsoft Yahei',
+    sans-serif;
+  background: #efefef;
+}
+
+.teacher-sketch {
+  display: flex;
+  background-color: #fff;
+}
+
+.teacherPhoto {
+  width: 150rpx;
+  height: 150rpx;
+  margin: 30rpx 0rpx 30rpx 30rpx;
+}
+
+.teacher-name {
+  font-size: 42rpx;
+}
+
+.name-course {
+  display: block;
+  margin: 38rpx 0rpx 0rpx 20rpx;
+}
+
+.complaint {
+  position: absolute;
+  top: 10rpx;
+  right: 20rpx;
+  text-align: center;
+}
+
+.complaintIcon {
+  width: 50rpx;
+  height: 70rpx;
+}
+
+.teachRange-salary,
+.teacher-info,
+.self-introduction,
+.telephone {
+  padding: 30rpx 0rpx 30rpx 30rpx;
+  margin-top: 15rpx;
+  background-color: #fff;
+}
+
+.aboutData {
+  display: flex;
+  padding: 0rpx 0rpx 20rpx 30rpx;
+  font-size: 30rpx;
+  color: #737373;
+  background-color: #fff;
+}
+
+.timeIcon,
+.collectIcon,
+.applyIcon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 10rpx;
+  border: none;
+}
+
+.course-check {
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.courseItem {
+  display: inline;
+  /* padding: 15rpx 25rpx 15rpx 25rpx; */
+
+  float: left;
+  margin: 8rpx;
+  font-size: 30rpx;
+  color: #737373;
+  border-radius: 40rpx;
+}
+
+.timeText,
+.collectText {
+  margin-right: 55rpx;
+  vertical-align: middle;
+}
+
+.applyText {
+  vertical-align: middle;
+}
+
+.teach-course {
+  margin-top: 30rpx;
+  color: #fe4c40;
+}
+
+.courseMargin {
+  margin-right: 20rpx;
+}
+
+.teacher-university,
+.teacher-score,
+.degree,
+.telephone,
+.self-title {
+  margin-bottom: 20rpx;
+}
+
+.gray-text {
+  color: #737373;
+}
+
+.test {
+  width: 70%;
+}
+
+.self-title {
+  display: flex;
+  color: #fe4c40;
+}
+
+.self-int {
+  display: flex;
+  margin-right: 30rpx;
+}
+
+.bottom {
+  position: fixed;
+  bottom: 0;
+  z-index: 99;
+  width: 100%;
+  height: 100rpx;
+  text-align: center;
+  background: #fff;
+}
+
+.talk-right {
+  display: flex;
+  width: 50%;
+  height: 100%;
+}
+
+.telephone-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin-left: 20rpx;
+}
+
+.collect-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin: auto;
+}
+
+.shareIcon {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.share-left {
+  float: left;
+  width: 25%;
+  height: 100%;
+}
+
+.collect-left {
+  float: left;
+  width: 25%;
+  height: 100%;
+}
+
+.talk-right {
+  float: right;
+  width: 50%;
+  color: #fff;
+  background-color: #fe4c40;
+}
+
+.collect {
+  width: 40%;
+  height: 80%;
+}
+
+.talk-right text {
+  display: flex;
+  margin: auto;
+}
+
+.collect,
+.collect-text {
+  margin: auto;
+  font-size: 27rpx;
+  color: #737373;
+}
+
+.tip {
+  width: 100%;
+  padding: 20rpx 0rpx 150rpx 0rpx;
+  font-size: 30rpx;
+  color: #fe4c40;
+  text-align: center;
+
+  background: #efefef;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 15rpx;
+  background-color: #fff;
+}
+/*每张图片所占容器*/
+.itemImage {
+  position: relative;
+}
+/*小图片*/
+.thumb {
+  position: relative;
+  margin: 10rpx;
+}
+
+.photo {
+  margin: 30rpx 0rpx 20rpx 0rpx;
+  text-align: center;
+}
+
+.logo {
+  position: absolute;
+  top: -60rpx;
+  z-index: 101;
+  width: 120rpx;
+  height: 120rpx;
+  margin-left: -60rpx;
+}
+
+.goldUser {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  z-index: 100;
+  display: block;
+  padding: 120rpx 80rpx 80rpx 80rpx;
+  margin-left: -260rpx;
+  text-align: center;
+
+  background-color: #ffea2e;
+  border-radius: 20rpx;
+  box-shadow:
+    0 2px 16px #ffea2e,
+    0 0 1px #ffea2e,
+    0 0 1px #ffea2e;
+}
+
+.openTitle {
+  padding-bottom: 20rpx;
+  font-size: 50rpx;
+  color: #595858;
+}
+
+.openContent {
+  margin-top: 50rpx;
+  font-size: 30rpx;
+  color: #737273;
+}
+
+.openButton {
+  width: 300rpx;
+  margin: auto;
+  margin-top: 70rpx;
+  font-size: 40rpx;
+  line-height: 2.2;
+  background-color: #fe4c40;
+  border: 0;
+}
+
+.openButton text {
+  color: #fff;
+}
+
+.giveUp {
+  margin-top: 40rpx;
+  font-size: 30rpx;
+  color: #878585;
+}
+
+.detailText {
+  margin-bottom: 20rpx;
+}
+
+.goldUserOpacity {
+  display: none;
+}
+
+.fullbg {
+  position: fixed;
+  top: 0;
+  z-index: 1;
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: rgb(1, 1, 1);
+  transition: all 2s;
+}
+.fullopacity {
+  display: flex;
+  opacity: 0.5;
+}
