@@ -38,6 +38,7 @@
 <script>
 // const Bmob = require('../../utils/bmob.js')
 // const app = getApp()
+
 export default {
   data() {
     return {
@@ -69,17 +70,166 @@ export default {
     // })
   },
   onLoad: function () {
-    // TODO: onLoad
-    // const that = this
-    // app.globalData.getUserInfo(function (userInfo) {
+    console.log('onload')
+    // 删除本地缓存
+    wx.removeStorageSync('userInfo')
+    // 获取个人信息，如果不存在，则跳转到认证页面
+    this.IsAuthor()
+    // app.globalData.getUserInfo((userInfo) => {
     //   console.log(userInfo)
     //   // 更新数据
-    //   that.setData({
+    //   this.setData({
     //     userInfo,
     //   })
     // })
+
+    // wx.getSetting({
+    //   success: (res) => {
+    //     console.log(res)
+    //     if (res.authSetting['scope.userInfo']) {
+    //       wx.getUserInfo({
+    //         success: (res) => {
+    //           // console.log(res)
+    //           const userInfo = res.userInfo
+    //           const nickName = userInfo.nickName
+    //           const avatarUrl = userInfo.avatarUrl
+    //           const gender = userInfo.gender // 性别 0：未知、1：男、2：女
+    //           const province = userInfo.province
+    //           const city = userInfo.city
+    //           const country = userInfo.country
+    //           const updatedUserInfo = {
+    //             nickName,
+    //             avatarUrl,
+    //             gender,
+    //             province,
+    //             city,
+    //             country,
+    //           }
+    //           // 获取数据库的用户信息
+    //           this.InitInfo(updatedUserInfo)
+    //         },
+    //       })
+    //     } else {
+    //       // 未授权，跳转到授权页面
+    //       wx.redirectTo({
+    //         url: '../login/login?id=auth',
+    //       })
+    //     }
+    //   },
+    //   fail: (err) => {
+    //     console.error(err)
+    //     wx.hideLoading()
+    //   },
+    // })
   },
+
   methods: {
+    /**
+     * 检查授权情况
+     */
+    IsAuthor() {
+      // wx.showLoading({
+      //   title: '加载中...',
+      //   mask: true,
+      // })
+      wx.getSetting({
+        success: (res) => {
+          console.log(res)
+          if (res.authSetting['scope.userInfo']) {
+            wx.getUserInfo({
+              success: (res) => {
+                // console.log(res)
+                const userInfo = res.userInfo
+                const nickName = userInfo.nickName
+                const avatarUrl = userInfo.avatarUrl
+                const gender = userInfo.gender // 性别 0：未知、1：男、2：女
+                const province = userInfo.province
+                const city = userInfo.city
+                const country = userInfo.country
+                const updatedUserInfo = {
+                  nickName,
+                  avatarUrl,
+                  gender,
+                  province,
+                  city,
+                  country,
+                }
+                // 获取数据库的用户信息
+                this.InitInfo(updatedUserInfo)
+              },
+            })
+          } else {
+            // 未授权，跳转到授权页面
+            wx.redirectTo({
+              url: '../login/login?id=auth',
+            })
+          }
+        },
+        fail: (err) => {
+          console.error(err)
+          wx.hideLoading()
+        },
+      })
+    },
+
+    // 获取个人信息
+    InitInfo(userInfo) {
+      wx.showLoading({
+        title: '正在加载...',
+        mask: true,
+      })
+      wx.cloud.callFunction({
+        name: 'InitInfo',
+        data: {
+          type: 'INIT',
+        },
+        success: (res) => {
+          wx.hideLoading()
+          console.log('res', res)
+          const result = res.result.data
+          // 判断是否已经注册
+          if (result.length) {
+            // 已注册，拉取公告、推荐列表
+            userInfo.openid = result[0]._openid
+            userInfo.name = result[0].name
+            userInfo.phone = result[0].phone
+            userInfo.address = result[0].address
+            // 缓存到本地
+            wx.setStorageSync('userInfo', userInfo)
+            // 修改全局变量为已登录
+            // app.IsLogon()
+            // 跳转到home
+            // wx.switchTab({
+            //   url: '../home/home',
+            // })
+          } else {
+            // 显示注册页面，并提示注册
+            this.setData({
+              showAuth: false,
+              showform: true,
+            })
+            wx.showToast({
+              title: '你还未注册，请填写注册信息！',
+              icon: 'none',
+              duration: 2500,
+              mask: true,
+            })
+          }
+        },
+        fail: (err) => {
+          wx.hideLoading()
+          console.log('err', err)
+          wx.showToast({
+            title: '网络错误，信息获取失败...',
+            icon: 'none',
+            duration: 2000,
+          })
+        },
+        complete: (res) => {
+          console.log('complete', res)
+        },
+      })
+    },
     collect: function () {
       //   const currentUser = Bmob.User.current()
       //   const currentUserId = currentUser.id
