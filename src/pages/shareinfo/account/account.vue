@@ -429,12 +429,15 @@ const SubmitRegister = (userInfo) => {
           icon: 'none',
           duration: 1000,
         })
+        // 修改库变量
+        userStore.value.setUserInfo(userInfo)
+        userInfo.value = userStore.value.userInfo
         // 保存成功，更新本地缓存
         uni.setStorageSync('userInfo', userInfo)
         // 页面跳转
         // 跳转到home
         uni.switchTab({
-          url: '../shareinfo/accout/accout',
+          url: '../shareinfo/account/account',
         })
       } else {
         // 提示网络错误
