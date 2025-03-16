@@ -22,3 +22,13 @@ import { getTime } from '@service/util/util.ts'
 import { getTime } from '@service/util/util'
 
 feat: add basic pages
+
+修改这个页面为， 显示个人基本信息， 包括下面字段：
+name,
+phone,
+address:
+avatarUrl,
+nickName,
+mamager
+
+    并且允许用户修改， 比如最下面有修改按钮， 用户按下修改按钮后， 所有的选选项变成可修改， 再在旁边添加一个提交按钮

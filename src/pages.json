@@ -95,6 +95,10 @@
       "type": "page"
     },
     {
+      "path": "pages/shareinfo/account/setting",
+      "type": "page"
+    },
+    {
       "path": "pages/shareinfo/applyStudent/applyStudent",
       "type": "page"
     },

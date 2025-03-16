@@ -1,7 +1,7 @@
 <template>
   <view class="page">
     <view class="head">
-      <view v-if="userStore.userInfo?.openid" class="head-box">
+      <view v-if="userStore.userInfo?.openid" class="head-box" @click="navigateToSettings">
         <image class="photo" :src="userInfo.avatarUrl"></image>
         <view class="name">{{ userStore.userInfo?.nickname }}</view>
       </view>
@@ -59,6 +59,12 @@ const show = ref(false)
 // const userStore = useUserStore()
 const userStore = computed(() => useUserStore())
 const hasLogin = computed(() => userStore.value.userInfo?.openid)
+
+const navigateToSettings = () => {
+  uni.navigateTo({
+    url: '../account/setting',
+  })
+}
 
 const logout = () => {
   uni.showModal({
@@ -455,7 +461,6 @@ const SubmitRegister = (userInfo) => {
   })
 }
 </script>
-
 <style>
 @import './account.css';
 </style>

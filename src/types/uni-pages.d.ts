@@ -10,6 +10,7 @@ interface NavigateToOptions {
        "/pages/my/index" |
        "/pages/shareinfo/aboutUs/aboutUs" |
        "/pages/shareinfo/account/account" |
+       "/pages/shareinfo/account/setting" |
        "/pages/shareinfo/applyStudent/applyStudent" |
        "/pages/shareinfo/applyTeacher/applyTeacher" |
        "/pages/shareinfo/collectStudent/collectStudent" |
