@@ -3,6 +3,7 @@
     <view class="head">
       <image class="photo" :src="userInfo.avatarUrl"></image>
       <view class="name">{{ userInfo.nickName }}</view>
+      <view class="name">{{ userInfo.openid }}</view>
     </view>
 
     <view @tap="collect" class="collect">
@@ -39,6 +40,13 @@
 // const Bmob = require('../../utils/bmob.js')
 // const app = getApp()
 
+import { useUserStore } from '@/store'
+const userStore = useUserStore()
+// const userInfo = userStore.userInfo
+
+// const userInfo = computed(() => {
+//   return userStore.userInfo
+// })
 export default {
   data() {
     return {
@@ -75,51 +83,27 @@ export default {
     wx.removeStorageSync('userInfo')
     // 获取个人信息，如果不存在，则跳转到认证页面
     this.IsAuthor()
-    // app.globalData.getUserInfo((userInfo) => {
+    // userInfo = wx.getStorageSync('userInfo')
+    // const userStore = useUserStore()
+    this.setData({
+      userInfo: userStore.userInfo,
+    })
+    // userStore.userInfo((userInfo) => {
     //   console.log(userInfo)
     //   // 更新数据
     //   this.setData({
     //     userInfo,
     //   })
     // })
-
-    // wx.getSetting({
-    //   success: (res) => {
-    //     console.log(res)
-    //     if (res.authSetting['scope.userInfo']) {
-    //       wx.getUserInfo({
-    //         success: (res) => {
-    //           // console.log(res)
-    //           const userInfo = res.userInfo
-    //           const nickName = userInfo.nickName
-    //           const avatarUrl = userInfo.avatarUrl
-    //           const gender = userInfo.gender // 性别 0：未知、1：男、2：女
-    //           const province = userInfo.province
-    //           const city = userInfo.city
-    //           const country = userInfo.country
-    //           const updatedUserInfo = {
-    //             nickName,
-    //             avatarUrl,
-    //             gender,
-    //             province,
-    //             city,
-    //             country,
-    //           }
-    //           // 获取数据库的用户信息
-    //           this.InitInfo(updatedUserInfo)
-    //         },
-    //       })
-    //     } else {
-    //       // 未授权，跳转到授权页面
-    //       wx.redirectTo({
-    //         url: '../login/login?id=auth',
-    //       })
-    //     }
-    //   },
-    //   fail: (err) => {
-    //     console.error(err)
-    //     wx.hideLoading()
-    //   },
+    // this.setData({
+    //   userInfo,
+    // })
+    // app.globalData.getUserInfo((userInfo) => {
+    //   console.log(userInfo)
+    //   // 更新数据
+    //   this.setData({
+    //     userInfo,
+    //   })
     // })
   },
 
@@ -194,6 +178,10 @@ export default {
             userInfo.name = result[0].name
             userInfo.phone = result[0].phone
             userInfo.address = result[0].address
+            // 修改库变量
+            userStore.setUserInfo(userInfo)
+            this.userInfo = userStore.userInfo
+
             // 缓存到本地
             wx.setStorageSync('userInfo', userInfo)
             // 修改全局变量为已登录
