@@ -140,9 +140,10 @@ export default {
       console.log(e.detail.userInfo)
       console.log(e.detail.rawData)
       if (e.detail.errMsg === 'getUserInfo:ok') {
+        // userStore
         const userInfo = e.detail.userInfo
-        const nickName = userInfo.nickName
-        const avatarUrl = userInfo.avatarUrl
+        // const nickName = userInfo.nickName
+        // const avatarUrl = userInfo.avatarUrl
         const gender = userInfo.gender // 性别 0：未知、1：男、2：女
         const province = userInfo.province
         const city = userInfo.city

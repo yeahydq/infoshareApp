@@ -1,7 +1,7 @@
 <template>
   <view class="page">
     <view class="head">
-      <view v-if="userStore.userInfo?.nickname" class="head-box">
+      <view v-if="userStore.userInfo?.openid" class="head-box">
         <image class="photo" :src="userInfo.avatarUrl"></image>
         <view class="name">{{ userStore.userInfo?.nickname }}</view>
       </view>
@@ -10,11 +10,12 @@
 
       <view class="p-4">
         <view class="flex items-center leading-6" v-if="hasLogin"></view>
-        <view class="flex items-center leading-6" v-else @click="show = true">
-          <view class="i-carbon-user-avatar"></view>
+        <view class="flex items-center leading-6" v-else @click="login">
+          <!-- <view class="i-carbon-user-avatar"></view> -->
           <view class="ml-2">点击登录</view>
         </view>
-        <fly-login v-model="show" />
+        <!-- <fly-login v-model="show" /> -->
+        <!-- We need a page to login, but a page similar to fly-login to let user to input more detail -->
         <button v-if="hasLogin" class="mt-2" @click="logout">退出登录</button>
       </view>
     </view>
@@ -57,7 +58,7 @@ import { useUserStore } from '@/store'
 const show = ref(false)
 // const userStore = useUserStore()
 const userStore = computed(() => useUserStore())
-const hasLogin = computed(() => userStore.value.userInfo?.nickname)
+const hasLogin = computed(() => userStore.value.userInfo?.openid)
 
 const logout = () => {
   uni.showModal({
@@ -69,6 +70,17 @@ const logout = () => {
     },
   })
 }
+
+// const login = () => {
+//   uni.showModal({
+//     title: '确认退出当前账号？',
+//     success: (res) => {
+//       if (res.confirm) {
+//         userStore.value.clearUserInfo()
+//       }
+//     },
+//   })
+// }
 
 const userInfo = ref({
   avatarUrl: '',
@@ -128,125 +140,11 @@ const onLoad = () => {
   // })
 }
 
-const IsAuthor = () => {
-  // wx.showLoading({
-  //   title: '加载中...',
-  //   mask: true,
-  // })
-  wx.getSetting({
-    success: (res) => {
-      console.log(res)
-      if (res.authSetting['scope.userInfo']) {
-        wx.getUserInfo({
-          success: (res) => {
-            // console.log(res)
-            const userInfo = res.userInfo
-            const nickName = userInfo.nickName
-            const avatarUrl = userInfo.avatarUrl
-            const gender = userInfo.gender // 性别 0：未知、1：男、2：女
-            const province = userInfo.province
-            const city = userInfo.city
-            const country = userInfo.country
-            const updatedUserInfo = {
-              nickName,
-              avatarUrl,
-              gender,
-              province,
-              city,
-              country,
-            }
-            // 获取数据库的用户信息
-            InitInfo(updatedUserInfo)
-          },
-        })
-      } else {
-        // 未授权，跳转到授权页面
-        uni.navigateTo({
-          url: '../login/login?id=auth',
-        })
-      }
-    },
-    fail: (err) => {
-      console.error(err)
-      wx.hideLoading()
-    },
-  })
-}
-
-const InitInfo = (userInfo: any) => {
-  wx.showLoading({
-    title: '正在加载...',
-    mask: true,
-  })
-  wx.cloud.callFunction({
-    name: 'InitInfo',
-    data: {
-      type: 'INIT',
-    },
-    success: (res) => {
-      wx.hideLoading()
-      console.log('res', res)
-      const result = res.result.data
-      // 判断是否已经注册
-      if (result.length) {
-        // 已注册，拉取公告、推荐列表
-        userInfo.openid = result[0]._openid
-        userInfo.name = result[0].name
-        userInfo.phone = result[0].phone
-        userInfo.address = result[0].address
-        // 修改库变量
-        userStore.value.setUserInfo(userInfo)
-        userInfo.value = userStore.value.userInfo
-
-        // 缓存到本地
-        wx.setStorageSync('userInfo', userInfo)
-        // 修改全局变量为已登录
-        // app.IsLogon()
-        // 跳转到home
-        // wx.switchTab({
-        //   url: '../home/home',
-        // })
-      } else {
-        // wx.showToast({
-        //   title: '你还未注册，请填写注册信息！',
-        //   icon: 'none',
-        //   duration: 2500,
-        //   mask: true,
-        // })
-        // 未注册，页面跳转到授权注册页面
-        // wx.redirectTo({
-        //   url: '../login/login?id=register',
-        // })
-        uni.navigateTo({
-          url: '../login/login?id=register',
-        })
-        // // 显示注册页面，并提示注册
-        // this.setData({
-        //   showAuth: false,
-        //   showform: true,
-        // })
-      }
-    },
-    fail: (err) => {
-      wx.hideLoading()
-      console.log('err', err)
-      wx.showToast({
-        title: '网络错误，信息获取失败...',
-        icon: 'none',
-        duration: 2000,
-      })
-    },
-    complete: (res) => {
-      console.log('complete', res)
-    },
-  })
-}
-
-const login = () => {
-  uni.navigateTo({
-    url: '../login/index',
-  })
-}
+// const login = () => {
+//   uni.navigateTo({
+//     url: '../login/index',
+//   })
+// }
 
 const collect = () => {
   //   const currentUser = Bmob.User.current()
@@ -383,6 +281,174 @@ const useHelp = () => {
 const aboutUs = () => {
   uni.navigateTo({
     url: '../aboutUs/aboutUs',
+  })
+}
+
+const login = () => {
+  wx.showLoading({
+    title: '加载中...',
+    mask: true,
+  })
+  wx.getSetting({
+    success: (res) => {
+      console.log(res)
+      if (res.authSetting['scope.userInfo']) {
+        wx.getUserInfo({
+          success: (res) => {
+            // console.log(res)
+            const userInfo = res.userInfo
+            const nickName = userInfo.nickName // NOte: this is empty, need  to update later
+            const avatarUrl = userInfo.avatarUrl // Note: this is empty, need  to update later
+            const gender = userInfo.gender // 性别 0：未知、1：男、2：女
+            const province = userInfo.province
+            const city = userInfo.city
+            const country = userInfo.country
+            const updatedUserInfo = {
+              nickName,
+              avatarUrl,
+              gender,
+              province,
+              city,
+              country,
+            }
+            // 获取数据库的用户信息
+            InitInfo(updatedUserInfo)
+          },
+        })
+      } else {
+        // TODO 未授权，跳转到授权页面
+        // uni.navigateTo({
+        //   url: '../login/login?id=auth',
+        // })
+      }
+    },
+    fail: (err) => {
+      console.error(err)
+      wx.hideLoading()
+    },
+  })
+}
+
+const InitInfo = (userInfo: any) => {
+  wx.showLoading({
+    title: '正在加载...',
+    mask: true,
+  })
+  wx.cloud.callFunction({
+    name: 'InitInfo',
+    data: {
+      type: 'INIT',
+    },
+    success: (res) => {
+      wx.hideLoading()
+      console.log('res', res)
+      const result = res.result.data
+      // 判断是否已经注册
+      if (result.length) {
+        // 已注册，拉取公告、推荐列表
+        userInfo.openid = result[0]._openid
+        userInfo.name = result[0].name
+        userInfo.phone = result[0].phone
+        userInfo.address = result[0].address
+        // 修改库变量
+        userStore.value.setUserInfo(userInfo)
+        userInfo.value = userStore.value.userInfo
+
+        // 缓存到本地
+        wx.setStorageSync('userInfo', userInfo)
+        // 修改全局变量为已登录
+        // app.IsLogon()
+        // 跳转到home
+        // wx.switchTab({
+        //   url: '../home/home',
+        // })
+      } else {
+        // wx.showToast({
+        //   title: '你还未注册，请填写注册信息！',
+        //   icon: 'none',
+        //   duration: 2500,
+        //   mask: true,
+        // })
+        // 未注册，页面跳转到授权注册页面
+        // wx.redirectTo({
+        //   url: '../login/login?id=register',
+        // })
+        SubmitRegister(userInfo)
+        // uni.navigateTo({
+        //   url: '../login/login?id=register',
+        // })
+        // // 显示注册页面，并提示注册
+        // this.setData({
+        //   showAuth: false,
+        //   showform: true,
+        // })
+      }
+    },
+    fail: (err) => {
+      wx.hideLoading()
+      console.log('err', err)
+      wx.showToast({
+        title: '网络错误，信息获取失败...',
+        icon: 'none',
+        duration: 2000,
+      })
+    },
+    complete: (res) => {
+      console.log('complete', res)
+    },
+  })
+}
+const SubmitRegister = (userInfo) => {
+  // SubmitRegister(e) {
+  // 保存
+  uni.showLoading({
+    mask: true,
+    title: '正在保存...',
+  })
+  const name = userInfo.name
+  const phone = userInfo.phone
+  const avatarUrl = userInfo.avatarUrl
+  const nickName = userInfo.nickName
+  // 保存到数据库
+  const dbname = 'UserList'
+  const db = wx.cloud.database()
+  db.collection(dbname).add({
+    data: {
+      name,
+      phone,
+      address: '',
+      avatarUrl,
+      nickName,
+      mamager: false,
+    },
+    success: function (res) {
+      uni.hideLoading()
+      if (res.errMsg === 'collection.add:ok') {
+        uni.showToast({
+          title: '恭喜,注册成功！',
+          icon: 'none',
+          duration: 1000,
+        })
+        // 保存成功，更新本地缓存
+        uni.setStorageSync('userInfo', userInfo)
+        // 页面跳转
+        // 跳转到home
+        uni.switchTab({
+          url: '../shareinfo/accout/accout',
+        })
+      } else {
+        // 提示网络错误
+        uni.showToast({
+          title: '网络错误，注册失败，请检查网络后重试！',
+          icon: 'none',
+          duration: 2000,
+        })
+      }
+    },
+    fail: function (err) {
+      uni.hideLoading()
+      console.error(err)
+    },
   })
 }
 </script>

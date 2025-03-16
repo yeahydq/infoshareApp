@@ -18,7 +18,6 @@ interface NavigateToOptions {
        "/pages/shareinfo/complaintTeacher/complaintTeacher" |
        "/pages/shareinfo/feedback/feedback" |
        "/pages/shareinfo/index/index" |
-       "/pages/shareinfo/login/index" |
        "/pages/shareinfo/login/login" |
        "/pages/shareinfo/modifyStudent/modifyStudent" |
        "/pages/shareinfo/modifyTeacher/modifyTeacher" |
