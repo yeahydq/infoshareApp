@@ -60,37 +60,49 @@
       </view>
     </view>
 
-    <!-- <view wx:if="{{showAuth}}">
-	<button open-type="getUserInfo" lang="zh_CN" bindgetuserinfo="onGotUserInfo">获取用户信息</button>
-</view> -->
+    <view wx:if="{{showAuth}}">
+      <button open-type="getUserInfo" lang="zh_CN" bindgetuserinfo="onGotUserInfo">
+        获取用户信息
+      </button>
+    </view>
 
     <view class="auth-box" v-if="showAuth">
       <view class="card-box">
         <view class="card-content">
           <button open-type="getUserInfo" lang="zh_CN" @getuserinfo="onGotUserInfo">确 定</button>
         </view>
-        <image src="/static/pages/image/modal.png"></image>
+        <!-- <image src="/static/pages/image/modal.png"></image> -->
       </view>
     </view>
   </view>
 </template>
 
 <script>
-// pages/login/login.js
-const app = getApp()
+import { useUserStore } from '@/store'
+const userStore = useUserStore()
+
 export default {
   data() {
     return {
       showAuth: true,
       showform: true,
-      userInfo: '',
+      userInfo: {},
     }
   },
   /**
    * 生命周期函数--监听页面加载
-   */ onLoad: function (e) {
-    console.log(e)
-    const id = e.id
+   */
+  onLoad: function (option) {
+    console.log(option.id)
+    // const id = e.id
+    if (option.id === 'register') {
+      this.show = true
+      this.showAuth = false
+    } else if (option.id === 'auth') {
+      this.show = true
+      this.showAuth = true
+    }
+    this.userInfo = userStore.userInfo
   },
   /**
    * 生命周期函数--监听页面初次渲染完成
@@ -144,9 +156,9 @@ export default {
           city,
           country,
         }
-        this.setData({
-          userInfo: userData,
-        })
+        // this.setData({
+        //   userInfo: userData,
+        // })
         // 获取数据库的用户信息
         this.InitInfo(userData)
       } else {
@@ -188,14 +200,14 @@ export default {
             app.globalData.IsLogon()
             // 跳转到home
             uni.switchTab({
-              url: '../home/home',
+              url: '../account/account',
             })
           } else {
             // 显示注册页面，并提示注册
-            this.setData({
-              showAuth: false,
-              showform: true,
-            })
+            // this.setData({
+            this.showAuth = false
+            this.showform = true
+            // })
             uni.showToast({
               title: '你还未注册，请填写注册信息！',
               icon: 'none',

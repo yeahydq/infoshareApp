@@ -59,7 +59,7 @@ export default defineUniPages({
       {
         iconPath: 'static/tabbar/example.png',
         selectedIconPath: 'static/tabbar/exampleHL.png',
-        pagePath: 'pages/shareinfo/applyTeacher/applyTeacher',
+        pagePath: 'pages/my/index',
         // pagePath: 'pages/shareinfo/useHelp/useHelp',
         text: 'test',
       },

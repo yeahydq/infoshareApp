@@ -1,10 +1,27 @@
 <template>
   <view class="page">
     <view class="head">
-      <image class="photo" :src="userInfo.avatarUrl"></image>
-      <view class="name">{{ userInfo.nickName }}</view>
-      <view class="name">{{ userInfo.openid }}</view>
+      <view v-if="userInfo.avatarUrl" class="head-box">
+        <image class="photo" :src="userInfo.avatarUrl"></image>
+        <view class="name">{{ userInfo.nickName }}</view>
+      </view>
+      <!-- <view class="login" v-if="!userInfo.avatarUrl" @click="login">点击登录</view> -->
+      <!-- <wx-login v-if="!userInfo.avatarUrl" /> -->
+
+      <view class="p-4">
+        <view class="flex items-center leading-6" v-if="hasLogin">
+          <image class="w-8 h-8 rounded-full" :src="userStore.userInfo?.avatar"></image>
+          <view class="ml-2">{{ userStore.userInfo?.nickname }}</view>
+        </view>
+        <view class="flex items-center leading-6" v-else @click="show = true">
+          <view class="i-carbon-user-avatar"></view>
+          <view class="ml-2">点击显示微信头像</view>
+        </view>
+        <fly-login v-model="show" />
+        <button v-if="hasLogin" class="mt-2" @click="logout">退出登录</button>
+      </view>
     </view>
+    <!-- <view class="form-box" v-if="showform & !showAuth"> -->
 
     <view @tap="collect" class="collect">
       <image class="icon" src="/static/image/collect-click.png"></image>
@@ -41,12 +58,20 @@
 // const app = getApp()
 
 import { useUserStore } from '@/store'
+const show = ref(false)
 const userStore = useUserStore()
-// const userInfo = userStore.userInfo
+const hasLogin = computed(() => userStore.userInfo?.nickname)
+const logout = () => {
+  uni.showModal({
+    title: '确认退出当前账号？',
+    success: (res) => {
+      if (res.confirm) {
+        userStore.clearUserInfo()
+      }
+    },
+  })
+}
 
-// const userInfo = computed(() => {
-//   return userStore.userInfo
-// })
 export default {
   data() {
     return {
@@ -82,12 +107,12 @@ export default {
     // 删除本地缓存
     wx.removeStorageSync('userInfo')
     // 获取个人信息，如果不存在，则跳转到认证页面
-    this.IsAuthor()
+    // this.IsAuthor() // TODO  probably need to do it when user click the login button
     // userInfo = wx.getStorageSync('userInfo')
     // const userStore = useUserStore()
-    this.setData({
-      userInfo: userStore.userInfo,
-    })
+    // this.setData({
+    //   userInfo: userStore.userInfo,
+    // })
     // userStore.userInfo((userInfo) => {
     //   console.log(userInfo)
     //   // 更新数据
@@ -144,7 +169,7 @@ export default {
             })
           } else {
             // 未授权，跳转到授权页面
-            wx.redirectTo({
+            uni.navigateTo({
               url: '../login/login?id=auth',
             })
           }
@@ -191,17 +216,24 @@ export default {
             //   url: '../home/home',
             // })
           } else {
-            // 显示注册页面，并提示注册
-            this.setData({
-              showAuth: false,
-              showform: true,
+            // wx.showToast({
+            //   title: '你还未注册，请填写注册信息！',
+            //   icon: 'none',
+            //   duration: 2500,
+            //   mask: true,
+            // })
+            // 未注册，页面跳转到授权注册页面
+            // wx.redirectTo({
+            //   url: '../login/login?id=register',
+            // })
+            uni.navigateTo({
+              url: '../login/login?id=register',
             })
-            wx.showToast({
-              title: '你还未注册，请填写注册信息！',
-              icon: 'none',
-              duration: 2500,
-              mask: true,
-            })
+            // // 显示注册页面，并提示注册
+            // this.setData({
+            //   showAuth: false,
+            //   showform: true,
+            // })
           }
         },
         fail: (err) => {
@@ -216,6 +248,12 @@ export default {
         complete: (res) => {
           console.log('complete', res)
         },
+      })
+    },
+    login: function () {
+      uni.navigateTo({
+        // url: '../login/login?id=auth',
+        url: '../login/index',
       })
     },
     collect: function () {

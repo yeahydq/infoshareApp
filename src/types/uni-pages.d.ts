@@ -7,6 +7,7 @@ interface NavigateToOptions {
   url: "/pages/shareinfo/studentList/studentList" |
        "/pages/about/about" |
        "/pages/index/index" |
+       "/pages/my/index" |
        "/pages/shareinfo/aboutUs/aboutUs" |
        "/pages/shareinfo/account/account" |
        "/pages/shareinfo/applyStudent/applyStudent" |
@@ -17,6 +18,7 @@ interface NavigateToOptions {
        "/pages/shareinfo/complaintTeacher/complaintTeacher" |
        "/pages/shareinfo/feedback/feedback" |
        "/pages/shareinfo/index/index" |
+       "/pages/shareinfo/login/index" |
        "/pages/shareinfo/login/login" |
        "/pages/shareinfo/modifyStudent/modifyStudent" |
        "/pages/shareinfo/modifyTeacher/modifyTeacher" |
@@ -33,7 +35,7 @@ interface NavigateToOptions {
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/shareinfo/studentList/studentList" | "/pages/shareinfo/recommend/recommend" | "/pages/shareinfo/account/account" | "/pages/about/about" | "/pages/shareinfo/applyTeacher/applyTeacher"
+  url: "/pages/shareinfo/studentList/studentList" | "/pages/shareinfo/recommend/recommend" | "/pages/shareinfo/account/account" | "/pages/about/about" | "/pages/my/index"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;
