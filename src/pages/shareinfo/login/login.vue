@@ -266,7 +266,7 @@ export default {
           address: '',
           avatarUrl,
           nickName,
-          mamager: false,
+          manager: false,
         },
         success: function (res) {
           uni.hideLoading()

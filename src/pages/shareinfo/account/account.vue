@@ -3,7 +3,7 @@
     <view class="head">
       <view v-if="userStore.userInfo?.openid" class="head-box" @click="navigateToSettings">
         <image class="photo" :src="userInfo.avatarUrl"></image>
-        <view class="name">{{ userStore.userInfo?.nickname }}</view>
+        <view class="name">{{ userStore.userInfo?.nickName }}</view>
       </view>
       <!-- <view class="login" v-if="!userInfo.avatarUrl" @click="login">点击登录</view> -->
       <!-- <wx-login v-if="!userInfo.avatarUrl" /> -->
@@ -57,8 +57,10 @@ import { useUserStore } from '@/store'
 
 const show = ref(false)
 // const userStore = useUserStore()
-const userStore = computed(() => useUserStore())
-const hasLogin = computed(() => userStore.value.userInfo?.openid)
+// const userStore = computed(() => useUserStore())
+const userStore = useUserStore()
+// const hasLogin = computed(() => userStore.value.userInfo?.openid)
+const hasLogin = computed(() => userStore.userInfo?.openid)
 
 const navigateToSettings = () => {
   uni.navigateTo({
@@ -71,7 +73,7 @@ const logout = () => {
     title: '确认退出当前账号？',
     success: (res) => {
       if (res.confirm) {
-        userStore.value.clearUserInfo()
+        userStore.clearUserInfo()
       }
     },
   })
@@ -353,12 +355,14 @@ const InitInfo = (userInfo: any) => {
       if (result.length) {
         // 已注册，拉取公告、推荐列表
         userInfo.openid = result[0]._openid
-        userInfo.name = result[0].name
+        userInfo.id = result[0]._id
+        userInfo.nickName = result[0].nickName
         userInfo.phone = result[0].phone
         userInfo.address = result[0].address
         // 修改库变量
-        userStore.value.setUserInfo(userInfo)
-        userInfo.value = userStore.value.userInfo
+        userStore.setUserInfo(userInfo)
+        // userStore.value.setUserInfo(userInfo)
+        // userInfo.value = userStore.value.userInfo
 
         // 缓存到本地
         wx.setStorageSync('userInfo', userInfo)
@@ -425,7 +429,7 @@ const SubmitRegister = (userInfo) => {
       address: '',
       avatarUrl,
       nickName,
-      mamager: false,
+      manager: false,
     },
     success: function (res) {
       uni.hideLoading()

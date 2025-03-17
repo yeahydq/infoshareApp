@@ -68,7 +68,7 @@ const onChooseAvatar = (e) => {
 
 const onChange = (e) => {
   const { value } = e.detail
-  nickname.value = value
+  nickName.value = value
   console.log(value)
 }
 
@@ -82,7 +82,7 @@ const onSubmit = () => {
     })
     return
   }
-  if (!nickname.value) {
+  if (!nickName.value) {
     uni.showToast({
       title: '请填写昵称',
       icon: 'none',
@@ -93,8 +93,8 @@ const onSubmit = () => {
   emit('update:modelValue', false)
   console.log('保存用户信息')
   userStore.setUserInfo({
-    nickname: nickname.value,
-    avatar: avatarUrl.value,
+    nickName: nickName.value,
+    avatarUrl: avatarUrl.value,
   })
   // IsAuthor(nickname.value, avatarUrl.value)
 }
@@ -237,7 +237,7 @@ const SubmitRegister = (userInfo) => {
       address: '',
       avatarUrl,
       nickName,
-      mamager: false,
+      manager: false,
     },
     success: function (res) {
       uni.hideLoading()

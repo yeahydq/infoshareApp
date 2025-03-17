@@ -7,8 +7,8 @@
 <template>
   <view class="p-4">
     <view class="flex items-center leading-6" v-if="hasLogin">
-      <image class="w-8 h-8 rounded-full" :src="userStore.userInfo?.avatar"></image>
-      <view class="ml-2">{{ userStore.userInfo?.nickname }}</view>
+      <image class="w-8 h-8 rounded-full" :src="userStore.userInfo?.avatarUrl"></image>
+      <view class="ml-2">{{ userStore.userInfo?.nickName }}</view>
     </view>
     <view class="flex items-center leading-6" v-else @click="show = true">
       <view class="i-carbon-user-avatar"></view>
@@ -25,7 +25,7 @@ import { useUserStore } from '@/store'
 
 const show = ref(false)
 const userStore = useUserStore()
-const hasLogin = computed(() => userStore.userInfo?.nickname)
+const hasLogin = computed(() => userStore.userInfo?.nickName)
 const logout = () => {
   uni.showModal({
     title: '确认退出当前账号？',

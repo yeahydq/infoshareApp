@@ -115,6 +115,7 @@ export default defineManifestConfig({
       urlCheck: false,
     },
     usingComponents: true,
+    cloudfunctionRoot: 'cloudfunctions/',
     // __usePrivacyCheck__: true,
   },
   'mp-alipay': {

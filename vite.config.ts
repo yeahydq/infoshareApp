@@ -20,6 +20,25 @@ import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import ViteRestart from 'vite-plugin-restart'
 import { copyNativeRes } from './vite-plugins/copyNativeRes'
+import fs from 'fs-extra'
+
+function copyCloudFunctionsFile() {
+  return {
+    enforce: 'post',
+    async writeBundle() {
+      await fs.copy(
+        path.resolve(__dirname, 'cloudfunctions'),
+        path.join(
+          __dirname,
+          'dist',
+          process.env.NODE_ENV === 'production' ? 'build' : 'dev',
+          process.env.UNI_PLATFORM || '',
+          'cloudfunctions',
+        ),
+      )
+    },
+  }
+}
 
 // https://vitejs.dev/config/
 export default ({ command, mode }) => {
@@ -83,6 +102,7 @@ export default ({ command, mode }) => {
           }
         },
       },
+      copyCloudFunctionsFile(),
       UnoCSS(),
       AutoImport({
         imports: ['vue', 'uni-app'],
