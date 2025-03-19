@@ -40,3 +40,5 @@ https://cloud.tencent.com/developer/article/2225434
       data: {
        age:44
       },
+
+把这个vue 的script 部分改为 ： lang="ts" setup

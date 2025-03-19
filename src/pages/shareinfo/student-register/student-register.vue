@@ -333,725 +333,546 @@
   </view>
 </template>
 
-<script>
-// var Bmob = require('../../utils/bmob.js'); // TODO: Commented out Bmob import
-// const utils = require('../../service/util.js')
-// import { getTime } from '@service/util/util'
+<script lang="ts" setup>
+import { ref, onMounted } from 'vue'
 
-export default {
-  data() {
-    return {
-      courseArray: [
-        '数学',
-        '英语',
-        '语文',
-        '物理',
-        '化学',
-        '生物',
-        '政治',
-        '历史',
-        '地理',
-        '美术',
-        '钢琴',
-        '日语',
-        '韩语',
-      ],
-      courseEnglish: [
-        'math',
-        'english',
-        'chinese',
-        'physics',
-        'chemistry',
-        'biology',
-        'politics',
-        'history',
-        'geography',
-        'art',
-        'piano',
-        'Japanese',
-        'korean',
-      ],
-      courseIndex: 0,
-      course: '请选择您要补习的课程',
-      basicArray: ['较差', '中下', '中等', '中上', '较好'],
-      basicIndex: 0,
-      basic: '请选择孩子的学习基础',
-      gradeArray: [
-        ['小学', '初中', '高中'],
-        ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],
-      ],
-      gradeIndex: [0, 0],
-      gradeArr: [],
-      gradeFirst: '请选择您孩子的年级',
-      gradeSecond: '',
-      traitArray: ['有能力即可', '211高校', '985高校', '研究生'],
-      traitIndex: 0,
-      teacherTrait: '请选择教师资质',
-      sexArray: ['无要求', '男老师', '女老师'],
-      sexIndex: 0,
-      sex: '请选择教师性别',
-      frequencyArray: [
-        '一周一次',
-        '一周两次',
-        '一周三次',
-        '一周四次',
-        '一周五次',
-        '一周六次',
-        '一周七次',
-      ],
-      frequencyIndex: 0,
-      frequency: '请选择补习次数',
-      studentTraitList: [
-        {
-          name: '学习主动性差',
-          chose: 'false',
-        },
-        {
-          name: '学习速度慢',
-          chose: 'false',
-        },
-        {
-          name: '抵触心理大',
-          chose: 'false',
-        },
-        {
-          name: '叛逆',
-          chose: 'false',
-        },
-        {
-          name: '内向',
-          chose: 'false',
-        },
-        {
-          name: '没有耐心',
-          chose: 'false',
-        },
-        {
-          name: '自卑',
-          chose: 'false',
-        },
-        {
-          name: '粗心大意',
-          chose: 'false',
-        },
-        {
-          name: '偏科',
-          chose: 'false',
-        },
-        {
-          name: '公式、单词记不住',
-          chose: 'false',
-        },
-        {
-          name: '贪玩',
-          chose: 'false',
-        },
-        {
-          name: '沉迷手机、电脑',
-          chose: 'false',
-        },
-        {
-          name: '注意力不集中',
-          chose: 'false',
-        },
-      ],
-      choseStudentTrait: [],
-      teacherTraitList: [
-        {
-          name: '教学经验丰富',
-          chose: 'false',
-        },
-        {
-          name: '有成功案例',
-          chose: 'false',
-        },
-        {
-          name: '提分快',
-          chose: 'false',
-        },
-        {
-          name: '注重基础',
-          chose: 'false',
-        },
-        {
-          name: '严厉',
-          chose: 'false',
-        },
-        {
-          name: '有耐心',
-          chose: 'false',
-        },
-        {
-          name: '和学生交朋友',
-          chose: 'false',
-        },
-        {
-          name: '心理辅导',
-          chose: 'false',
-        },
-        {
-          name: '幽默风趣',
-          chose: 'false',
-        },
-        {
-          name: '沟通能力强',
-          chose: 'false',
-        },
-        {
-          name: '备课详细',
-          chose: 'false',
-        },
-        {
-          name: '引导学生自主学习',
-          chose: 'false',
-        },
-        {
-          name: '善于鼓励',
-          chose: 'false',
-        },
-      ],
-      choseTeacherTrait: [],
-      addressName: '',
-      addressDetail: '',
-      latitude: '',
-      longitude: '',
-      inputName: null,
-      inputTelephone: null,
-      inputCourse: null,
-      inputGrade: null,
-      inputBasic: null,
-      inputTrait: null,
-      inputSex: null,
-      inputFrequency: null,
-      inputSalary: null,
-      inputAddress: null,
-    }
-  },
-  onLoad: function () {
-    uni.showModal({
-      title: '您的电话不会公开显示',
-      content: '为保护您的隐私，仅当您主动向教师发送申请时，对方才可看到您的电话',
-      showCancel: false,
-      confirmText: '我知道啦',
-      success: function (res) {
-        if (res.confirm) {
-          // This block is intentionally left empty because no further action is needed
-        }
-      },
-    })
-  },
-  methods: {
-    inputNameRight: function (e) {
-      if (!e.detail.value) {
-        this.setData({
-          inputName: false,
-        })
-      } else {
-        this.setData({
-          inputName: true,
-        })
+const courseArray = ref([
+  '数学',
+  '英语',
+  '语文',
+  '物理',
+  '化学',
+  '生物',
+  '政治',
+  '历史',
+  '地理',
+  '美术',
+  '钢琴',
+  '日语',
+  '韩语',
+])
+const courseEnglish = ref([
+  'math',
+  'english',
+  'chinese',
+  'physics',
+  'chemistry',
+  'biology',
+  'politics',
+  'history',
+  'geography',
+  'art',
+  'piano',
+  'Japanese',
+  'korean',
+])
+const courseIndex = ref(0)
+const course = ref('请选择您要补习的课程')
+const basicArray = ref(['较差', '中下', '中等', '中上', '较好'])
+const basicIndex = ref(0)
+const basic = ref('请选择孩子的学习基础')
+const gradeArray = ref([
+  ['小学', '初中', '高中'],
+  ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],
+])
+const gradeIndex = ref([0, 0])
+const gradeArr = ref<string[]>([])
+const gradeFirst = ref('请选择您孩子的年级')
+const gradeSecond = ref('')
+const traitArray = ref(['有能力即可', '211高校', '985高校', '研究生'])
+const traitIndex = ref(0)
+const teacherTrait = ref('请选择教师资质')
+const sexArray = ref(['无要求', '男老师', '女老师'])
+const sexIndex = ref(0)
+const sex = ref('请选择教师性别')
+const frequencyArray = ref([
+  '一周一次',
+  '一周两次',
+  '一周三次',
+  '一周四次',
+  '一周五次',
+  '一周六次',
+  '一周七次',
+])
+const frequencyIndex = ref(0)
+const frequency = ref('请选择补习次数')
+const studentTraitList = ref([
+  { name: '学习主动性差', chose: 'false' },
+  { name: '学习速度慢', chose: 'false' },
+  { name: '抵触心理大', chose: 'false' },
+  { name: '叛逆', chose: 'false' },
+  { name: '内向', chose: 'false' },
+  { name: '没有耐心', chose: 'false' },
+  { name: '自卑', chose: 'false' },
+  { name: '粗心大意', chose: 'false' },
+  { name: '偏科', chose: 'false' },
+  { name: '公式、单词记不住', chose: 'false' },
+  { name: '贪玩', chose: 'false' },
+  { name: '沉迷手机、电脑', chose: 'false' },
+  { name: '注意力不集中', chose: 'false' },
+])
+const choseStudentTrait = ref<string[]>([])
+const teacherTraitList = ref([
+  { name: '教学经验丰富', chose: 'false' },
+  { name: '有成功案例', chose: 'false' },
+  { name: '提分快', chose: 'false' },
+  { name: '注重基础', chose: 'false' },
+  { name: '严厉', chose: 'false' },
+  { name: '有耐心', chose: 'false' },
+  { name: '和学生交朋友', chose: 'false' },
+  { name: '心理辅导', chose: 'false' },
+  { name: '幽默风趣', chose: 'false' },
+  { name: '沟通能力强', chose: 'false' },
+  { name: '备课详细', chose: 'false' },
+  { name: '引导学生自主学习', chose: 'false' },
+  { name: '善于鼓励', chose: 'false' },
+])
+const choseTeacherTrait = ref<string[]>([])
+const addressName = ref('')
+const addressDetail = ref('')
+const latitude = ref('')
+const longitude = ref('')
+const inputName = ref<boolean | null>(null)
+const inputTelephone = ref<boolean | null>(null)
+const inputCourse = ref<boolean | null>(null)
+const inputGrade = ref<boolean | null>(null)
+const inputBasic = ref<boolean | null>(null)
+const inputTrait = ref<boolean | null>(null)
+const inputSex = ref<boolean | null>(null)
+const inputFrequency = ref<boolean | null>(null)
+const inputSalary = ref<boolean | null>(null)
+const inputAddress = ref<boolean | null>(null)
+
+onMounted(() => {
+  uni.showModal({
+    title: '您的电话不会公开显示',
+    content: '为保护您的隐私，仅当您主动向教师发送申请时，对方才可看到您的电话',
+    showCancel: false,
+    confirmText: '我知道啦',
+    success: function (res) {
+      if (res.confirm) {
+        // This block is intentionally left empty because no further action is needed
       }
     },
+  })
+})
 
-    inputTelephoneRight: function (e) {
-      if (!e.detail.value) {
-        this.setData({
-          inputTelephone: false,
-        })
-      } else {
-        this.setData({
-          inputTelephone: true,
-        })
-      }
-    },
+function inputNameRight(e: any) {
+  if (!e.detail.value) {
+    inputName.value = false
+  } else {
+    inputName.value = true
+  }
+}
 
-    inputSalaryRight: function (e) {
-      if (!e.detail.value) {
-        this.setData({
-          inputSalary: false,
-        })
-      } else {
-        this.setData({
-          inputSalary: true,
-        })
-      }
-    },
+function inputTelephoneRight(e: any) {
+  if (!e.detail.value) {
+    inputTelephone.value = false
+  } else {
+    inputTelephone.value = true
+  }
+}
 
-    courseChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      this.setData({
-        courseIndex: e.detail.value,
-        course: this.data.courseArray[e.detail.value],
-      })
-      if (!this.data.courseArray[e.detail.value]) {
-        this.setData({
-          inputCourse: false,
-        })
-      } else {
-        this.setData({
-          inputCourse: true,
-        })
-      }
-    },
+function inputSalaryRight(e: any) {
+  if (!e.detail.value) {
+    inputSalary.value = false
+  } else {
+    inputSalary.value = true
+  }
+}
 
-    gradeChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      const A = this.gradeArray[0][this.gradeIndex[0]]
-      const B = this.gradeArray[1][this.gradeIndex[1]]
-      this.setData({
-        gradeIndex: e.detail.value,
-        gradeArr: [A, B],
-        gradeFirst: A,
-        gradeSecond: B,
-      })
-      console.log(this.gradeArr)
-      if (!A || !B) {
-        this.setData({
-          inputGrade: false,
-        })
-      } else {
-        this.setData({
-          inputGrade: true,
-        })
-      }
-    },
+function courseChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  courseIndex.value = e.detail.value
+  course.value = courseArray.value[e.detail.value]
+  if (!courseArray.value[e.detail.value]) {
+    inputCourse.value = false
+  } else {
+    inputCourse.value = true
+  }
+}
 
-    gradeColumnChange: function (e) {
-      console.log('修改的列为', e.detail.column, '，值为', e.detail.value)
-      const data = {
-        gradeArray: this.gradeArray,
-        gradeIndex: this.gradeIndex,
-      }
-      data.gradeIndex[e.detail.column] = e.detail.value
-      switch (e.detail.column) {
+function gradeChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  const A = gradeArray.value[0][gradeIndex.value[0]]
+  const B = gradeArray.value[1][gradeIndex.value[1]]
+  gradeIndex.value = e.detail.value
+  gradeArr.value = [A, B]
+  gradeFirst.value = A
+  gradeSecond.value = B
+  console.log(gradeArr.value)
+  if (!A || !B) {
+    inputGrade.value = false
+  } else {
+    inputGrade.value = true
+  }
+}
+
+function gradeColumnChange(e: any) {
+  console.log('修改的列为', e.detail.column, '，值为', e.detail.value)
+  const data = {
+    gradeArray: gradeArray.value,
+    gradeIndex: gradeIndex.value,
+  }
+  data.gradeIndex[e.detail.column] = e.detail.value
+  switch (e.detail.column) {
+    case 0:
+      switch (data.gradeIndex[0]) {
         case 0:
-          switch (data.gradeIndex[0]) {
-            case 0:
-              data.gradeArray[1] = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级']
-              break
-            case 1:
-              data.gradeArray[1] = ['一年级', '二年级', '三年级']
-              break
-            case 2:
-              data.gradeArray[1] = ['一年级', '二年级', '三年级']
-              break
-          }
-          data.gradeIndex[1] = 0
+          data.gradeArray[1] = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级']
+          break
+        case 1:
+          data.gradeArray[1] = ['一年级', '二年级', '三年级']
+          break
+        case 2:
+          data.gradeArray[1] = ['一年级', '二年级', '三年级']
           break
       }
-      this.setData(data)
-    },
+      data.gradeIndex[1] = 0
+      break
+  }
+  gradeArray.value = data.gradeArray
+  gradeIndex.value = data.gradeIndex
+}
 
-    basciChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      this.setData({
-        basicIndex: e.detail.value,
-        basic: this.data.basicArray[e.detail.value],
+function basciChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  basicIndex.value = e.detail.value
+  basic.value = basicArray.value[e.detail.value]
+  if (!e.detail.value) {
+    inputBasic.value = false
+  } else {
+    inputBasic.value = true
+  }
+}
+
+function traitChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  traitIndex.value = e.detail.value
+  teacherTrait.value = traitArray.value[e.detail.value]
+  if (!e.detail.value) {
+    inputTrait.value = false
+  } else {
+    inputTrait.value = true
+  }
+}
+
+function sexChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  sexIndex.value = e.detail.value
+  sex.value = sexArray.value[e.detail.value]
+  if (!e.detail.value) {
+    inputSex.value = false
+  } else {
+    inputSex.value = true
+  }
+}
+
+function frequencyChange(e: any) {
+  console.log('picker发送选择改变，携带值为', e.detail.value)
+  frequencyIndex.value = e.detail.value
+  frequency.value = frequencyArray.value[e.detail.value]
+  if (!e.detail.value) {
+    inputFrequency.value = false
+  } else {
+    inputFrequency.value = true
+  }
+}
+
+function bindTextAreaBlur(e: any) {
+  console.log(e.detail.value)
+}
+
+function choseStudentTraitFun(e: any) {
+  const index = e.currentTarget.dataset.index // 获取自定义的ID值
+  const studentTraitListNow = studentTraitList.value
+  if (studentTraitListNow[index].chose === 'false') {
+    if (choseStudentTrait.value.length >= 5) {
+      uni.showToast({
+        title: '最多只可选择五项',
+        image: '../../image/warn.png',
+        duration: 2000,
       })
-      if (!e.detail.value) {
-        this.setData({
-          inputBasic: false,
-        })
-      } else {
-        this.setData({
-          inputBasic: true,
-        })
+    } else {
+      choseStudentTrait.value.push(studentTraitListNow[index].name)
+      studentTraitListNow[index].chose = 'true'
+      studentTraitList.value = studentTraitListNow
+      console.log(studentTraitList.value)
+      console.log(choseStudentTrait.value)
+    }
+  } else if (studentTraitListNow[index].chose === 'true') {
+    studentTraitListNow[index].chose = 'false'
+    for (let i = 0; i < choseStudentTrait.value.length; i++) {
+      if (choseStudentTrait.value[i] === studentTraitListNow[index].name) {
+        choseStudentTrait.value.splice(i, 1)
+        break
       }
-    },
+    }
+    studentTraitList.value = studentTraitListNow
+    console.log(studentTraitList.value)
+    console.log(choseStudentTrait.value)
+  }
+}
 
-    traitChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      this.setData({
-        traitIndex: e.detail.value,
-        teacherTrait: this.data.traitArray[e.detail.value],
+function choseTeacherTraitFun(e: any) {
+  const index = e.currentTarget.dataset.index // 获取自定义的ID值
+  const teacherTraitListNow = teacherTraitList.value
+  if (teacherTraitListNow[index].chose === 'false') {
+    if (choseTeacherTrait.value.length >= 5) {
+      uni.showToast({
+        title: '最多只可选择五项',
+        image: '../../image/warn.png',
+        duration: 2000,
       })
-      if (!e.detail.value) {
-        this.setData({
-          inputTrait: false,
-        })
-      } else {
-        this.setData({
-          inputTrait: true,
-        })
+    } else {
+      choseTeacherTrait.value.push(teacherTraitListNow[index].name)
+      teacherTraitListNow[index].chose = 'true'
+      teacherTraitList.value = teacherTraitListNow
+      console.log(teacherTraitList.value)
+      console.log(choseTeacherTrait.value)
+    }
+  } else if (teacherTraitListNow[index].chose === 'true') {
+    teacherTraitListNow[index].chose = 'false'
+    for (let i = 0; i < choseTeacherTrait.value.length; i++) {
+      if (choseTeacherTrait.value[i] === teacherTraitListNow[index].name) {
+        choseTeacherTrait.value.splice(i, 1)
+        break
       }
-    },
+    }
+    teacherTraitList.value = teacherTraitListNow
+    console.log(teacherTraitList.value)
+    console.log(choseTeacherTrait.value)
+  }
+}
 
-    sexChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      this.setData({
-        sexIndex: e.detail.value,
-        sex: this.data.sexArray[e.detail.value],
-      })
-      if (!e.detail.value) {
-        this.setData({
-          inputSex: false,
-        })
-      } else {
-        this.setData({
-          inputSex: true,
-        })
-      }
-    },
+function registerSuccess(e: any) {
+  // const nowTime = getTime()
+  const name = e.detail.value.name
+  const telephone = e.detail.value.telephone
+  const choseTeacherTraitValue = choseTeacherTrait.value
+  const choseStudentTraitValue = choseStudentTrait.value
+  const courseValue = courseArray.value[courseIndex.value]
+  let courseEnglishValue = ''
+  for (let i = 0; i < courseEnglish.value.length; i++) {
+    if (courseValue === courseArray.value[i]) {
+      courseEnglishValue = courseEnglish.value[i]
+    }
+  }
+  console.log(courseEnglishValue)
+  const gradeValue = gradeArr.value.length === 0 ? ['小学', '一年级'] : gradeArr.value
+  const basicValue = basicArray.value[basicIndex.value]
+  const traitValue = traitArray.value[traitIndex.value]
+  const sexValue = sexArray.value[sexIndex.value]
+  const addressNameValue = addressName.value
+  const addressDetailValue = addressDetail.value
+  const latitudeValue = latitude.value
+  const longitudeValue = longitude.value
+  console.log(latitudeValue)
+  console.log(longitudeValue)
+  const frequencyValue = frequencyArray.value[frequencyIndex.value]
+  const salary = e.detail.value.salary
+  const remark = e.detail.value.remark
+  if (!name) {
+    uni.showToast({
+      title: '请填写您的称呼',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputName.value = false
+  } else if (!telephone) {
+    uni.showToast({
+      title: '请填写您的电话',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputTelephone.value = false
+  } else if (course.value === '请选择您要补习的课程') {
+    uni.showToast({
+      title: '请选择您要补习的课程',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputCourse.value = false
+  } else if (!gradeSecond.value) {
+    uni.showToast({
+      title: '请选择您孩子的年级',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputGrade.value = false
+  } else if (basic.value === '请选择孩子的学习基础') {
+    uni.showToast({
+      title: '请选择孩子的学习基础',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputBasic.value = false
+  } else if (teacherTrait.value === '请选择教师资质') {
+    uni.showToast({
+      title: '请选择教师资质',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputTrait.value = false
+  } else if (sex.value === '请选择教师性别') {
+    uni.showToast({
+      title: '请选择教师性别',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputSex.value = false
+  } else if (frequency.value === '请选择补习次数') {
+    uni.showToast({
+      title: '请选择补习次数',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputFrequency.value = false
+  } else if (!salary) {
+    uni.showToast({
+      title: '请填写课时费（最终可与教师商议）',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputSalary.value = false
+  } else if (!addressName.value || !addressDetail.value) {
+    uni.showToast({
+      title: '请选择您的上课地点',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+    inputAddress.value = false
+  } else if (!remark) {
+    uni.showToast({
+      title: '请尽量详细填写你的备注',
+      image: '../../image/warn.png',
+      duration: 2000,
+    })
+  } else {
+    // var user = Bmob.Object.extend('_User'); // TODO: Commented out Bmob related code
+    // var UserModel = new user(); // TODO: Commented out Bmob related code
+    // var Student = Bmob.Object.extend('student'); // TODO: Commented out Bmob related code
+    // var student = new Student(); // TODO: Commented out Bmob related code
+    // var query = new Bmob.Query(user); // TODO: Commented out Bmob related code
+    // var objectId; // TODO: Commented out Bmob related code
+    // var currentUser = Bmob.User.current(); // TODO: Commented out Bmob related code
+    // objectId = currentUser.id; // TODO: Commented out Bmob related code
+    // student.set('name', name); // TODO: Commented out Bmob related code
+    // student.set('telephone', telephone); // TODO: Commented out Bmob related code
+    // student.set('course', courseValue); // TODO: Commented out Bmob related code
+    // student.set('gradeIndex', gradeIndex.value); // TODO: Commented out Bmob related code
+    // student.set('grade', gradeValue); // TODO: Commented out Bmob related code
+    // student.set('basic', basicValue); // TODO: Commented out Bmob related code
+    // student.set('trait_limit', traitValue); // TODO: Commented out Bmob related code
+    // student.set('sex', sexValue); // TODO: Commented out Bmob related code
+    // student.set('frequency', frequencyValue); // TODO: Commented out Bmob related code
+    // student.set('salary', salary); // TODO: Commented out Bmob related code
+    // student.set('addressName', addressNameValue); // TODO: Commented out Bmob related code
+    // student.set('studentTrait', choseStudentTraitValue); // TODO: Commented out Bmob related code
+    // student.set('teacherTrait', choseTeacherTraitValue); // TODO: Commented out Bmob related code
+    // student.set('addressDetail', addressDetailValue); // TODO: Commented out Bmob related code
+    // student.set('latitude', latitudeValue); // TODO: Commented out Bmob related code
+    // student.set('longitude', longitudeValue); // TODO: Commented out Bmob related code
+    // student.set('remark', remark); // TODO: Commented out Bmob related code
+    // student.set('courseEnglish', courseEnglishValue); // TODO: Commented out Bmob related code
+    // student.set('own', objectId); // TODO: Commented out Bmob related code
+    // student.set('modifyTime', nowTime); // TODO: Commented out Bmob related code
+    // student.save(null, { // TODO: Commented out Bmob related code
+    //     success: function (result) {
+    //         var releaseId = result.id;
+    //         query.get(objectId, {
+    //             success: function (result) {
+    //                 result.set('release', releaseId);
+    //                 result.set('register', true);
+    //                 result.set('role', 'student');
+    //                 result.save();
+    //                 uni.showToast({
+    //                     title: '发布成功',
+    //                     icon: 'success',
+    //                     success: function () {
+    //                         setTimeout(function () {
+    //                             if (uni.reLaunch) {
+    //                                 uni.reLaunch({
+    //                                     url: '/pages/teacherList/teacherList'
+    //                                 });
+    //                             } else {
+    //                                 uni.switchTab({
+    //                                     url: '/pages/teacherList/teacherList'
+    //                                 });
+    //                             }
+    //                         }, 2000);
+    //                     }
+    //                 });
+    //             },
+    //             error: function (object, error) {
+    //                 console.log('111');
+    //                 uni.showToast({
+    //                     title: '网络错误',
+    //                     image: '../../image/warn.png',
+    //                     duration: 2000
+    //                 });
+    //             }
+    //         });
+    //     },
+    //     error: function (result, error) {
+    //         console.log('222');
+    //         uni.showToast({
+    //             title: '网络错误',
+    //             image: '../../image/warn.png',
+    //             duration: 2000
+    //         });
+    //     }
+    // });
+  }
+}
 
-    frequencyChange: function (e) {
-      console.log('picker发送选择改变，携带值为', e.detail.value)
-      this.setData({
-        frequencyIndex: e.detail.value,
-        frequency: this.data.frequencyArray[e.detail.value],
-      })
-      if (!e.detail.value) {
-        this.setData({
-          inputFrequency: false,
-        })
-      } else {
-        this.setData({
-          inputFrequency: true,
-        })
-      }
-    },
+function jumpTeacher() {
+  uni.redirectTo({
+    url: '../teacher-register/teacher-register',
+  })
+}
 
-    bindTextAreaBlur: function (e) {
-      console.log(e.detail.value)
+function getAddress() {
+  uni.chooseLocation({
+    success: (res) => {
+      console.log(res)
+      addressName.value = res.name
+      addressDetail.value = res.address
+      latitude.value = res.latitude
+      longitude.value = res.longitude
+      inputAddress.value = true
     },
-
-    choseStudentTraitFun: function (e) {
-      const index = e.currentTarget.dataset.index // 获取自定义的ID值
-      const choseStudentTrait = this.choseStudentTrait
-      const studentTraitListNow = this.studentTraitList
-      if (this.studentTraitList[index].chose === 'false') {
-        if (this.choseStudentTrait.length >= 5) {
-          uni.showToast({
-            title: '最多只可选择五项',
-            image: '../../image/warn.png',
-            duration: 2000,
-          })
-        } else {
-          choseStudentTrait.push(this.studentTraitList[index].name)
-          studentTraitListNow[index].chose = 'true'
-          this.setData({
-            // id: index,
-            studentTraitList: studentTraitListNow,
-            choseStudentTrait,
-          })
-          console.log(this.studentTraitList)
-          console.log(this.choseStudentTrait)
-        }
-      } else if (this.studentTraitList[index].chose === 'true') {
-        studentTraitListNow[index].chose = 'false'
-        for (let i = 0; i < choseStudentTrait.length; i++) {
-          if (choseStudentTrait[i] === studentTraitListNow[index].name) {
-            choseStudentTrait.splice(i, 1)
-            break
-          }
-        }
-        this.setData({
-          // id: index,
-          studentTraitList: studentTraitListNow,
-          choseStudentTrait,
-        })
-        console.log(this.traitList)
-        console.log(this.choseStudentTrait)
-      }
-    },
-
-    choseTeacherTraitFun: function (e) {
-      const index = e.currentTarget.dataset.index // 获取自定义的ID值
-      const choseTeacherTrait = this.choseTeacherTrait
-      const teacherTraitListNow = this.teacherTraitList
-      if (this.teacherTraitList[index].chose === 'false') {
-        if (this.choseTeacherTrait.length >= 5) {
-          uni.showToast({
-            title: '最多只可选择五项',
-            image: '../../image/warn.png',
-            duration: 2000,
-          })
-        } else {
-          choseTeacherTrait.push(this.teacherTraitList[index].name)
-          teacherTraitListNow[index].chose = 'true'
-          this.setData({
-            // id: index,
-            teacherTraitList: teacherTraitListNow,
-            choseTeacherTrait,
-          })
-          console.log(this.teacherTraitList)
-          console.log(this.choseTeacherTrait)
-        }
-      } else if (this.teacherTraitList[index].chose === 'true') {
-        teacherTraitListNow[index].chose = 'false'
-        for (let i = 0; i < choseTeacherTrait.length; i++) {
-          if (choseTeacherTrait[i] === teacherTraitListNow[index].name) {
-            choseTeacherTrait.splice(i, 1)
-            break
-          }
-        }
-        this.setData({
-          // id: index,
-          teacherTraitList: teacherTraitListNow,
-          choseTeacherTrait,
-        })
-        console.log(this.traitList)
-        console.log(this.choseTeacherTrait)
-      }
-    },
-
-    registerSuccess: function (e) {
-      // const nowTime = getTime()
-      const addressIndex = this.addressIndex
-      const gradeIndex = this.gradeIndex
-      const name = e.detail.value.name
-      const telephone = e.detail.value.telephone
-      const choseTeacherTrait = this.choseTeacherTrait
-      const choseStudentTrait = this.choseStudentTrait
-      const course = this.courseArray[this.courseIndex]
-      let courseEnglish
-      for (let i = 0; i < this.courseEnglish.length; i++) {
-        if (course === this.courseArray[i]) {
-          courseEnglish = this.courseEnglish[i]
-        }
-      }
-      console.log(courseEnglish)
-      if (this.gradeArr.length === 0) {
-        const grade = ['小学', '一年级']
-      } else {
-        const grade = this.gradeArr
-      }
-      const basic = this.basicArray[this.basicIndex]
-      const trait = this.traitArray[this.traitIndex]
-      const sex = this.sexArray[this.sexIndex]
-      const addressName = this.addressName
-      const addressDetail = this.addressDetail
-      const latitude = this.latitude
-      const longitude = this.longitude
-      console.log(latitude)
-      console.log(longitude)
-      const frequency = this.frequencyArray[this.frequencyIndex]
-      const salary = e.detail.value.salary
-      const remark = e.detail.value.remark
-      if (!name) {
-        uni.showToast({
-          title: '请填写您的称呼',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputName: false,
-        })
-      } else if (!telephone) {
-        uni.showToast({
-          title: '请填写您的电话',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputTelephone: false,
-        })
-      } else if (this.course === '请选择您要补习的课程') {
-        uni.showToast({
-          title: '请选择您要补习的课程',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputCourse: false,
-        })
-      } else if (!this.gradeSecond) {
-        uni.showToast({
-          title: '请选择您孩子的年级',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputGrade: false,
-        })
-      } else if (this.basic === '请选择孩子的学习基础') {
-        uni.showToast({
-          title: '请选择孩子的学习基础',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputBasic: false,
-        })
-      } else if (this.teacherTrait === '请选择教师资质') {
-        uni.showToast({
-          title: '请选择教师资质',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputTrait: false,
-        })
-      } else if (this.sex === '请选择教师性别') {
-        uni.showToast({
-          title: '请选择教师性别',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputSex: false,
-        })
-      } else if (this.frequency === '请选择补习次数') {
-        uni.showToast({
-          title: '请选择补习次数',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputFrequency: false,
-        })
-      } else if (!salary) {
-        uni.showToast({
-          title: '请填写课时费（最终可与教师商议）',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputSalary: false,
-        })
-      } else if (!this.addressName || !this.addressDetail) {
-        uni.showToast({
-          title: '请选择您的上课地点',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-        this.setData({
-          inputAddress: false,
-        })
-      } else if (!remark) {
-        uni.showToast({
-          title: '请尽量详细填写你的备注',
-          image: '../../image/warn.png',
-          duration: 2000,
-        })
-      } else {
-        // var user = Bmob.Object.extend('_User'); // TODO: Commented out Bmob related code
-        // var UserModel = new user(); // TODO: Commented out Bmob related code
-        // var Student = Bmob.Object.extend('student'); // TODO: Commented out Bmob related code
-        // var student = new Student(); // TODO: Commented out Bmob related code
-        // var query = new Bmob.Query(user); // TODO: Commented out Bmob related code
-        // var objectId; // TODO: Commented out Bmob related code
-        // var currentUser = Bmob.User.current(); // TODO: Commented out Bmob related code
-        // objectId = currentUser.id; // TODO: Commented out Bmob related code
-        // student.set('name', name); // TODO: Commented out Bmob related code
-        // student.set('telephone', telephone); // TODO: Commented out Bmob related code
-        // student.set('course', course); // TODO: Commented out Bmob related code
-        // student.set('gradeIndex', gradeIndex); // TODO: Commented out Bmob related code
-        // student.set('grade', grade); // TODO: Commented out Bmob related code
-        // student.set('basic', basic); // TODO: Commented out Bmob related code
-        // student.set('trait_limit', trait); // TODO: Commented out Bmob related code
-        // student.set('sex', sex); // TODO: Commented out Bmob related code
-        // student.set('frequency', frequency); // TODO: Commented out Bmob related code
-        // student.set('salary', salary); // TODO: Commented out Bmob related code
-        // student.set('addressName', addressName); // TODO: Commented out Bmob related code
-        // student.set('studentTrait', choseStudentTrait); // TODO: Commented out Bmob related code
-        // student.set('teacherTrait', choseTeacherTrait); // TODO: Commented out Bmob related code
-        // student.set('addressDetail', addressDetail); // TODO: Commented out Bmob related code
-        // student.set('latitude', latitude); // TODO: Commented out Bmob related code
-        // student.set('longitude', longitude); // TODO: Commented out Bmob related code
-        // student.set('remark', remark); // TODO: Commented out Bmob related code
-        // student.set('courseEnglish', courseEnglish); // TODO: Commented out Bmob related code
-        // student.set('own', objectId); // TODO: Commented out Bmob related code
-        // student.set('modifyTime', nowTime); // TODO: Commented out Bmob related code
-        // student.save(null, { // TODO: Commented out Bmob related code
-        //     success: function (result) {
-        //         var releaseId = result.id;
-        //         query.get(objectId, {
-        //             success: function (result) {
-        //                 result.set('release', releaseId);
-        //                 result.set('register', true);
-        //                 result.set('role', 'student');
-        //                 result.save();
-        //                 uni.showToast({
-        //                     title: '发布成功',
-        //                     icon: 'success',
-        //                     success: function () {
-        //                         setTimeout(function () {
-        //                             if (uni.reLaunch) {
-        //                                 uni.reLaunch({
-        //                                     url: '/pages/teacherList/teacherList'
-        //                                 });
-        //                             } else {
-        //                                 uni.switchTab({
-        //                                     url: '/pages/teacherList/teacherList'
-        //                                 });
-        //                             }
-        //                         }, 2000);
-        //                     }
-        //                 });
-        //             },
-        //             error: function (object, error) {
-        //                 console.log('111');
-        //                 uni.showToast({
-        //                     title: '网络错误',
-        //                     image: '../../image/warn.png',
-        //                     duration: 2000
-        //                 });
-        //             }
-        //         });
-        //     },
-        //     error: function (result, error) {
-        //         console.log('222');
-        //         uni.showToast({
-        //             title: '网络错误',
-        //             image: '../../image/warn.png',
-        //             duration: 2000
-        //         });
-        //     }
-        // });
-      }
-    },
-
-    jumpTeacher: function () {
-      uni.redirectTo({
-        url: '../teacher-register/teacher-register',
-      })
-    },
-
-    getAddress: function () {
-      uni.chooseLocation({
+    fail: () => {
+      uni.getSetting({
         success: (res) => {
           console.log(res)
-          this.setData({
-            addressName: res.name,
-            addressDetail: res.address,
-            latitude: res.latitude,
-            longitude: res.longitude,
-            inputAddress: true,
-          })
-        },
-        fail: () => {
-          uni.getSetting({
-            success: (res) => {
-              console.log(res)
-              if (!res.authSetting['scope.userLocation']) {
-                uni.showModal({
-                  title: '警告',
-                  content:
-                    '若不授权您的地理信息，将无法正常使用蜂鸟家教，因为教师需要权衡到达上课地点的距离，这是优秀教师是否愿意上课的重要主观因素。\n仅获取您的大致地址，绝不会泄露您的隐私',
-                  confirmText: '授权',
-                  confirmColor: '#2ba945',
-                  cancelColor: '#bdbdbd',
-                  success: function (res) {
-                    if (res.confirm) {
-                      uni.openSetting({
-                        success: (res) => {
-                          res.authSetting = {
-                            'scope.userLocation': true,
-                          }
-                        },
-                      })
-                    } else if (res.cancel) {
-                      // This block is intentionally left empty because no further action is needed
-                    }
-                  },
-                })
-              }
-            },
-          })
+          if (!res.authSetting['scope.userLocation']) {
+            uni.showModal({
+              title: '警告',
+              content:
+                '若不授权您的地理信息，将无法正常使用蜂鸟家教，因为教师需要权衡到达上课地点的距离，这是优秀教师是否愿意上课的重要主观因素。\n仅获取您的大致地址，绝不会泄露您的隐私',
+              confirmText: '授权',
+              confirmColor: '#2ba945',
+              cancelColor: '#bdbdbd',
+              success: function (res) {
+                if (res.confirm) {
+                  uni.openSetting({
+                    success: (res) => {
+                      res.authSetting = {
+                        'scope.userLocation': true,
+                      }
+                    },
+                  })
+                } else if (res.cancel) {
+                  // This block is intentionally left empty because no further action is needed
+                }
+              },
+            })
+          }
         },
       })
     },
-  },
+  })
 }
 </script>
 <style>

@@ -35,7 +35,7 @@ interface NavigateToOptions {
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/shareinfo/studentList/studentList" | "/pages/shareinfo/recommend/recommend" | "/pages/shareinfo/account/account" | "/pages/about/about" | "/pages/my/index"
+  url: "/pages/shareinfo/studentList/studentList" | "/pages/shareinfo/recommend/recommend" | "/pages/shareinfo/account/account" | "/pages/about/about" | "/pages/shareinfo/teacher-register/teacher-register"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;
