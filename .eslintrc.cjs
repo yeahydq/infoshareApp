@@ -41,6 +41,7 @@ module.exports = {
     // eslint-import-resolver-typescript 插件，@see https://www.npmjs.com/package/eslint-import-resolver-typescript
     'import',
   ],
+  ignorePatterns: ['cloudfunctions/'],
   rules: {
     // 3. 注意要加上这一句，开启 prettier 自动修复的功能
     'prettier/prettier': 'error',
