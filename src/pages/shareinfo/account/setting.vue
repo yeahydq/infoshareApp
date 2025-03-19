@@ -59,14 +59,18 @@
         <input type="checkbox" v-model="manager" :disabled="!isEditing" />
       </view> -->
 
+      <!-- <view v-if="isButtonDisabled" class="text-center text-gray-500 mb-2">
+        可修改时间: {{ countdown }} 秒
+      </view> -->
       <button
         size="default"
         type="default"
-        style="color: #fff; background-color: #1aad19; border-color: #1aad19"
+        :style="buttonStyle"
         class="text-center leading-12 w-40 my-4"
         @click="toggleEdit"
+        :disabled="isButtonDisabled"
       >
-        {{ isEditing ? '提交' : '修改' }}
+        {{ isEditing ? (isButtonDisabled ? `${countdown}秒后可提交` : '提交') : '修改' }}
       </button>
     </view>
   </view>
@@ -86,12 +90,14 @@ const nickName = ref(userStore.userInfo.nickName || '')
 const phone = ref(userInfo.value.phone || '')
 const address = ref(userInfo.value.address || '')
 const manager = ref(userInfo.value.manager || false)
+const isButtonDisabled = ref(false)
+const countdown = ref(3)
 
-// const avatarUrl = computed(() => userStore.userInfo?.avatarUrl || defaultAvatarUrl)
-// const nickName = computed(() => userStore.userInfo?.nickName || '')
-// const phone = computed(() => userStore.userInfo?.phone || '')
-// const address = computed(() => userStore.userInfo?.address || '')
-// const manager = computed(() => userStore.userInfo?.manager || false)
+const buttonStyle = computed(() => ({
+  color: '#fff',
+  backgroundColor: isButtonDisabled.value ? '#d3d3d3' : '#1aad19',
+  borderColor: isButtonDisabled.value ? '#d3d3d3' : '#1aad19',
+}))
 
 const onChooseAvatar = (e) => {
   const { avatarUrl: url } = e.detail
@@ -115,6 +121,17 @@ const toggleEdit = () => {
       title: '信息已更新',
       icon: 'success',
     })
+  } else {
+    // Disable button for 3 seconds
+    isButtonDisabled.value = true
+    countdown.value = 3
+    const interval = setInterval(() => {
+      countdown.value -= 1
+      if (countdown.value === 0) {
+        clearInterval(interval)
+        isButtonDisabled.value = false
+      }
+    }, 1000)
   }
   isEditing.value = !isEditing.value
 }
@@ -146,11 +163,12 @@ const updateDabaseRecord = (userInfo) => {
             duration: 1000,
           })
           // 修改库变量
-          userStore.setUserInfo(userInfo)
-          // 保存成功，更新本地缓存
-          uni.setStorageSync('userInfo', userInfo)
+          // userStore.setUserInfo(userInfo)
+          // // 保存成功，更新本地缓存
+          // uni.setStorageSync('userInfo', userInfo)
           // 页面跳转
           uni.navigateBack()
+          // TODO  here is a bug, when new user update their setting, the page still show require login again
         } else {
           // 提示网络错误
           uni.showToast({

@@ -1,23 +1,18 @@
 <template>
   <view class="page">
     <view class="head">
-      <view v-if="userStore.userInfo?.openid" class="head-box" @click="navigateToSettings">
-        <image class="photo" :src="userInfo.avatarUrl"></image>
-        <view class="name">{{ userStore.userInfo?.nickName }}</view>
+      <view v-if="userStore.userInfo?.openid" class="head-box">
+        <view @click="navigateToSettings">
+          <image class="photo" :src="userInfo.avatarUrl"></image>
+          <view class="name">{{ userStore.userInfo?.nickName }}</view>
+        </view>
+      </view>
+      <view v-else class="head-box" @click="login">
+        <image class="photo" src="/static/image/user.png"></image>
+        <view class="name">点击登录</view>
       </view>
       <!-- <view class="login" v-if="!userInfo.avatarUrl" @click="login">点击登录</view> -->
       <!-- <wx-login v-if="!userInfo.avatarUrl" /> -->
-
-      <view class="p-4">
-        <view class="flex items-center leading-6" v-if="hasLogin"></view>
-        <view class="flex items-center leading-6" v-else @click="login">
-          <!-- <view class="i-carbon-user-avatar"></view> -->
-          <view class="ml-2">点击登录</view>
-        </view>
-        <!-- <fly-login v-model="show" /> -->
-        <!-- We need a page to login, but a page similar to fly-login to let user to input more detail -->
-        <button v-if="hasLogin" class="mt-2" @click="logout">退出登录</button>
-      </view>
     </view>
     <!-- <view class="form-box" v-if="showform & !showAuth"> -->
 
@@ -47,6 +42,11 @@
     <view @tap="aboutUs" class="aboutUs">
       <image class="icon" src="/static/image/aboutUs.png"></image>
       <text class="text">关于系统</text>
+    </view>
+
+    <view @tap="logout" class="aboutUs" v-if="hasLogin">
+      <image class="icon" src="/static/image/aboutUs.png"></image>
+      <text class="text">退出登录</text>
     </view>
   </view>
 </template>
@@ -320,7 +320,7 @@ const login = () => {
               country,
             }
             // 获取数据库的用户信息
-            InitInfo(updatedUserInfo)
+            InitInfo(updatedUserInfo, true)
           },
         })
       } else {
@@ -337,7 +337,7 @@ const login = () => {
   })
 }
 
-const InitInfo = (userInfo: any) => {
+const InitInfo = (userInfo: any, registerIdc: boolean) => {
   wx.showLoading({
     title: '正在加载...',
     mask: true,
@@ -372,27 +372,18 @@ const InitInfo = (userInfo: any) => {
         // wx.switchTab({
         //   url: '../home/home',
         // })
-      } else {
-        // wx.showToast({
-        //   title: '你还未注册，请填写注册信息！',
-        //   icon: 'none',
-        //   duration: 2500,
-        //   mask: true,
-        // })
-        // 未注册，页面跳转到授权注册页面
-        // wx.redirectTo({
-        //   url: '../login/login?id=register',
-        // })
+      } else if (registerIdc) {
         SubmitRegister(userInfo)
-        // uni.navigateTo({
-        //   url: '../login/login?id=register',
-        // })
-        // // 显示注册页面，并提示注册
-        // this.setData({
-        //   showAuth: false,
-        //   showform: true,
-        // })
       }
+      // SubmitRegister(userInfo)
+      // uni.navigateTo({
+      //   url: '../login/login?id=register',
+      // })
+      // // 显示注册页面，并提示注册
+      // this.setData({
+      //   showAuth: false,
+      //   showform: true,
+      // })
     },
     fail: (err) => {
       wx.hideLoading()
@@ -439,16 +430,17 @@ const SubmitRegister = (userInfo) => {
           icon: 'none',
           duration: 1000,
         })
-        // 修改库变量
-        userStore.value.setUserInfo(userInfo)
-        userInfo.value = userStore.value.userInfo
-        // 保存成功，更新本地缓存
-        uni.setStorageSync('userInfo', userInfo)
-        // 页面跳转
-        // 跳转到home
-        uni.switchTab({
-          url: '../shareinfo/account/account',
-        })
+        InitInfo(userInfo, false)
+
+        // // 修改库变量
+        // userStore.setUserInfo(userInfo)
+        // // 保存成功，更新本地缓存
+        // wx.setStorageSync('userInfo', userInfo)
+        // // 页面跳转
+        // // 跳转到home
+        // // uni.switchTab({
+        // //   url: '../shareinfo/account/account',
+        // // })
       } else {
         // 提示网络错误
         uni.showToast({
