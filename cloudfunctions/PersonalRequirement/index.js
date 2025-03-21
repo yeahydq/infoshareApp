@@ -5,7 +5,7 @@ cloud.init();
 const db = cloud.database();
 
 exports.main = async (event, context) => {
-  const { action, data, entityType } = event;
+  const { action, entityType, data } = event;
   switch (entityType) {
     case 'student':
       return handleStudent(action, data);
@@ -106,53 +106,79 @@ const deleteTeacher = async (data) => {
 
 const extractStudentFields = (data) => {
     return {
-        name: data.name,
-        age: data.age,
-        grade: data.grade,
-        telephone: data.telephone,
-        course: data.courseValue,
-        gradeIndex: data.gradeIndex.value,
-        gradeValue: data.gradeValue,
-        basic: data.basicValue,
-        trait_limit: data.traitValue,
-        sex: data.sexValue,
-        frequency: data.frequencyValue,
-        salary: data.salary,
-        addressName: data.addressNameValue,
-        studentTrait: data.choseStudentTraitValue,
-        teacherTrait: data.choseTeacherTraitValue,
-        addressDetail: data.addressDetailValue,
-        latitude: data.latitudeValue,
-        longitude: data.longitudeValue,
-        remark: data.remark,
-        courseEnglish: data.courseEnglishValue,
-        own: data.objectId,
-        modifyTime: data.nowTime,
-        // ...other student fields...
+      name: data.name || '',
+      age: data.age || '',
+      grade: data.grade || '',
+      telephone: data.telephone || '',
+      course: data.courseValue || '',
+      gradeIndex: data.gradeIndex?.value || '',
+      gradeValue: data.gradeValue || '',
+      basic: data.basicValue || '',
+      trait_limit: data.traitValue || '',
+      sex: data.sexValue || '',
+      frequency: data.frequencyValue || '',
+      salary: data.salary || '',
+      addressName: data.addressNameValue || '',
+      studentTrait: data.choseStudentTraitValue || '',
+      teacherTrait: data.choseTeacherTraitValue || '',
+      addressDetail: data.addressDetailValue || '',
+      latitude: data.latitudeValue || '',
+      longitude: data.longitudeValue || '',
+      remark: data.remark || '',
+      courseEnglish: data.courseEnglishValue || '',
+      own: data.objectId || '',
+      modifyTime: data.nowTime || '',
+      // ...other student fields...
     };
 };
 
 const extractTeacherFields = (data) => {
     return {
-        name: data.name,
-        age: data.age,
-        subject: data.subject,
-        teacher_name: data.teacherName,
-        telephone: data.telephone,
-        major: data.major,
-        teacher_score: data.teacherScore,
-        salary: data.salary,
-        self_int: data.remark,
-        sex: data.sexValue,
-        university: data.universityValue,
-        degree: data.degreeValue,
-        teach_course: data.choseCourseValue,
-        teach_trait: data.choseTraitValue,
-        photo: data.photoValue,
-        trait: data.trait.value,
-        own: data.objectId,
-        images: data.urlArr.value,
-        modifyTime: data.nowTime,
-        // ...other teacher fields...
+      name: data.name || '',
+      age: data.age || '',
+      subject: data.subject || '',
+      teacher_name: data.teacherName || '',
+      telephone: data.telephone || '',
+      major: data.major || '',
+      teacher_score: data.teacherScore || '',
+      salary: data.salary || '',
+      self_int: data.remark || '',
+      sex: data.sexValue || '',
+      university: data.universityValue || '',
+      degree: data.degreeValue || '',
+      teach_course: data.choseCourseValue || '',
+      teach_trait: data.choseTraitValue || '',
+      photo: data.photoValue || '',
+      trait: data.trait.value || '',
+      own: data.objectId || '',
+      images: data.urlArr.value || '',
+      modifyTime: data.nowTime || '',
+      // ...other teacher fields...
     };
 };
+
+
+// {
+// 	"action": "register",
+// 	"entityType": "student",
+// 	"data": {
+// 			"name": "3",
+// 			"telephone": "33",
+// 			"course": "数学",
+// 			"grade": ["小学", "一年级"],
+// 			"basic": "较差",
+// 			"trait_limit": "有能力即可",
+// 			"sex": "无要求",
+// 			"frequency": "一周一次",
+// 			"salary": "33",
+// 			"addressName": "",
+// 			"studentTrait": [],
+// 			"teacherTrait": [],
+// 			"addressDetail": "",
+// 			"latitude": "",
+// 			"longitude": "",
+// 			"remark": "a",
+// 			"courseEnglish": "math"
+// 		}
+
+// }

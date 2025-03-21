@@ -45,3 +45,5 @@ https://cloud.tencent.com/developer/article/2225434
 
 students
 teachers
+
+https://doc.dcloud.net.cn/uniCloud/cf-callfunction.html

@@ -734,14 +734,16 @@ function registerSuccess(e: any) {
       duration: 2000,
     })
     inputSalary.value = false
-  } else if (!addressName.value || !addressDetail.value) {
-    uni.showToast({
-      title: '请选择您的上课地点',
-      image: '../../image/warn.png',
-      duration: 2000,
-    })
-    inputAddress.value = false
-  } else if (!remark) {
+  }
+  //  else if (!addressName.value || !addressDetail.value) {
+  //   uni.showToast({
+  //     title: '请选择您的上课地点',
+  //     image: '../../image/warn.png',
+  //     duration: 2000,
+  //   })
+  //   inputAddress.value = false
+  // }
+  else if (!remark) {
     uni.showToast({
       title: '请尽量详细填写你的备注',
       image: '../../image/warn.png',
@@ -767,11 +769,20 @@ function registerSuccess(e: any) {
       remark,
       courseEnglish: courseEnglishValue,
     }
-    uniCloud.callFunction({
-      name: 'registerStudent',
+    // TODO it cannot call the cloud function
+    // Error: uni-app cli项目内使用uniCloud需要使用HBuilderX的运行菜单运行项目，且需要在uniCloud目录关联服务空间
+
+    wx.cloud.callFunction({
+      name: 'PersonalRequirement',
       data: {
-        student,
+        action: 'register',
+        entityType: 'student',
+        data: student,
       },
+      // name: 'InitInfo',
+      // data: {
+      //   type: 'INIT',
+      // },
       success: function (res) {
         uni.showToast({
           title: '发布成功',
@@ -820,6 +831,11 @@ function getAddress() {
       inputAddress.value = true
     },
     fail: () => {
+      uni.showToast({
+        title: '网络错误，请稍后重试',
+        image: '../../image/warn.png',
+        duration: 2000,
+      })
       uni.getSetting({
         success: (res) => {
           console.log(res)
