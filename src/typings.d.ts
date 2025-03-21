@@ -28,6 +28,43 @@ declare global {
     address?: string
     email?: string
   }
+
+  type ITeacher = {
+    teacherName: string
+    telephone: string
+    major: string
+    teacherScore: string
+    salary: string
+    remark: string
+    sex: string
+    university: string
+    degree: string
+    teachCourse: string[]
+    teachTrait: string[]
+    photo: string
+    trait: string
+    images: { url: string }[]
+  }
+
+  type IStudent = {
+    name: string
+    telephone: string
+    course: string
+    grade: string[]
+    basic: string
+    trait_limit: string
+    sex: string
+    frequency: string
+    salary: string
+    addressName: string
+    studentTrait: string[]
+    teacherTrait: string[]
+    addressDetail: string
+    latitude: string
+    longitude: string
+    remark: string
+    courseEnglish: string
+  }
 }
 
 export {} // 防止模块污染

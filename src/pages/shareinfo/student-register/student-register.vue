@@ -646,7 +646,6 @@ function choseTeacherTraitFun(e: any) {
 }
 
 function registerSuccess(e: any) {
-  // const nowTime = getTime()
   const name = e.detail.value.name
   const telephone = e.detail.value.telephone
   const choseTeacherTraitValue = choseTeacherTrait.value
@@ -749,80 +748,58 @@ function registerSuccess(e: any) {
       duration: 2000,
     })
   } else {
-    // var user = Bmob.Object.extend('_User'); // TODO: Commented out Bmob related code
-    // var UserModel = new user(); // TODO: Commented out Bmob related code
-    // var Student = Bmob.Object.extend('student'); // TODO: Commented out Bmob related code
-    // var student = new Student(); // TODO: Commented out Bmob related code
-    // var query = new Bmob.Query(user); // TODO: Commented out Bmob related code
-    // var objectId; // TODO: Commented out Bmob related code
-    // var currentUser = Bmob.User.current(); // TODO: Commented out Bmob related code
-    // objectId = currentUser.id; // TODO: Commented out Bmob related code
-    // student.set('name', name); // TODO: Commented out Bmob related code
-    // student.set('telephone', telephone); // TODO: Commented out Bmob related code
-    // student.set('course', courseValue); // TODO: Commented out Bmob related code
-    // student.set('gradeIndex', gradeIndex.value); // TODO: Commented out Bmob related code
-    // student.set('grade', gradeValue); // TODO: Commented out Bmob related code
-    // student.set('basic', basicValue); // TODO: Commented out Bmob related code
-    // student.set('trait_limit', traitValue); // TODO: Commented out Bmob related code
-    // student.set('sex', sexValue); // TODO: Commented out Bmob related code
-    // student.set('frequency', frequencyValue); // TODO: Commented out Bmob related code
-    // student.set('salary', salary); // TODO: Commented out Bmob related code
-    // student.set('addressName', addressNameValue); // TODO: Commented out Bmob related code
-    // student.set('studentTrait', choseStudentTraitValue); // TODO: Commented out Bmob related code
-    // student.set('teacherTrait', choseTeacherTraitValue); // TODO: Commented out Bmob related code
-    // student.set('addressDetail', addressDetailValue); // TODO: Commented out Bmob related code
-    // student.set('latitude', latitudeValue); // TODO: Commented out Bmob related code
-    // student.set('longitude', longitudeValue); // TODO: Commented out Bmob related code
-    // student.set('remark', remark); // TODO: Commented out Bmob related code
-    // student.set('courseEnglish', courseEnglishValue); // TODO: Commented out Bmob related code
-    // student.set('own', objectId); // TODO: Commented out Bmob related code
-    // student.set('modifyTime', nowTime); // TODO: Commented out Bmob related code
-    // student.save(null, { // TODO: Commented out Bmob related code
-    //     success: function (result) {
-    //         var releaseId = result.id;
-    //         query.get(objectId, {
-    //             success: function (result) {
-    //                 result.set('release', releaseId);
-    //                 result.set('register', true);
-    //                 result.set('role', 'student');
-    //                 result.save();
-    //                 uni.showToast({
-    //                     title: '发布成功',
-    //                     icon: 'success',
-    //                     success: function () {
-    //                         setTimeout(function () {
-    //                             if (uni.reLaunch) {
-    //                                 uni.reLaunch({
-    //                                     url: '/pages/teacherList/teacherList'
-    //                                 });
-    //                             } else {
-    //                                 uni.switchTab({
-    //                                     url: '/pages/teacherList/teacherList'
-    //                                 });
-    //                             }
-    //                         }, 2000);
-    //                     }
-    //                 });
-    //             },
-    //             error: function (object, error) {
-    //                 console.log('111');
-    //                 uni.showToast({
-    //                     title: '网络错误',
-    //                     image: '../../image/warn.png',
-    //                     duration: 2000
-    //                 });
-    //             }
-    //         });
-    //     },
-    //     error: function (result, error) {
-    //         console.log('222');
-    //         uni.showToast({
-    //             title: '网络错误',
-    //             image: '../../image/warn.png',
-    //             duration: 2000
-    //         });
-    //     }
-    // });
+    const student: IStudent = {
+      name,
+      telephone,
+      course: courseValue,
+      grade: gradeValue,
+      basic: basicValue,
+      trait_limit: traitValue,
+      sex: sexValue,
+      frequency: frequencyValue,
+      salary,
+      addressName: addressNameValue,
+      studentTrait: choseStudentTraitValue,
+      teacherTrait: choseTeacherTraitValue,
+      addressDetail: addressDetailValue,
+      latitude: latitudeValue,
+      longitude: longitudeValue,
+      remark,
+      courseEnglish: courseEnglishValue,
+    }
+    uniCloud.callFunction({
+      name: 'registerStudent',
+      data: {
+        student,
+      },
+      success: function (res) {
+        uni.showToast({
+          title: '发布成功',
+          icon: 'success',
+          success: function () {
+            setTimeout(function () {
+              if (uni.reLaunch) {
+                uni.reLaunch({
+                  url: '/pages/teacherList/teacherList',
+                })
+              } else {
+                uni.switchTab({
+                  url: '/pages/teacherList/teacherList',
+                })
+              }
+            }, 2000)
+          },
+        })
+      },
+      fail: function (err) {
+        console.error('Error occurred:', err)
+        uni.showToast({
+          title: '网络错误，请稍后重试',
+          image: '../../image/warn.png',
+          duration: 2000,
+        })
+      },
+    })
   }
 }
 
@@ -838,8 +815,8 @@ function getAddress() {
       console.log(res)
       addressName.value = res.name
       addressDetail.value = res.address
-      latitude.value = res.latitude
-      longitude.value = res.longitude
+      latitude.value = res.latitude.toString()
+      longitude.value = res.longitude.toString()
       inputAddress.value = true
     },
     fail: () => {

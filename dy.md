@@ -42,3 +42,6 @@ https://cloud.tencent.com/developer/article/2225434
       },
 
 把这个vue 的script 部分改为 ： lang="ts" setup
+
+students
+teachers

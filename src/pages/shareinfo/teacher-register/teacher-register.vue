@@ -304,6 +304,11 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
+// import type { ITeacher } from '@/typings.d'
+
+function getTime() {
+  return new Date().toISOString()
+}
 
 const inputText = ref('')
 const sexArray = ref(['男老师', '女老师'])
@@ -575,13 +580,14 @@ function registerSuccess(e: any) {
   } else if (universityValue === '中国石油大学') {
     trait.value = '211'
   } else if (
-    (universityValue === '中国海洋大学' && universityValue === '中国石油大学') ||
+    universityValue === '中国海洋大学' ||
+    universityValue === '中国石油大学' ||
     degreeValue === '研究生'
   ) {
     trait.value = '研究生'
   } else if (
-    universityValue !== '中国海洋大学' ||
-    universityValue !== '中国石油大学' ||
+    universityValue !== '中国海洋大学' &&
+    universityValue !== '中国石油大学' &&
     degreeValue !== '研究生'
   ) {
     trait.value = 'null'
@@ -639,72 +645,52 @@ function registerSuccess(e: any) {
       image: '../../image/warn.png',
       duration: 2000,
     })
-  }
-  // TODO: Commented out Bmob import
-  else {
-    const User = Bmob.Object.extend('_User')
-    const UserModel = new User()
-    const Teacher = Bmob.Object.extend('teacher')
-    const teacher = new Teacher()
-    const query = new Bmob.Query(User)
-    const currentUser = Bmob.User.current()
-    const objectId = currentUser.id
-    teacher.set('teacher_name', teacherName)
-    teacher.set('telephone', telephone)
-    teacher.set('major', major)
-    teacher.set('teacher_score', teacherScore)
-    teacher.set('salary', salary)
-    teacher.set('self_int', remark)
-    teacher.set('sex', sexValue)
-    teacher.set('university', universityValue)
-    teacher.set('degree', degreeValue)
-    teacher.set('teach_course', choseCourseValue)
-    teacher.set('teach_trait', choseTraitValue)
-    teacher.set('photo', photoValue)
-    teacher.set('trait', trait.value)
-    teacher.set('own', objectId)
-    teacher.set('images', urlArr.value)
-    teacher.set('modifyTime', nowTime)
-    teacher.save(null, {
-      success: function (result) {
-        const releaseId = result.id
-        console.log('日记创建成功, objectId:' + result.id)
-        query.get(objectId, {
-          success: function (result) {
-            result.set('release', releaseId)
-            result.set('register', true)
-            result.set('role', 'teacher')
-            result.save()
-            uni.showToast({
-              title: '发布成功',
-              icon: 'success',
-              success: function () {
-                setTimeout(function () {
-                  if (uni.reLaunch) {
-                    uni.reLaunch({
-                      url: '/pages/teacherList/teacherList',
-                    })
-                  } else {
-                    uni.switchTab({
-                      url: '/pages/teacherList/teacherList',
-                    })
-                  }
-                }, 2000)
-              },
-            })
-          },
-          error: function (object, error) {
-            uni.showToast({
-              title: '网络错误',
-              image: '../../image/warn.png',
-              duration: 2000,
-            })
+  } else {
+    const teacher: ITeacher = {
+      teacherName,
+      telephone,
+      major,
+      teacherScore,
+      salary,
+      remark,
+      sex: sexValue,
+      university: universityValue,
+      degree: degreeValue,
+      teachCourse: choseCourseValue,
+      teachTrait: choseTraitValue,
+      photo: photoValue,
+      trait: trait.value,
+      images: urlArr.value,
+    }
+    uniCloud.callFunction({
+      name: 'registerTeacher',
+      data: {
+        teacher,
+        nowTime,
+      },
+      success: function (res) {
+        uni.showToast({
+          title: '发布成功',
+          icon: 'success',
+          success: function () {
+            setTimeout(function () {
+              if (uni.reLaunch) {
+                uni.reLaunch({
+                  url: '/pages/teacherList/teacherList',
+                })
+              } else {
+                uni.switchTab({
+                  url: '/pages/teacherList/teacherList',
+                })
+              }
+            }, 2000)
           },
         })
       },
-      error: function (result, error) {
+      fail: function (err) {
+        console.error('Error occurred:', err)
         uni.showToast({
-          title: '网络错误',
+          title: '网络错误，请稍后重试',
           image: '../../image/warn.png',
           duration: 2000,
         })
