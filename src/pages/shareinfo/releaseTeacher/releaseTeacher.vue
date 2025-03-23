@@ -293,7 +293,7 @@ export default {
     },
 
     modifyRelease: function () {
-      uni.redirectTo({
+      uni.navigateTo({
         url: '../modifyTeacher/modifyTeacher',
       })
     },

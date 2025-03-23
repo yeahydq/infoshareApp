@@ -464,7 +464,7 @@ function registerSuccess(e: any) {
 }
 
 function jumpStudent() {
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../student-register/student-register',
   })
 }

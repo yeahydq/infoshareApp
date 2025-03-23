@@ -6,8 +6,6 @@
 
 <template>
   <view class="container">
-    <page-header title="个人信息" />
-
     <view class="avatar-section">
       <view class="avatar">
         <image
@@ -58,9 +56,7 @@
   </view>
 </template>
 
-<script setup>
-import PageHeader from '../../components/PageHeader.vue'
-</script>
+<script setup></script>
 
 <style scoped>
 .container {

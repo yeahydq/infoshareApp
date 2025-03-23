@@ -1,12 +1,12 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '查找老师' },
+  style: { navigationBarTitleText: '推荐老师' },
 }
 </route>
 
 <template>
   <view class="container">
-    <page-header title="推荐老师" />
+    <!-- <page-header title="推荐老师" /> -->
 
     <view class="form-container">
       <view class="form-item">
@@ -170,7 +170,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength, maxLength } from '@vuelidate/validators'
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 
 // 表单数据
 const form = reactive({

@@ -383,7 +383,7 @@ export default {
       //                         icon: 'success',
       //                         success: function () {
       //                             setTimeout(function () {
-      //                                 uni.redirectTo({
+      //                                 uni.navigateTo({
       //                                     url: '../releaseTeacher/releaseTeacher'
       //                                 });
       //                             }, 2000);

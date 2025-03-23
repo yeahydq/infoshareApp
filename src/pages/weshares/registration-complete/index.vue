@@ -6,8 +6,6 @@
 
 <template>
   <view class="container">
-    <page-header title="教员入驻" />
-
     <view class="process-bar">
       <view class="process-item">
         <view class="process-icon">📝</view>
@@ -134,7 +132,6 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
 
 // 基本信息表单数据
 const basicInfo = reactive({

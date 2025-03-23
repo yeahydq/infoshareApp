@@ -1,6 +1,12 @@
+<route lang="json5">
+{
+  style: { navigationBarTitleText: '我的二维码', navigationStyle: 'default' },
+}
+</route>
+
 <template>
   <view class="container">
-    <page-header title="我的二维码" />
+    <!-- <page-header title="我的二维码" /> -->
 
     <view class="qr-content">
       <view class="qr-header">
@@ -47,7 +53,7 @@
 </template>
 
 <script setup>
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 </script>
 
 <style scoped>

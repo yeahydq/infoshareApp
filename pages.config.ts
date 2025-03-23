@@ -3,7 +3,7 @@ import { defineUniPages } from '@uni-helper/vite-plugin-uni-pages'
 export default defineUniPages({
   globalStyle: {
     navigationStyle: 'default',
-    navigationBarTitleText: 'unibest',
+    navigationBarTitleText: '',
     navigationBarBackgroundColor: '#f8f8f8',
     navigationBarTextStyle: 'black',
     backgroundColor: '#FFFFFF',
@@ -99,7 +99,7 @@ export default defineUniPages({
         pagePath: 'pages/weshares/personal-center/index',
         iconPath: 'static/tabbar/homeHL.png',
         selectedIconPath: 'static/tabbar/homeHL.png',
-        text: '我的',
+        text: '个人中心',
       },
     ],
   },

@@ -462,7 +462,7 @@ export default {
       //                         icon: 'success',
       //                         success: function () {
       //                             setTimeout(function () {
-      //                                 uni.redirectTo({
+      //                                 uni.navigateTo({
       //                                     url: '../releaseStudent/releaseStudent'
       //                                 });
       //                             }, 2000);

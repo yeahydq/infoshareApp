@@ -1,3 +1,9 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '老师详情' },
+}
+</route>
+
 <template>
   <view class="container">
     <page-header title="老师详情" />
@@ -131,7 +137,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 
 // Control modal visibility
 const showBookingModal = ref(false)

@@ -1,6 +1,6 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '我的' },
+  style: { navigationBarTitleText: '个人中心', navigationStyle: 'default' },
 }
 </route>
 <template>
@@ -109,49 +109,52 @@
 // Navigation functions
 function navigateToFindTeachers() {
   console.log('Navigating to Find Teachers page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../find-teachers/index',
   })
 }
 
 function navigateToTeacherRegistration() {
   console.log('Navigating to Teacher Registration page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../teacher-registration/index',
   })
 }
 
 function navigateToPersonalInfo() {
   console.log('Navigating to Teacher Registration page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../personal-info/index',
   })
 }
 
 function navigateToQrCode() {
   console.log('Navigating to QR Code page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../qr-code/index',
   })
 }
 
 function navigateToHelpCenter() {
   console.log('Navigating to Help Center page')
-  uni.redirectTo({
-    url: '../help-center/index',
+  uni.navigateTo({
+    url: '../help-center/index', // 在当前页面直接重定向到另一个页面
   })
+  // uni.navigateTo({
+  //   url: '../help-center/index',
+  // })
 }
 
 function navigateToAddress() {
   console.log('Navigating to Address Management page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../address-management/index',
   })
 }
 
 function navigateToAnnouncement() {
   console.log('Navigating to System Announcement page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../system-announcement/index',
   })
 }
@@ -173,14 +176,14 @@ function navigateToContactUs() {
 
 function navigateToSettings() {
   console.log('Navigating to Settings page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../system-settings/index',
   })
 }
 
 function navigateToHome() {
   console.log('Navigating to Home page')
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../index/index',
   })
 }
@@ -188,7 +191,7 @@ function navigateToHome() {
 function navigateToOrders() {
   console.log('Navigating to Orders page')
   // This page doesn't exist yet, so navigate to home
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../index/index',
   })
 }

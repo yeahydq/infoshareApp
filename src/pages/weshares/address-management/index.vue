@@ -1,7 +1,5 @@
 <template>
   <view class="container">
-    <page-header title="地址管理" />
-
     <view class="no-data">
       <text class="no-data-text">暂无数据~~</text>
     </view>
@@ -12,9 +10,7 @@
   </view>
 </template>
 
-<script setup>
-import PageHeader from '../../components/PageHeader.vue'
-</script>
+<script setup></script>
 
 <style scoped>
 .container {

@@ -815,7 +815,7 @@ function registerSuccess(e: any) {
 }
 
 function jumpTeacher() {
-  uni.redirectTo({
+  uni.navigateTo({
     url: '../teacher-register/teacher-register',
   })
 }

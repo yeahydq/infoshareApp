@@ -1,3 +1,9 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '教员入驻' },
+}
+</route>
+
 <template>
   <view class="container">
     <page-header title="教员入驻" />
@@ -152,7 +158,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength } from '@vuelidate/validators'
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 
 // 表单数据
 const form = reactive({

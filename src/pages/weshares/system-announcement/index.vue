@@ -1,6 +1,12 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '系统公告' },
+}
+</route>
+
 <template>
   <view class="container">
-    <page-header title="系统公告" />
+    <!-- <page-header title="系统公告" /> -->
 
     <view class="announcement-item">
       <view class="announcement-title">分销商城2023上线了</view>
@@ -23,7 +29,7 @@
 </template>
 
 <script setup>
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 </script>
 
 <style scoped>

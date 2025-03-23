@@ -222,7 +222,7 @@ export default {
     },
 
     modifyRelease: function () {
-      uni.redirectTo({
+      uni.navigateTo({
         url: '../modifyStudent/modifyStudent',
       })
     },

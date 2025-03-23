@@ -6,8 +6,6 @@
 
 <template>
   <view class="container">
-    <page-header title="教员入驻" />
-
     <view class="process-bar">
       <view class="process-item active">
         <view class="process-icon">📝</view>
@@ -239,7 +237,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, helpers, minLength, minValue, maxValue } from '@vuelidate/validators'
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 
 // 表单数据
 const form = reactive({

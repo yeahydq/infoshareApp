@@ -1,6 +1,6 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '订单' },
+  style: { navigationBarTitleText: '订单', navigationStyle: 'default' },
 }
 </route>
 <template>

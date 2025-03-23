@@ -1,10 +1,18 @@
-<route lang="json5" type="page">
+<route lang="json5">
 {
   style: { navigationBarTitleText: '帮助中心' },
 }
 </route>
 
 <template>
+  <!-- <uni-nav-bar
+    title="自定义导航栏"
+    left-icon="left"
+    @clickLeft="goBack"
+    class="fixed w-full"
+    :border="false"
+    :status-bar="true"
+  ></uni-nav-bar> -->
   <view class="container">
     <!-- <page-header title="帮助中心" /> -->
 
@@ -55,7 +63,10 @@
 </template>
 
 <script setup>
-import PageHeader from '../../components/PageHeader.vue'
+import PageHeader from '../../../components/PageHeader/PageHeader.vue'
+const goBack = () => {
+  uni.navigateBack()
+}
 </script>
 
 <style scoped>

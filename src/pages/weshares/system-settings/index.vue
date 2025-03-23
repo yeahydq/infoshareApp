@@ -6,7 +6,7 @@
 
 <template>
   <view class="container">
-    <page-header title="系统设置"></page-header>
+    <!-- <page-header title="系统设置"></page-header> -->
 
     <view class="settings-list">
       <view class="settings-item">
@@ -26,9 +26,7 @@
   </view>
 </template>
 
-<script setup>
-import PageHeader from '../../components/PageHeader.vue'
-</script>
+<script setup></script>
 
 <style scoped>
 .container {

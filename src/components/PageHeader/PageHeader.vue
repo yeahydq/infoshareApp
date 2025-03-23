@@ -1,14 +1,10 @@
 <template>
-  <!-- <view class="header">
+  <view class="header">
     <view class="back-button">
       <text class="back-icon">返回</text>
     </view>
     <view class="title">{{ title }}</view>
-    <view class="header-right">
-      <view class="dots">•••</view>
-      <view class="target-icon">○</view>
-    </view>
-  </view> -->
+  </view>
   <view></view>
 </template>
 
