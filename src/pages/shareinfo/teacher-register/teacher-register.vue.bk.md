@@ -5,64 +5,301 @@
       <view class="find-teacher" @tap="jumpStudent">我是家长</view>
     </view>
 
-    <view>
-      <div id="app">
-        <div class="container">
-          <div class="header">
-            <h1>教员入驻</h1>
-            <div class="tabs">
-              <div class="tab active">基本信息</div>
-              <div class="tab">上传资料</div>
-              <div class="tab">完成</div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="nickname">昵称</label>
-            <input type="text" id="nickname" placeholder="请输入" />
-          </div>
-          <div class="form-group">
-            <label for="name">姓名</label>
-            <input type="text" id="name" placeholder="请输入" />
-          </div>
-          <div class="form-group">
-            <label for="phone">联系电话</label>
-            <input type="text" id="phone" placeholder="请输入" />
-          </div>
-          <div class="form-group">
-            <label for="price">价格</label>
-            <input type="number" id="price" placeholder="请输入价格/小时" />
-          </div>
-          <div class="form-group">
-            <label for="subject">教学学科</label>
-            <select id="subject">
-              <option value="">请选择学科</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="teaching-experience">教龄</label>
-            <input type="text" id="teaching-experience" placeholder="请输入教龄" />
-          </div>
-          <div class="form-group">
-            <label for="location">选择位置</label>
-            <select id="location">
-              <option value="">请选择位置:</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="photo">上传照片</label>
-            <img
-              src="https://placehold.co/100x100?text=+&bgColor=ffffff&txtColor=000000"
-              alt="请上传2寸图片"
-            />
-          </div>
-          <div class="form-group">
-            <label for="education">最高学历</label>
-            <input type="text" id="education" placeholder="请输入" />
-          </div>
-          <button class="button">下一步</button>
-        </div>
-      </div>
-    </view>
+    <form @submit="registerSuccess" :report-submit="true">
+      <view class="column-photo">
+        <view class="tip-photo">您的照片</view>
+        <image class="photo" :src="photo" @tap="uploadPhoto" />
+
+        <image
+          class="rightArrowPhoto"
+          v-if="inputName == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrowPhoto"
+          v-else-if="inputName == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="tip-photo">基本信息</view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/name.png"></image>
+        <view class="tip">您的姓氏：</view>
+        <view class="inputColumn">
+          <input
+            :value="inputText"
+            name="teacherName"
+            maxlength="3"
+            @blur="teacherInput"
+            placeholder="为保护教师隐私，仅输入姓氏即可"
+            placeholder-style="color:#969696;  font-size: 25rpx;"
+          />
+        </view>
+        <image
+          class="rightArrow"
+          v-if="inputName == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputName == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/telephone.png"></image>
+        <view class="tip">您的电话：</view>
+        <view class="inputColumn">
+          <input
+            type="number"
+            @blur="inputTelephoneRight"
+            placeholder="用于家长及时和您沟通"
+            name="telephone"
+            placeholder-style="color:#969696"
+          />
+        </view>
+        <image
+          class="rightArrow"
+          v-if="inputTelephone == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputTelephone == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/sex.png"></image>
+        <view class="tip">您的性别：</view>
+        <view class="inputColumn">
+          <picker @change="sexChange" name="sex" :value="sexIndex" :range="sexArray">
+            <view class="picker">
+              <text class="grey">{{ sex }}</text>
+            </view>
+          </picker>
+        </view>
+        <image class="rightArrow" src="/static/image/rightArrow.png"></image>
+        <image
+          class="rightArrow"
+          v-if="inputSex == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputSex == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/university.png"></image>
+        <view class="tip">教育经历：</view>
+        <view class="inputColumn">
+          <picker
+            @change="universityChange"
+            name="university"
+            :value="universityIndex"
+            :range="universityArray"
+          >
+            <view class="picker">
+              <text class="grey">{{ university }}</text>
+            </view>
+          </picker>
+        </view>
+        <image class="rightArrow" src="/static/image/rightArrow.png"></image>
+        <image
+          class="rightArrow"
+          v-if="inputUniversity == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputUniversity == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/degree.png"></image>
+        <view class="tip">您的学历：</view>
+        <view class="inputColumn">
+          <picker @change="degreeChange" name="degree" :value="degreeIndex" :range="degreeArray">
+            <view class="picker">
+              <text class="grey">{{ degree }}</text>
+            </view>
+          </picker>
+        </view>
+        <image class="rightArrow" src="/static/image/rightArrow.png"></image>
+        <image
+          class="rightArrow"
+          v-if="inputDegree == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputDegree == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/major.png"></image>
+        <view class="tip">您的专业：</view>
+        <view class="inputColumn">
+          <input
+            placeholder="本科或研究生专业"
+            @blur="inputMajorRight"
+            name="major"
+            placeholder-style="color:#969696"
+          />
+        </view>
+        <image
+          class="rightArrow"
+          v-if="inputMajor == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputMajor == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/score.png"></image>
+        <view class="tip">高考分数：</view>
+        <view class="inputColumn">
+          <input
+            type="number"
+            placeholder="请填写您的高考分数"
+            @blur="inputScoreRight"
+            name="teacherScore"
+            placeholder-style="color:#969696"
+          />
+        </view>
+        <image
+          class="rightArrow"
+          v-if="inputScore == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputScore == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="column">
+        <image class="registerIcon" src="/static/registerIcon/salary.png"></image>
+        <view class="tip">期望薪资：</view>
+        <view class="inputColumn">
+          <input
+            placeholder="如“XX元1小时”"
+            @blur="inputSalaryRight"
+            name="salary"
+            placeholder-style="color:#969696"
+          />
+        </view>
+        <image
+          class="rightArrow"
+          v-if="inputSalary == true"
+          src="/static/image/inputRight.png"
+        ></image>
+        <image
+          class="rightArrow"
+          v-else-if="inputSalary == false"
+          src="/static/image/inputError.png"
+        ></image>
+      </view>
+
+      <view class="tip-photo" style="margin: 40rpx 0rpx 40rpx 0rpx">教学科目</view>
+      <view class="course-check" style="padding-bottom: 20rpx">
+        <view
+          class="courseItem"
+          :data-index="index"
+          @tap="choseCourseFun"
+          :style="
+            item.chose == 'true'
+              ? 'background-color: #fe4c40;border: 1rpx solid #fe4c40; color:#fff'
+              : ' background-color: #fff;  border: 1rpx solid #c6c4c4;'
+          "
+          v-for="(item, index) in courseList"
+          :key="index"
+        >
+          <view :style="'width: ' + 2 * imageWidth + 'rpx;padding-top:15rpx;padding-bottom:15rpx;'">
+            {{ item.name }}
+          </view>
+        </view>
+      </view>
+
+      <view class="tip-photo" style="margin: 40rpx 0rpx 40rpx 0rpx">教学特点</view>
+      <view class="course-check" style="padding-bottom: 20rpx">
+        <view
+          class="courseItem"
+          :data-index="index"
+          @tap="choseTraitFun"
+          :style="
+            item.chose == 'true'
+              ? 'background-color: #fe4c40;border: 1rpx solid #fe4c40; color:#fff'
+              : ' background-color: #fff;  border: 1rpx solid #c6c4c4;'
+          "
+          v-for="(item, index) in traitList"
+          :key="index"
+        >
+          <view style="padding: 15rpx">{{ item.name }}</view>
+        </view>
+      </view>
+
+      <view class="tip-photo" style="margin: 40rpx 0rpx 40rpx 0rpx">其他备注</view>
+
+      <view
+        class="column"
+        style="position: relative; height: 300rpx; border: 1rpx dashed #fe4c40; border-radius: 0rpx"
+      >
+        <view class="inputRemark" style="position: absolute; top: 15rpx; padding-top: 30rpx">
+          <textarea
+            maxlength="500"
+            name="remark"
+            placeholder="请填写对老师更为详细的要求，以及您孩子的学习情况，和补习时间等"
+            placeholder-style="color:#969696"
+          />
+        </view>
+      </view>
+
+      <view class="tip-photo" style="margin: 40rpx 0rpx 40rpx 0rpx">相关证书</view>
+      <view class="gallery">
+        <view class="item" v-for="(item, index) in urlArr" :key="index">
+          <image
+            class="thumb"
+            :data-current="item"
+            :style="'width: ' + 2 * imageWidth + 'rpx; height: ' + 2 * imageWidth + 'rpx'"
+            :src="item.url"
+            @tap="previewImage"
+          />
+
+          <image
+            class="delete"
+            src="/static/image/deleteImage.png"
+            :data-index="index"
+            @tap="deleteFun"
+          ></image>
+        </view>
+        <image
+          class="thumb"
+          :style="'width: ' + 2 * imageWidth + 'rpx; height: ' + 2 * imageWidth + 'rpx'"
+          src="/static/image/upload.png"
+          @tap="upImg"
+        />
+      </view>
+
+      <button class="submitButton" formType="submit">提交</button>
+    </form>
+
   </view>
 </template>
 

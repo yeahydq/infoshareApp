@@ -35,6 +35,8 @@
     "src/**/*.tsx",
     "src/**/*.jsx",
     "src/**/*.vue",
-    "src/**/*.json"
+    "src/**/*.json",
+    "src/pages/shareinfo/home/home.vue.md",
+    "src/pages/shareinfo/teacher-register/teacher-register.vue.bk.md"
   ]
 }

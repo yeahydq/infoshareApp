@@ -176,3 +176,86 @@ page {
   height: 35rpx;
   margin-top: 50rpx;
 }
+
+body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  background-color: #f0f8ff;
+}
+.container {
+  max-width: 600px;
+  margin: 20px auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #b0d9e7;
+}
+.header h1 {
+  font-size: 24px;
+  color: #fff;
+}
+.tabs {
+  display: flex;
+  gap: 20px;
+}
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: #cbeef4;
+  border-radius: 8px;
+}
+.tab.active {
+  background-color: #aeeaff;
+}
+.form-group {
+  padding-right: 20px;
+  padding-left: 20px;
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.form-group input[type='text'],
+.form-group input[type='number'],
+.form-group select,
+.form-group textarea {
+  width: calc(100% - 40px);
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.form-group select {
+  padding-right: 30px;
+}
+.form-group textarea {
+  height: 100px;
+}
+.form-group img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.button {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 18px;
+  color: white;
+  text-align: center;
+  cursor: pointer;
+  background-color: #4caf50;
+  border: none;
+  border-radius: 8px;
+}
+.button:hover {
+  background-color: #45a049;
+}
