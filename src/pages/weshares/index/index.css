@@ -1,0 +1,317 @@
+.container {
+  padding: 0;
+  background-color: #f8f8f8;
+}
+/* Header Styles */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  color: white;
+  background-color: #5bbdca;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.dots {
+  margin-right: 15px;
+  font-size: 20px;
+}
+
+.circle {
+  font-size: 24px;
+}
+/* Search Bar Styles */
+.search-bar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin: 10px 20px;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 25px;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 14px;
+  color: #333;
+  border-right: 1px solid #eee;
+}
+
+.down-arrow {
+  margin-left: 5px;
+  font-size: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0 10px;
+  font-size: 14px;
+  color: #999;
+}
+
+.search-icon {
+  padding: 0 15px;
+  font-size: 18px;
+}
+/* Banner Styles */
+.banner {
+  position: relative;
+  height: 150px;
+  margin: 10px 20px;
+  overflow: hidden;
+  background-color: #e6f7fb;
+  border-radius: 10px;
+}
+
+.banner-img {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-text {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-weight: bold;
+  color: #215967;
+}
+
+.banner-title {
+  font-size: 32px;
+}
+
+.banner-subtitle {
+  margin-top: 5px;
+  font-size: 24px;
+}
+/* Category Grid Styles */
+.category-grid {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 20px;
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22%;
+}
+
+.category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 5px;
+  font-size: 24px;
+  border-radius: 25px;
+}
+
+.management {
+  background-color: #4a8af4;
+}
+
+.medicine {
+  background-color: #5bbdca;
+}
+
+.agriculture {
+  background-color: #9b7cf6;
+}
+
+.engineering {
+  background-color: #f47a7a;
+}
+
+.science {
+  background-color: #5ed3b9;
+}
+
+.history {
+  background-color: #9b7cf6;
+}
+
+.literature {
+  background-color: #f47a7a;
+}
+
+.more {
+  background-color: #5bbdca;
+}
+
+.category-label {
+  font-size: 14px;
+  color: #333;
+}
+/* Teacher Finder Styles */
+.teacher-finder {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  margin: 20px;
+  background-color: #fff9e6;
+  border-radius: 10px;
+}
+
+.finder-left {
+  width: 60px;
+}
+
+.finder-img {
+  width: 60px;
+  height: 60px;
+}
+
+.finder-content {
+  flex: 1;
+  padding: 0 10px;
+}
+
+.finder-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.finder-subtitle {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #999;
+}
+
+.finder-button {
+  padding: 5px 15px;
+  font-size: 14px;
+  color: white;
+  background-color: #f47a7a;
+  border-radius: 20px;
+}
+/* Service Options Styles */
+.service-options {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px;
+}
+
+.service-card {
+  position: relative;
+  width: 48%;
+  height: 120px;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.online {
+  background-color: #f9e9e9;
+}
+
+.in-person {
+  background-color: #e8effa;
+}
+
+.service-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.service-subtitle {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #999;
+}
+
+.service-button {
+  display: inline-block;
+  padding: 5px 15px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #333;
+  background-color: white;
+  border-radius: 20px;
+}
+
+.service-img {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 60px;
+  height: 60px;
+}
+/* Featured Section Styles */
+.featured-section {
+  margin: 20px;
+}
+
+.featured-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.featured-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.featured-more {
+  font-size: 12px;
+  color: #999;
+}
+
+.featured-teachers {
+  /* Teacher cards styling would go here */
+}
+/* Bottom Navigation Styles */
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 50px;
+  background-color: white;
+  border-top: 1px solid #f0f0f0;
+}
+
+.nav-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.nav-icon {
+  margin-bottom: 2px;
+  font-size: 20px;
+  color: #999;
+}
+
+.nav-text {
+  font-size: 12px;
+  color: #999;
+}
+
+.active .nav-icon,
+.active .nav-text {
+  color: #5bbdca;
+}
