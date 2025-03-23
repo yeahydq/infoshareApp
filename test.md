@@ -26,3 +26,7 @@
 # Vue 3 + TypeScript + Vite
 
 create the uni-app Vue3/CSS
+
+move the css from block <sytle></style> into another file of the same folder, but using below format to import into vue
+
+<style> @import './style.css'; </style>

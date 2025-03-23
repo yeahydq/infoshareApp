@@ -1,0 +1,24 @@
+.container {
+  min-height: 100vh;
+  background-color: #f8f8f8;
+}
+
+.settings-list {
+  margin-top: 20px;
+  background-color: white;
+}
+
+.settings-item {
+  padding: 15px;
+  font-size: 16px;
+}
+
+.item-text {
+  color: #333;
+}
+
+.divider {
+  height: 1px;
+  margin-left: 15px;
+  background-color: #f0f0f0;
+}
