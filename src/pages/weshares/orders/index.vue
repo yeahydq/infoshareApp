@@ -1,12 +1,17 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '订单' },
+}
+</route>
 <template>
   <view class="container">
-    <view class="header">
+    <!-- <view class="header">
       <text class="header-title">订单</text>
       <view class="header-right">
         <text class="dots">•••</text>
         <text class="target-icon">○</text>
       </view>
-    </view>
+    </view> -->
 
     <view class="tab-bar">
       <view class="tab-item active">

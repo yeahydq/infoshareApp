@@ -1,3 +1,9 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '查找老师' },
+}
+</route>
+
 <template>
   <view class="container">
     <page-header title="推荐老师" />

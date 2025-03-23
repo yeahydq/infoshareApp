@@ -1,3 +1,9 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '系统设置' },
+}
+</route>
+
 <template>
   <view class="container">
     <page-header title="系统设置"></page-header>

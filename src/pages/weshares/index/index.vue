@@ -10,13 +10,13 @@
 <template>
   <view class="container">
     <!-- Header section -->
-    <view class="header">
+    <!-- <view class="header">
       <view class="title">首页</view>
       <view class="header-right">
         <view class="dots">•••</view>
         <view class="circle">◎</view>
       </view>
-    </view>
+    </view> -->
 
     <!-- Search Bar -->
     <view class="search-bar">

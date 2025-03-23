@@ -1,12 +1,18 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '找老师' },
+}
+</route>
+
 <template>
   <view class="container">
-    <view class="header">
+    <!-- <view class="header">
       <text class="header-title">找老师</text>
       <view class="header-right">
         <text class="dots">•••</text>
         <text class="target-icon">○</text>
       </view>
-    </view>
+    </view> -->
 
     <view class="search-bar">
       <view class="location">

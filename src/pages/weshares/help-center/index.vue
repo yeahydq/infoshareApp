@@ -1,6 +1,12 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '帮助中心' },
+}
+</route>
+
 <template>
   <view class="container">
-    <page-header title="帮助中心" />
+    <!-- <page-header title="帮助中心" /> -->
 
     <view class="tab-container">
       <view class="tab active">

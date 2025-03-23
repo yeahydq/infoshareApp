@@ -1,3 +1,9 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '修改信息' },
+}
+</route>
+
 <template>
   <view class="container">
     <page-header title="个人信息" />

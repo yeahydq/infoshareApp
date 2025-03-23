@@ -1,3 +1,8 @@
+<route lang="json5" type="page">
+{
+  style: { navigationBarTitleText: '我的' },
+}
+</route>
 <template>
   <view class="container">
     <view class="header">

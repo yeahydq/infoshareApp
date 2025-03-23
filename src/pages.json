@@ -196,23 +196,38 @@
     },
     {
       "path": "pages/weshares/find-teachers/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "找老师"
+      }
     },
     {
       "path": "pages/weshares/help-center/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "帮助中心"
+      }
     },
     {
       "path": "pages/weshares/orders/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "订单"
+      }
     },
     {
       "path": "pages/weshares/personal-center/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
     },
     {
       "path": "pages/weshares/personal-info/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "修改信息"
+      }
     },
     {
       "path": "pages/weshares/qr-code/index",
@@ -220,11 +235,17 @@
     },
     {
       "path": "pages/weshares/recommended-teacher/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "查找老师"
+      }
     },
     {
       "path": "pages/weshares/registration-complete/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "教员入驻"
+      }
     },
     {
       "path": "pages/weshares/system-announcement/index",
@@ -232,7 +253,10 @@
     },
     {
       "path": "pages/weshares/system-settings/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "系统设置"
+      }
     },
     {
       "path": "pages/weshares/teacher-details/index",
@@ -240,7 +264,10 @@
     },
     {
       "path": "pages/weshares/teacher-registration/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "教员入驻"
+      }
     },
     {
       "path": "pages/weshares/upload-documents/index",
