@@ -9,7 +9,6 @@
       <div id="app">
         <div class="container">
           <div class="header">
-            <h1>教员入驻</h1>
             <div class="tabs">
               <div class="tab active">基本信息</div>
               <div class="tab">上传资料</div>
