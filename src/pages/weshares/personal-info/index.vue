@@ -7,13 +7,23 @@
 <template>
   <view class="container">
     <view class="avatar-section">
+      <button
+        class="bg-transparent flex items-center after:b-none w-full h-12 leading-12"
+        open-type="chooseAvatar"
+        @chooseavatar="onChooseAvatar"
+        :disabled="false"
+      >
+        <image class="w-8 h-8 rounded-full" :src="avatarUrl"></image>
+        <!-- <text class="ml-auto i-carbon-chevron-right"></text> -->
+      </button>
+      <!-- 
       <view class="avatar">
         <image class="avatar-img" src="/static/image/logo.png" mode="aspectFill" />
       </view>
       <view class="upload-text">
         <text>上传头像</text>
         <text class="upload-icon">📷</text>
-      </view>
+      </view> -->
     </view>
 
     <view class="form-container">
