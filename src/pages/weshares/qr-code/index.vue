@@ -15,11 +15,7 @@
       </view>
 
       <view class="user-info">
-        <image
-          class="user-avatar"
-          src="https://source.unsplash.com/featured/?eiffel,tower"
-          mode="aspectFill"
-        />
+        <image class="user-avatar" src="/static/image/logo.png" mode="aspectFill" />
         <view class="user-tag">
           <text>用户</text>
         </view>

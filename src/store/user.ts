@@ -8,8 +8,8 @@ export const useUserStore = defineStore(
   () => {
     const userInfo = ref<IUserInfo>({ ...initState })
 
-    const setUserInfo = (val: IUserInfo) => {
-      userInfo.value = val
+    const setUserInfo = (val: Partial<IUserInfo>) => {
+      userInfo.value = { ...userInfo.value, ...val }
     }
 
     const clearUserInfo = () => {

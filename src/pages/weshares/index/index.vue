@@ -36,11 +36,7 @@
 
   <!-- Banner -->
   <view class="banner">
-    <image
-      class="banner-img"
-      src="https://source.unsplash.com/featured/?education,tutor"
-      mode="aspectFill"
-    />
+    <image class="banner-img" src="/static/image/logo.png" mode="aspectFill" />
     <view class="banner-text">
       <view class="banner-title">家教预约</view>
       <view class="banner-subtitle">小程序上线了</view>

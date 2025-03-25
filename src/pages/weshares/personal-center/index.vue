@@ -8,11 +8,7 @@
     <view class="header">
       <view class="profile-info">
         <view class="avatar">
-          <image
-            class="avatar-img"
-            src="https://source.unsplash.com/featured/?eiffel,tower"
-            mode="aspectFill"
-          />
+          <image class="avatar-img" src="/static/image/logo.png" mode="aspectFill" />
         </view>
         <view class="user-info">
           <view v-if="userStore.userInfo?.openid" class="head-box">
@@ -24,7 +20,7 @@
             </view>
           </view>
           <view v-else class="head-box" @click="login">
-            <image class="photo" src="/static/image/user.png"></image>
+            <image class="photo" src="/static/image/logo.png"></image>
             <view class="name">点击登录</view>
           </view>
         </view>

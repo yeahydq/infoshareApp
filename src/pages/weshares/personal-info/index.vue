@@ -8,11 +8,7 @@
   <view class="container">
     <view class="avatar-section">
       <view class="avatar">
-        <image
-          class="avatar-img"
-          src="https://source.unsplash.com/featured/?eiffel,tower"
-          mode="aspectFill"
-        />
+        <image class="avatar-img" src="/static/image/logo.png" mode="aspectFill" />
       </view>
       <view class="upload-text">
         <text>上传头像</text>
@@ -72,8 +68,8 @@
       </view>
     </view>
 
-    <view class="submit-button">
-      <text class="button-text" @click="toggleEdit">
+    <view class="submit-button" @click="toggleEdit">
+      <text class="button-text">
         {{ isEditing ? (isButtonDisabled ? `${countdown}秒后可提交` : '提交') : '修改' }}
       </text>
     </view>
