@@ -8,13 +8,13 @@
     <view class="header">
       <view class="profile-info">
         <view class="avatar">
-          <image class="avatar-img" src="/static/image/logo.png" mode="aspectFill" />
+          <image class="avatar-img" :src="avatarUrl" mode="aspectFill" />
         </view>
         <view class="user-info">
           <view v-if="userStore.userInfo?.openid" class="head-box">
             <view @click="navigateToSettings">
-              <image class="photo" :src="userInfo.avatarUrl"></image>
-              <view class="username">{{ userStore.userInfo?.nickName }}</view>
+              <!-- <image class="photo" :src="avatarUrl"></image> -->
+              <view class="username">{{ nickName }}</view>
               <view class="user-tag">用户</view>
               <!-- <view class="user-id">ID:HY000054 {{ userStore.userInfo?.id }}</view> -->
             </view>
@@ -148,8 +148,11 @@ const show = ref(false)
 // const userStore = useUserStore()
 // const userStore = computed(() => useUserStore())
 const userStore = useUserStore()
+const userInfo = ref(userStore.userInfo)
 // const hasLogin = computed(() => userStore.value.userInfo?.openid)
 const hasLogin = computed(() => userStore.userInfo?.openid)
+const nickName = ref(userStore.userInfo.nickName || '')
+const avatarUrl = ref(userInfo.value.avatarUrl || '')
 
 const navigateToSettings = () => {
   uni.navigateTo({
@@ -163,15 +166,16 @@ const logout = () => {
     success: (res) => {
       if (res.confirm) {
         userStore.clearUserInfo()
+        avatarUrl.value = ''
       }
     },
   })
 }
 
-const userInfo = ref({
-  avatarUrl: '',
-  nickName: '',
-})
+// const userInfo = ref({
+//   avatarUrl: '',
+//   nickName: '',
+// })
 
 const onLoad = () => {
   console.log('onload')
@@ -244,6 +248,8 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
         userInfo.openid = result[0]._openid
         userInfo.id = result[0]._id
         userInfo.nickName = result[0].nickName
+        userInfo.avatarUrlCloud = result[0].avatarUrlCloud || ''
+        downloadFile(userInfo.avatarUrlCloud, userInfo) // need to download from cloud
         userInfo.phone = result[0].phone
         userInfo.address = result[0].address
         // 修改库变量
@@ -251,6 +257,7 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
 
         // 缓存到本地
         wx.setStorageSync('userInfo', userInfo)
+        // TODO may need to download the avatar image
       } else if (registerIdc) {
         SubmitRegister(userInfo)
       }
@@ -313,6 +320,35 @@ const SubmitRegister = (userInfo) => {
     fail: function (err) {
       uni.hideLoading()
       console.error(err)
+    },
+  })
+}
+
+const downloadFile = (url, userInfo) => {
+  // const fileName = url
+  // const dotPosition = fileName.lastIndexOf('.')
+  // const extension = fileName.slice(dotPosition)
+  // const cloudPath = `${Date.now()}-${Math.floor(Math.random(0, 1) * 10000000)}${extension}`
+  if (url === '' || url === undefined) {
+    return ''
+  }
+  wx.cloud.downloadFile({
+    fileID: url,
+    success: (res) => {
+      // get temp file path
+      console.log(res.tempFilePath)
+      userStore.setUserInfo({
+        avatarUrl: res.tempFilePath,
+      })
+      wx.setStorageSync('userInfo', userStore.userInfo)
+    },
+    fail: (err) => {
+      console.error('Upload failed', err)
+      uni.showToast({
+        title: '图片保存失败',
+        icon: 'none',
+        duration: 2000,
+      })
     },
   })
 }

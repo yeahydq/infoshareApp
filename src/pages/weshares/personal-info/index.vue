@@ -36,7 +36,6 @@
           type="nickname"
           placeholder="请输入昵称"
           :value="nickName"
-          :disabled="!isEditing"
           @input="(event) => (nickName = event.target.value)"
         />
       </view>
@@ -52,12 +51,7 @@
       <view class="form-item">
         <text class="label">电话</text>
         <!-- <text class="placeholder">请输入电话</text> -->
-        <input
-          class="placeholder"
-          placeholder="请输入手机号"
-          v-model="phone"
-          :disabled="!isEditing"
-        />
+        <input class="placeholder" placeholder="请输入手机号" v-model="phone" />
       </view>
       <view class="divider" />
 
@@ -68,20 +62,17 @@
             {{ region.label }}
           </option>
         </select> -->
-        <input
-          type="text"
-          class="placeholder"
-          placeholder="请输入地址"
-          v-model="address"
-          :disabled="!isEditing"
-        />
+        <input type="text" class="placeholder" placeholder="请输入地址" v-model="address" />
       </view>
     </view>
 
-    <view class="submit-button" @click="toggleEdit">
+    <!-- <view class="submit-button" @click="toggleEdit">
       <text class="button-text">
         {{ isEditing ? (isButtonDisabled ? `${countdown}秒后可提交` : '提交') : '修改' }}
       </text>
+    </view> -->
+    <view class="submit-button" @click="toggleEdit">
+      <text class="button-text">修改</text>
     </view>
     <!-- <button
       size="default"
@@ -123,38 +114,98 @@ const buttonStyle = computed(() => ({
 const onChooseAvatar = (e) => {
   const { avatarUrl: url } = e.detail
   avatarUrl.value = url
-  console.log(url)
+  uploadFile(url)
+  console.log(url) // "http://tmp/A2TDlqiAIYP5f420fa5178b846d0d5bac3f680a853a9.jpeg"
 }
 
-const toggleEdit = () => {
-  if (isEditing.value) {
-    // Submit changes
-    userStore.setUserInfo({
-      nickName: nickName.value,
-      avatarUrl: avatarUrl.value,
-      phone: phone.value,
-      address: address.value,
-      // manager: manager.value,
-    })
+const uploadFile = (url) => {
+  const fileName = url
+  const dotPosition = fileName.lastIndexOf('.')
+  const extension = fileName.slice(dotPosition)
+  const cloudPath = `${Date.now()}-${Math.floor(Math.random(0, 1) * 10000000)}${extension}`
+  wx.cloud.uploadFile({
+    cloudPath,
+    filePath: fileName,
+    success(res) {
+      wx.hideLoading()
+      // console.log('imgs', res, imgPathList.length, that.data.imgList.length)
+      // imgPathList.push(res.fileID)
+      // if (imgPathList.length == that.data.imgList.length) {
+      //   // 保存信息
+      //   that.SubmitEntrust(imgPathList)
+      // }
+      console.log('上传成功', res.fileID)
+      // updateDabaseRecord({ avatarUrl: res.fileID })
+      userStore.setUserInfo({
+        avatarUrlCloud: res.fileID,
+      })
+    },
+    fail: function (err) {
+      console.error('Upload failed', err)
+      uni.showToast({
+        title: '图片保存失败',
+        icon: 'none',
+        duration: 2000,
+      })
+    },
+    complete: (res) => {},
+  })
+}
+// const uploadAvatar = () => {
+//   uni.chooseImage({
+//     count: 1,
+//     sizeType: ['compressed'],
+//     sourceType: ['album', 'camera'],
+//     success: (res) => {
+//       const tempFilePaths = res.tempFilePaths
+//       console.log(tempFilePaths)
+//       uni.uploadFile({
+//         url: 'https://example.weixin.qq.com/upload', //仅为示例，非真实的接口地址
+//         filePath: tempFilePaths[0],
+//         name: 'file',
+//         formData: {
+//           user: 'test',
+//         },
+//         success: (res) => {
+//           const data = res.data
+//           //do something
+//         },
+//       })
+//     },
+//   })
+// }
 
-    updateDabaseRecord(userStore.userInfo)
-    uni.showToast({
-      title: '信息已更新',
-      icon: 'success',
-    })
-  } else {
-    // Disable button for 3 seconds
-    isButtonDisabled.value = true
-    countdown.value = 3
-    const interval = setInterval(() => {
-      countdown.value -= 1
-      if (countdown.value === 0) {
-        clearInterval(interval)
-        isButtonDisabled.value = false
-      }
-    }, 1000)
-  }
-  isEditing.value = !isEditing.value
+const toggleEdit = () => {
+  // if (isEditing.value) {
+  // Submit changes
+  userStore.setUserInfo({
+    nickName: nickName.value,
+    avatarUrl: avatarUrl.value,
+    // avatarUrlCloud: avatarUrlCloud.value,
+    phone: phone.value,
+    address: address.value,
+    // manager: manager.value,
+  })
+
+  updateDabaseRecord(userStore.userInfo)
+  uni.showToast({
+    title: '信息已更新',
+    icon: 'success',
+  })
+  // }
+  // else {
+  //   // Disable button for 3 seconds
+  //   isButtonDisabled.value = true
+  //   countdown.value = 3
+  //   const interval = setInterval(() => {
+  //     countdown.value -= 1
+  //     if (countdown.value === 0) {
+  //       clearInterval(interval)
+  //       isButtonDisabled.value = false
+  //     }
+  //   }, 1000)
+  // }
+  // isEditing.value = !isEditing.value
 }
 
 const updateDabaseRecord = (userInfo) => {
@@ -183,13 +234,8 @@ const updateDabaseRecord = (userInfo) => {
             icon: 'none',
             duration: 1000,
           })
-          // 修改库变量
-          // userStore.setUserInfo(userInfo)
-          // // 保存成功，更新本地缓存
-          // uni.setStorageSync('userInfo', userInfo)
           // 页面跳转
           uni.navigateBack()
-          // TODO  here is a bug, when new user update their setting, the page still show require login again
         } else {
           // 提示网络错误
           uni.showToast({

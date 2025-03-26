@@ -27,6 +27,7 @@ exports.main = async (event, context) => {
         address: true,
         manager: true,
         avatarUrl: true,
+        avatarUrlCloud: true,
         city: true,
         country: true,
         gender: true,
