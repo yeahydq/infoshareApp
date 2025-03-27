@@ -72,7 +72,7 @@
         <view class="info-text">关于我们</view>
         <view class="info-arrow">></view>
       </view>
-      <view class="info-link" @click="navigateTo(NavigationRoutes.CUSTOMER_SERVICE)">
+      <!-- <view class="info-link" @click="navigateTo(NavigationRoutes.CUSTOMER_SERVICE)">
         <view class="info-icon">🎧</view>
         <view class="info-text">在线客服</view>
         <view class="info-arrow">></view>
@@ -81,7 +81,7 @@
         <view class="info-icon">📞</view>
         <view class="info-text">联系我们</view>
         <view class="info-arrow">></view>
-      </view>
+      </view> -->
       <view class="info-link" @click="navigateTo(NavigationRoutes.SETTINGS)">
         <view class="info-icon">⚙️</view>
         <view class="info-text">系统设置</view>
@@ -148,11 +148,13 @@ const show = ref(false)
 // const userStore = useUserStore()
 // const userStore = computed(() => useUserStore())
 const userStore = useUserStore()
-const userInfo = ref(userStore.userInfo)
+// const userInfo = ref(userStore.userInfo)
 // const hasLogin = computed(() => userStore.value.userInfo?.openid)
 const hasLogin = computed(() => userStore.userInfo?.openid)
-const nickName = ref(userStore.userInfo.nickName || '')
-const avatarUrl = ref(userInfo.value.avatarUrl || '')
+// const nickName = ref(userStore.userInfo.nickName || '')
+// const avatarUrl = ref(userInfo.value.avatarUrl || '')
+const nickName = computed(() => userStore.userInfo.nickName || '')
+const avatarUrl = computed(() => userStore.userInfo.avatarUrl || '')
 
 const navigateToSettings = () => {
   uni.navigateTo({
