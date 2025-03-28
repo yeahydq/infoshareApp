@@ -50,6 +50,7 @@ interface NavigateToOptions {
        "/pages/weshares/system-settings/index" |
        "/pages/weshares/teacher-details/index" |
        "/pages/weshares/teacher-registration/index" |
+       "/pages/weshares/teacher-registration/register-page1" |
        "/pages/weshares/upload-documents/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}

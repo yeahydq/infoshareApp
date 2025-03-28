@@ -282,6 +282,13 @@
       }
     },
     {
+      "path": "pages/weshares/teacher-registration/register-page1",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "教员入驻"
+      }
+    },
+    {
       "path": "pages/weshares/upload-documents/index",
       "type": "page",
       "style": {

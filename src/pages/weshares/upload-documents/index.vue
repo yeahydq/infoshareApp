@@ -6,23 +6,6 @@
 
 <template>
   <view class="container">
-    <page-header title="教员入驻" />
-
-    <view class="process-bar">
-      <view class="process-item">
-        <view class="process-icon">📝</view>
-        <view class="process-text">基本信息</view>
-      </view>
-      <view class="process-item active">
-        <view class="process-icon">📎</view>
-        <view class="process-text">上传资料</view>
-      </view>
-      <view class="process-item">
-        <view class="process-icon">✓</view>
-        <view class="process-text">完成</view>
-      </view>
-    </view>
-
     <view class="form-container">
       <view class="form-group">
         <view class="form-title">
