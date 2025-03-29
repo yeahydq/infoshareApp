@@ -5,263 +5,322 @@
 </route>
 
 <template>
-  <view class="register-container">
-    <view class="header">
-      <text class="title">服务协议</text>
-      <text class="subtitle">请仔细阅读并同意服务协议</text>
-    </view>
+  <PageLayout
+    title="专业人员注册 (3/4)"
+    subtitle="上传证件资料，增加您的信誉度"
+    :steps="steps"
+    :showBack="true"
+    @next="handleNext"
+    @back="handleBack"
+  >
+    <view class="form">
+      <!-- 上传说明 -->
+      <view class="upload-intro">
+        <view class="intro-title">为什么要上传资质证明？</view>
+        <view class="intro-text">
+          上传相关证件和资质证明，不仅能提高您的注册审核通过率，还能增加用户对您的信任。
+          所有资料将严格保密，仅用于平台审核。
+        </view>
+      </view>
 
-    <view class="agreement-content">
-      <scroll-view scroll-y class="agreement-scroll">
-        <view class="agreement-text">
-          <view class="section">
-            <text class="section-title">1. 服务说明</text>
-            <text class="section-content">
-              本平台为专业人才提供展示和接单服务，平台将根据专业人才的资质、经验和服务质量进行审核和推荐。
-            </text>
+      <!-- 证件上传区域 -->
+      <view class="upload-section">
+        <!-- 学历证书 -->
+        <view class="upload-group">
+          <view class="upload-title">
+            学历证书
+            <text class="hint">(选填，有助于提高审核通过率)</text>
           </view>
+          <FileUploader
+            v-model="formData.education"
+            :max="3"
+            :multiple="true"
+            fileType="education"
+            @change="handleEducationChange"
+          />
+        </view>
 
-          <view class="section">
-            <text class="section-title">2. 入驻要求</text>
-            <text class="section-content">
-              2.1 专业人才必须提供真实、有效的身份信息和专业资质证明。 2.2
-              专业人才必须遵守平台规则和相关法律法规。 2.3 专业人才必须保证服务质量，维护平台声誉。
-            </text>
+        <!-- 专业证书 -->
+        <view class="upload-group">
+          <view class="upload-title">
+            专业证书
+            <text class="hint">(选填，有助于提高审核通过率)</text>
           </view>
+          <FileUploader
+            v-model="formData.professional"
+            :max="5"
+            :multiple="true"
+            fileType="professional"
+            @change="handleProfessionalChange"
+          />
+        </view>
 
-          <view class="section">
-            <text class="section-title">3. 服务规范</text>
-            <text class="section-content">
-              3.1 专业人才必须按照约定的时间和地点提供服务。 3.2
-              专业人才必须使用符合标准的工具和材料。 3.3 专业人才必须保护客户隐私和财产安全。
-            </text>
+        <!-- 专业资格证书 -->
+        <view class="form-item">
+          <text class="label">
+            专业资格证书
+            <text class="hint">(选填，如有其他专业资格证书可上传)</text>
+          </text>
+          <FileUploader
+            v-model="formData.qualification"
+            fileType="qualification"
+            :max="1"
+            :showPreview="true"
+            @change="handleQualificationChange"
+          />
+        </view>
+
+        <!-- 身份证上传 -->
+        <view class="upload-group">
+          <view class="upload-title">
+            身份证照片
+            <text class="hint">(选填，有助于提高审核通过率)</text>
           </view>
-
-          <view class="section">
-            <text class="section-title">4. 费用结算</text>
-            <text class="section-content">
-              4.1 平台将按照约定的服务价格进行结算。 4.2 平台将收取一定比例的服务费。 4.3
-              结算周期为每月一次。
-            </text>
-          </view>
-
-          <view class="section">
-            <text class="section-title">5. 违约责任</text>
-            <text class="section-content">
-              5.1 如违反平台规则，平台有权暂停或终止服务。 5.2
-              如造成客户损失，专业人才需承担相应责任。 5.3 平台保留追究法律责任的权利。
-            </text>
+          <view class="upload-container">
+            <view class="upload-item">
+              <text class="upload-label">正面</text>
+              <FileUploader
+                v-model="formData.idCardFront"
+                :max="1"
+                :multiple="false"
+                fileType="idCardFront"
+                @change="handleIdCardFrontChange"
+              />
+            </view>
+            <view class="upload-item">
+              <text class="upload-label">反面</text>
+              <FileUploader
+                v-model="formData.idCardBack"
+                :max="1"
+                :multiple="false"
+                fileType="idCardBack"
+                @change="handleIdCardBackChange"
+              />
+            </view>
           </view>
         </view>
-      </scroll-view>
 
-      <view class="agreement-checkbox">
-        <checkbox-group @change="handleAgreementChange">
-          <label class="checkbox-label">
-            <checkbox :checked="isAgreed" color="#007aff" />
-            <text class="checkbox-text">我已阅读并同意《服务协议》</text>
-          </label>
-        </checkbox-group>
+        <!-- 荣誉证书 -->
+        <view class="upload-group">
+          <view class="upload-title">
+            荣誉证书
+            <text class="hint">(选填，如获奖证书、表彰证书等)</text>
+          </view>
+          <FileUploader
+            v-model="formData.honor"
+            :max="5"
+            :multiple="true"
+            fileType="honor"
+            @change="handleHonorChange"
+          />
+        </view>
       </view>
     </view>
-
-    <!-- 提交按钮 -->
-    <view class="footer">
-      <button class="submit-btn" @tap="handleSubmit" :disabled="!isAgreed">提交申请</button>
-    </view>
-  </view>
+  </PageLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import FileUploader from '@/components/FileUploader/FileUploader.vue'
+import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
-const isAgreed = ref(false)
-
-// 处理协议同意状态
-const handleAgreementChange = (e: any) => {
-  isAgreed.value = e.detail.value.length > 0
+interface Step {
+  number: number
+  status: 'active' | 'completed' | ''
 }
 
-// 提交申请
-const handleSubmit = async () => {
-  if (!isAgreed.value) {
-    uni.showToast({
-      title: '请先同意服务协议',
-      icon: 'none',
-    })
+const steps = ref<Step[]>([
+  { number: 1, status: 'completed' },
+  { number: 2, status: 'completed' },
+  { number: 3, status: 'active' },
+  { number: 4, status: '' },
+])
+
+const formData = reactive({
+  idCardFront: '',
+  idCardBack: '',
+  qualification: '',
+  education: '',
+  professional: '',
+  honor: '',
+})
+
+// 表单是否已提交（用于显示验证错误）
+const formSubmitted = ref(false)
+
+// 处理身份证正面照片上传
+const handleIdCardFrontChange = (files: string[]) => {
+  formData.idCardFront = files[0] || ''
+}
+
+// 处理身份证反面照片上传
+const handleIdCardBackChange = (files: string[]) => {
+  formData.idCardBack = files[0] || ''
+}
+
+// 处理专业资格证书上传
+const handleQualificationChange = (files: string[]) => {
+  formData.qualification = files.join(',')
+}
+
+// 处理学历证书上传
+const handleEducationChange = (files: string[]) => {
+  formData.education = files.join(',')
+}
+
+// 处理专业证书上传
+const handleProfessionalChange = (files: string[]) => {
+  formData.professional = files.join(',')
+}
+
+// 处理荣誉证书上传
+const handleHonorChange = (files: string[]) => {
+  formData.honor = files.join(',')
+}
+
+// 处理下一步
+const handleNext = () => {
+  formSubmitted.value = true
+  if (!validateForm()) {
     return
   }
 
-  try {
-    // 获取前两步的数据
-    const step1Data = uni.getStorageSync('professionalRegisterStep1')
-    const step2Data = uni.getStorageSync('professionalRegisterStep2')
-
-    if (!step1Data || !step2Data) {
-      uni.showToast({
-        title: '请完成所有步骤',
-        icon: 'none',
-      })
-      return
-    }
-
-    // 合并所有数据
-    const submitData = {
-      ...step1Data,
-      ...step2Data,
-      agreement: true,
-      submitTime: new Date().toISOString(),
-    }
-
-    // TODO: 调用后端API提交数据
-    // const res = await uni.request({
-    //   url: 'YOUR_API_ENDPOINT',
-    //   method: 'POST',
-    //   data: submitData,
-    // })
-
-    // 模拟提交成功
-    uni.showLoading({
-      title: '提交中...',
-    })
-
-    setTimeout(() => {
-      uni.hideLoading()
-      uni.showToast({
-        title: '提交成功',
-        icon: 'success',
-      })
-
-      // 清除本地存储的数据
-      uni.removeStorageSync('professionalRegisterStep1')
-      uni.removeStorageSync('professionalRegisterStep2')
-
-      // 延迟跳转到首页
-      setTimeout(() => {
-        uni.switchTab({
-          url: '/pages/index/index',
-        })
-      }, 1500)
-    }, 2000)
-  } catch (error) {
-    console.error('提交失败:', error)
-    uni.showToast({
-      title: '提交失败，请重试',
-      icon: 'none',
-    })
-  }
+  // 保存当前数据到本地存储
+  saveFormData()
+  // 触发next事件
+  emit('next', 3)
 }
 
-// 检查是否已完成前两步
-onMounted(() => {
-  const step1Data = uni.getStorageSync('professionalRegisterStep1')
-  const step2Data = uni.getStorageSync('professionalRegisterStep2')
+// 返回上一步
+const handleBack = () => {
+  // 保存当前数据到本地存储
+  saveFormData()
+  // 触发back事件
+  emit('back', 3)
+}
 
-  if (!step1Data || !step2Data) {
-    uni.showToast({
-      title: '请完成所有步骤',
-      icon: 'none',
-    })
-    uni.navigateBack()
+// 保存表单数据到本地存储
+const saveFormData = () => {
+  uni.setStorageSync('professionalRegisterStep3', formData)
+}
+
+// 表单验证
+const validateForm = () => {
+  // 所有项都选填，总是返回true
+  return true
+}
+
+// 定义emit
+const emit = defineEmits(['next', 'back'])
+
+// 页面加载时获取缓存数据
+onMounted(() => {
+  const cachedData = uni.getStorageSync('professionalRegisterStep3')
+  if (cachedData) {
+    Object.assign(formData, cachedData)
   }
 })
 </script>
 
 <style lang="scss" scoped>
-.register-container {
-  min-height: 100vh;
-  padding: 20rpx;
-  padding-bottom: 120rpx;
-  background-color: #f5f5f5;
-}
+// 定义统一的颜色变量
+$primary-color: #07c160; // 主题色（绿色）
+$background-color: #f5f5f5; // 背景色
+$text-primary: #333; // 主要文本颜色
+$text-secondary: #666; // 次要文本颜色
+$text-hint: #999; // 提示文本颜色
+$border-color: #e0e0e0; // 边框颜色
+$required-color: #ff4d4f; // 必填项标记颜色
 
-.header {
-  padding: 30rpx 0;
-  text-align: center;
+.form {
+  .upload-intro {
+    padding: 20rpx;
+    margin-bottom: 30rpx;
+    background-color: #fff7e6;
+    border-radius: 8rpx;
 
-  .title {
-    font-size: 36rpx;
-    font-weight: bold;
-    color: #333;
-  }
+    .intro-title {
+      display: block;
+      margin-bottom: 10rpx;
+      font-size: 28rpx;
+      font-weight: bold;
+      color: $text-primary;
+    }
 
-  .subtitle {
-    margin-top: 10rpx;
-    font-size: 24rpx;
-    color: #999;
-  }
-}
-
-.agreement-content {
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-  background-color: #fff;
-  border-radius: 12rpx;
-
-  .agreement-scroll {
-    height: 800rpx;
-    margin-bottom: 20rpx;
-
-    .agreement-text {
-      .section {
-        margin-bottom: 30rpx;
-
-        .section-title {
-          display: block;
-          margin-bottom: 16rpx;
-          font-size: 32rpx;
-          font-weight: bold;
-          color: #333;
-        }
-
-        .section-content {
-          font-size: 28rpx;
-          line-height: 1.6;
-          color: #666;
-        }
-      }
+    .intro-text {
+      font-size: 24rpx;
+      line-height: 1.5;
+      color: $text-secondary;
     }
   }
 
-  .agreement-checkbox {
-    padding: 20rpx 0;
-    border-top: 1rpx solid #eee;
+  .upload-section {
+    .upload-group {
+      padding: 20rpx;
+      margin-bottom: 30rpx;
+      background-color: #fff;
+      border-radius: 12rpx;
 
-    .checkbox-label {
-      display: flex;
-      align-items: center;
+      &:last-child {
+        margin-bottom: 0;
+      }
 
-      .checkbox-text {
-        margin-left: 10rpx;
+      .upload-title {
+        margin-bottom: 20rpx;
         font-size: 28rpx;
-        color: #333;
+        font-weight: 500;
+        color: $text-primary;
+
+        .hint {
+          margin-left: 8rpx;
+          font-size: 24rpx;
+          font-weight: normal;
+          color: $text-hint;
+        }
+
+        .required {
+          margin-left: 4rpx;
+          color: $required-color;
+        }
+      }
+
+      .upload-container {
+        display: flex;
+        gap: 30rpx;
+
+        .upload-item {
+          flex: 1;
+
+          .upload-label {
+            display: block;
+            margin-bottom: 10rpx;
+            font-size: 24rpx;
+            color: $text-secondary;
+          }
+        }
       }
     }
-  }
-}
 
-.footer {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 20rpx;
-  background-color: #fff;
-  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+    .form-item {
+      padding: 20rpx;
+      margin-bottom: 30rpx;
+      background-color: #fff;
+      border-radius: 12rpx;
 
-  .submit-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 80rpx;
-    font-size: 32rpx;
-    color: #fff;
-    background-color: #007aff;
-    border-radius: 40rpx;
+      .label {
+        display: block;
+        margin-bottom: 16rpx;
+        font-size: 28rpx;
+        font-weight: 500;
+        color: $text-primary;
 
-    &[disabled] {
-      background-color: #ccc;
+        .hint {
+          margin-left: 8rpx;
+          font-size: 24rpx;
+          font-weight: normal;
+          color: $text-hint;
+        }
+      }
     }
   }
 }

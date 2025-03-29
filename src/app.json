@@ -1,0 +1,40 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/weshares/teacher-registration/index",
+    "pages/weshares/teacher-registration/register-page1",
+    "pages/weshares/teacher-registration/register-page2",
+    "pages/weshares/teacher-registration/register-page3",
+    "pages/weshares/teacher-registration/register-page4",
+    "pages/weshares/teacher-registration/success",
+    "pages/weshares/upload-documents/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "WeShare",
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#007aff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/images/tabbar/home.png",
+        "selectedIconPath": "static/images/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/weshares/teacher-registration/index",
+        "text": "注册",
+        "iconPath": "static/images/tabbar/register.png",
+        "selectedIconPath": "static/images/tabbar/register-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

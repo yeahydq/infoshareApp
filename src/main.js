@@ -6,9 +6,14 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 
 import { createSSRApp } from 'vue'
 import App from './App.vue'
+import FileUploader from './components/FileUploader/FileUploader.vue'
 
 export function createApp() {
   const app = createSSRApp(App)
+
+  // 注册全局组件
+  app.component('FileUploader', FileUploader)
+
   return {
     app,
   }

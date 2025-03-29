@@ -6,140 +6,123 @@
 
 <template>
   <view class="container">
-    <!-- <view class="process-bar">
-      <view class="process-item active" @click="tabActive = '1'">
-        <view class="process-icon">📝</view>
-        <view class="process-text">基本信息</view>
-      </view>
-      <view class="process-item" @click="tabActive = '2'">
-        <view class="process-icon">📎</view>
-        <view class="process-text">上传资料</view>
-      </view>
-      <view class="process-item" @click="tabActive = '3'">
-        <view class="process-icon">✓</view>
-        <view class="process-text">完成</view>
-      </view>
-    </view> -->
-    <wd-tabs v-model="tabActive">
-      <template v-for="(item, index) in tabList" :key="index">
-        <wd-tab :title="item.title" :name="item.key">
-          <registerPage1 v-if="item.key === '1'"></registerPage1>
-          <uploadDocuments v-if="item.key === '2'"></uploadDocuments>
-        </wd-tab>
-      </template>
-    </wd-tabs>
+    <registerPage1
+      v-if="activeComponent === 'registerPage1'"
+      @next="handleNext"
+      @back="handleBack"
+    ></registerPage1>
+    <registerPage2
+      v-if="activeComponent === 'registerPage2'"
+      @next="handleNext"
+      @back="handleBack"
+    ></registerPage2>
+    <registerPage3
+      v-if="activeComponent === 'registerPage3'"
+      @next="handleNext"
+      @back="handleBack"
+    ></registerPage3>
+    <registerPage4
+      v-if="activeComponent === 'registerPage4'"
+      @next="handleNext"
+      @back="handleBack"
+    ></registerPage4>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import registerPage1 from './register-page1.vue'
-import uploadDocuments from '../upload-documents/index.vue'
+import registerPage2 from './register-page2.vue'
+import registerPage3 from './register-page3.vue'
+import registerPage4 from './register-page4.vue'
 
-const tabActive = ref('1') // Changed to ref for reactivity
+// 使用字符串直接表示当前活动组件
+const activeComponent = ref('registerPage1')
 
-const tabList = ref([
-  { key: '1', title: '📝基本信息' },
-  { key: '2', title: '📎上传资料' },
-  { key: '3', title: '完成' },
-])
-// const ruleTemplateTableActions = [
-//   {
-//     label: '编辑',
-//     component: View,
-//   },
-//   {
-//     label: '删除',
-//     component: '<view>删除</view>',
-//   },
-
-/** 基本功能 */
-// const page1 = pagesJson.pages
-//   .filter((e) => e.path.startsWith('pages/demo/base') && !e.hide)
-//   .map((e) => ({
-//     title: handleTitle(e.style?.navigationBarTitleText),
-//     path: e.path,
-//   }))
-
-const currContentList = [
-  {
-    title: '第一页',
-    // path: 'pages/weshares/teacher-registration/register-page1',
-    component: registerPage1,
-  },
-  {
-    title: '第二页',
-    // path: 'pages/weshares/upload-documents/index',
-    component: uploadDocuments,
-  },
-  // {
-  //   title: '完成',
-  //   path: 'pages/demo/route-interceptor/login-model?name=feige&age=30',
-  // },
-  // {
-  //   title: '静默登录',
-  //   path: 'pages/demo/route-interceptor/login-auto?name=feige&age=30',
-  // },
-]
-
-function getComponentName(key) {
-  // 根据 key 返回对应的组件名
-  switch (key) {
-    case 'registerPage1':
-      return 'registerPage1'
-    case 'uploadDocuments':
-      return 'uploadDocuments'
-    default:
-      return 'registerPage1' // 返回一个默认组件名
+// 处理页面切换
+const handleNext = (step) => {
+  switch (step) {
+    case 1:
+      activeComponent.value = 'registerPage2'
+      break
+    case 2:
+      activeComponent.value = 'registerPage3'
+      break
+    case 3:
+      activeComponent.value = 'registerPage4'
+      break
+    case 4:
+      // 完成注册，跳转到首页
+      uni.switchTab({
+        url: '/pages/index/index',
+      })
+      break
   }
 }
 
-// {
-//   label: $t('common.edit'),
-//   func: async (row) => {
-//     console.log('编辑： ', row.edition_id)
-//     selectedDataId.value = row.edition_id
-//     let currentDetail = {}
-//     // 编辑和详情模式mode均为view,组件内通过 isPreviewMode 再去区分编辑、详情
-//     if (selectedDataId.value && selectedDataId.value !== -1) {
-//       currentDetail = await editTemplateRef.value.getDetailByTable(selectedDataId.value)
-//       if (!currentDetail.editable) {
-//         return FMessage.error('没有编辑权限')
-//       }
-//       openEditPanel('view')
-//     }
-//   },
-// },
-// {
-//   label: $t('common.delete'),
-//   class: 'btn-delete',
-//   func: async (row) => {
-//     console.log('删除 ', row.edition_id)
-//     selectedDataId.value = row.edition_id
-//     let currentDetail = {}
-//     if (selectedDataId.value && selectedDataId.value !== -1) {
-//       currentDetail = await editTemplateRef.value.getDetailByTable(selectedDataId.value)
-//       if (!currentDetail.editable) {
-//         return FMessage.error('没有删除权限')
-//       }
-//     }
-//     FModal.confirm({
-//       title: $t('common.prompt'),
-//       content: `确认删除中文名称为【${row.cn_name}】的标准值？`,
-//       async onOk() {
-//         console.log('信息', row)
-//         await FRequest('api/v1/projector/standardValue/delete', {
-//           edition_id: row.edition_id,
-//           type: 1,
-//         })
-//         FMessage.success($t('toastSuccess.deleteSuccess'))
-//         loadListData()
-//       },
-//     })
-//   },
-// },
+// 处理返回
+const handleBack = (step) => {
+  switch (step) {
+    case 2:
+      activeComponent.value = 'registerPage1'
+      break
+    case 3:
+      activeComponent.value = 'registerPage2'
+      break
+    case 4:
+      activeComponent.value = 'registerPage3'
+      break
+  }
+}
+
+onMounted(() => {
+  console.log('Teacher registration index page mounted')
+
+  // 初始化第一步数据（创建一个空对象）
+  const initStep1Data = uni.getStorageSync('professionalRegisterStep1')
+  if (!initStep1Data) {
+    console.log('Initializing step 1 data with default values')
+    uni.setStorageSync('professionalRegisterStep1', {
+      name: '',
+      phone: '',
+      idCard: '',
+      professionalType: '', // 移除默认值
+    })
+  }
+
+  // 根据缓存决定显示哪个页面
+  try {
+    const step1Data = uni.getStorageSync('professionalRegisterStep1')
+    const step2Data = uni.getStorageSync('professionalRegisterStep2')
+    const step3Data = uni.getStorageSync('professionalRegisterStep3')
+
+    if (!step1Data || !step2Data || !step3Data) {
+      throw new Error('请先完成前三步信息填写')
+    }
+
+    if (step2Data && Object.keys(step2Data).length > 0) {
+      // 如果有第二步数据，显示第三步
+      activeComponent.value = 'registerPage3'
+    } else if (step1Data && Object.keys(step1Data).length > 0) {
+      // 如果有第一步数据，显示第二步
+      activeComponent.value = 'registerPage2'
+    } else {
+      // 默认显示第一步
+      activeComponent.value = 'registerPage1'
+    }
+    console.log('Active component set to:', activeComponent.value)
+  } catch (error) {
+    console.error('Error initializing teacher registration:', error)
+    // 出错时默认显示第一步
+    activeComponent.value = 'registerPage1'
+  }
+})
 </script>
 
 <style>
-@import './style.css';
+.container {
+  width: 100%;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
 </style>

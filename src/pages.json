@@ -22,7 +22,6 @@
     "fontSize": "12px",
     "iconWidth": "28px",
     "spacing": "4px",
-    "blurEffect": "extralight",
     "list": [
       {
         "pagePath": "pages/weshares/index/index",
@@ -321,6 +320,10 @@
       "style": {
         "navigationBarTitleText": "专业人才入驻"
       }
+    },
+    {
+      "path": "pages/weshares/teacher-registration/register-page4",
+      "type": "page"
     },
     {
       "path": "pages/weshares/teacher-registration/success",

@@ -25,7 +25,6 @@ export default defineUniPages({
     fontSize: '12px',
     iconWidth: '28px',
     spacing: '4px',
-    blurEffect: 'extralight',
     list: [
       {
         pagePath: 'pages/weshares/index/index',
