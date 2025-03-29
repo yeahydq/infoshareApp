@@ -23,6 +23,15 @@ import { ref, onMounted } from 'vue'
 import TimeSchedule from '@/components/TimeSchedule.vue'
 import type { TimeSchedule as TimeScheduleType } from '@/types/cloud'
 
+// 扩展uni类型以支持cloud属性
+declare global {
+  interface Uni {
+    cloud: {
+      callFunction(options: { name: string; data?: any }): Promise<any>
+    }
+  }
+}
+
 const timeScheduleRef = ref()
 
 // 获取当前时间安排
