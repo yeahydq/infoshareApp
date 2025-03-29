@@ -37,3 +37,18 @@ recommend ： 智能匹配页面： 首页？
   - 我的申请
     - applyStudent : 貌似是老师添加学生的页面
     - applyTeacher ： 主动向教师发送申请
+
+## TODO List
+
+### Bug Fixes
+
+- **TimeSchedule组件月份切换问题**: TimeSchedule.vue组件中的月份切换功能（前进/后退按钮）在切换月份时存在兼容性问题，需要修复以确保日期选择在90天范围内正常工作。当前尝试通过以下方法未能解决：
+  - 改变@tap为@click事件
+  - 替换picker组件为简化的月份显示
+  - 调整日期计算和格式化方法
+  - 直接修改currentDate变量
+
+### Features
+
+- 完善全局样式和主题
+- 优化移动端适配

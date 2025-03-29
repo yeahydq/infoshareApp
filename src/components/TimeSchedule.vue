@@ -5,17 +5,10 @@
       <view class="calendar-header">
         <view class="month-selector">
           <view class="month-nav">
-            <text class="nav-btn" @tap="prevMonth">←</text>
-            <picker
-              mode="date"
-              :value="currentDate"
-              :start="startDate"
-              :end="endDate"
-              @change="handleMonthChange"
-            >
-              <view class="picker">{{ currentMonth }}月</view>
-            </picker>
-            <text class="nav-btn" @tap="nextMonth">→</text>
+            <text class="nav-btn" @click="prevMonth">←</text>
+            <!-- 简化日期显示，不使用picker -->
+            <view class="month-display">{{ currentYear }}年{{ currentMonth }}月</view>
+            <text class="nav-btn" @click="nextMonth">→</text>
           </view>
         </view>
       </view>
@@ -35,8 +28,9 @@
               { today: day.isToday },
               { 'other-month': !day.isCurrentMonth },
               { 'past-date': day.isPast },
+              { 'out-of-range': day.isOutOfRange },
             ]"
-            @tap="selectDate(day)"
+            @click="handleDateClick(day)"
           >
             <text class="day-number">{{ day.dayNumber }}</text>
             <view v-if="day.hasSchedule" class="schedule-dot"></view>
@@ -47,11 +41,11 @@
 
     <!-- 日期详情弹窗 -->
     <view v-if="showDateDetail" class="date-detail-popup">
-      <view class="popup-mask" @tap="closeDateDetail"></view>
+      <view class="popup-mask" @click="closeDateDetail"></view>
       <view class="popup-content">
         <view class="popup-header">
           <text class="date-title">{{ formatDate(selectedDate) }}</text>
-          <text class="close-btn" @tap="closeDateDetail">×</text>
+          <text class="close-btn" @click="closeDateDetail">×</text>
         </view>
         <view class="time-slots">
           <view class="time-slot-header">
@@ -69,7 +63,7 @@
                   booked: isSlotBooked(selectedDate, slot.value),
                 },
               ]"
-              @tap="isSlotBooked(selectedDate, slot.value) ? null : toggleTimeSlot(slot.value)"
+              @click="isSlotBooked(selectedDate, slot.value) ? null : toggleTimeSlot(slot.value)"
             >
               <text>{{ slot.label }}</text>
               <text
@@ -93,8 +87,8 @@
           </scroll-view>
         </view>
         <view class="popup-actions">
-          <text class="action-btn" @tap="selectAllTimes">全选</text>
-          <text class="action-btn" @tap="clearAllTimes">清空</text>
+          <text class="action-btn" @click="selectAllTimes">全选</text>
+          <text class="action-btn" @click="clearAllTimes">清空</text>
         </view>
       </view>
     </view>
@@ -106,7 +100,7 @@
         <text
           v-if="selectedDate && !isPastDate(selectedDate)"
           class="add-btn"
-          @tap="editSelectedDateTimes"
+          @click="editSelectedDateTimes"
         >
           维护时间段
         </text>
@@ -153,11 +147,11 @@
 
     <!-- 时间段选择弹窗 -->
     <view v-if="showTimeSelector" class="time-selector-popup">
-      <view class="popup-mask" @tap="hideTimeSelector"></view>
+      <view class="popup-mask" @click="hideTimeSelector"></view>
       <view class="popup-content">
         <view class="popup-header">
           <text class="popup-title">{{ formatDate(selectedDate) }} 时间段</text>
-          <text class="close-btn" @tap="hideTimeSelector">×</text>
+          <text class="close-btn" @click="hideTimeSelector">×</text>
         </view>
 
         <view class="time-slots">
@@ -176,7 +170,7 @@
                   booked: isSlotBooked(selectedDate, slot.value),
                 },
               ]"
-              @tap="
+              @click="
                 isSlotBooked(selectedDate, slot.value) ? null : toggleSelectorTimeSlot(slot.value)
               "
             >
@@ -203,9 +197,9 @@
         </view>
 
         <view class="popup-actions">
-          <text class="action-btn" @tap="selectAllSelectorTimes">全选</text>
-          <text class="action-btn" @tap="clearAllSelectorTimes">清空</text>
-          <text class="action-btn confirm" @tap="confirmTimeSelection">确定</text>
+          <text class="action-btn" @click="selectAllSelectorTimes">全选</text>
+          <text class="action-btn" @click="clearAllSelectorTimes">清空</text>
+          <text class="action-btn confirm" @click="confirmTimeSelection">确定</text>
         </view>
       </view>
     </view>
@@ -217,10 +211,53 @@ import { ref, computed, watch, onMounted } from 'vue'
 
 // 生成未来3个月的日期范围
 const startDate = new Date().toISOString().split('T')[0]
-const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-const currentDate = ref(new Date().toISOString().split('T')[0])
+// 更精确地计算90天后的日期
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+const endDateObj = new Date(today)
+endDateObj.setDate(today.getDate() + 90 - 1) // 今天+89天=90天范围
+const endDate = endDateObj.toISOString().split('T')[0]
+
+// 为picker组件准备的日期范围
+const startDateForPicker = computed(() => {
+  // 当前月份的第一天
+  const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  return todayMonth.toISOString().split('T')[0]
+})
+
+const endDateForPicker = computed(() => {
+  // 最后可预约日期所在月份的第一天
+  const lastBookableMonth = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 1)
+  // 移到下一个月，因为我们需要包含整个最后一个月
+  lastBookableMonth.setMonth(lastBookableMonth.getMonth() + 1)
+  lastBookableMonth.setDate(0) // 设置为月的最后一天
+  return lastBookableMonth.toISOString().split('T')[0]
+})
+
+// 提取为全局函数：判断日期是否超出可预约范围
+const isDateOutOfRange = (dateStr) => {
+  const date = new Date(dateStr)
+  date.setHours(0, 0, 0, 0)
+  return date < today || date > endDateObj
+}
+
+// 提取为全局函数：判断日期是否是过去的日期
+const isPastDate = (dateStr) => {
+  const date = new Date(dateStr)
+  date.setHours(0, 0, 0, 0)
+  return date < today
+}
+
+// 设置当前日期为今天，格式为YYYY-MM-DD
+const now = new Date()
+const year = now.getFullYear()
+const month = String(now.getMonth() + 1).padStart(2, '0')
+const day = String(now.getDate()).padStart(2, '0')
+const currentDate = ref(`${year}-${month}-${day}`)
+
 const currentMonth = computed(() => new Date(currentDate.value).getMonth() + 1)
+const currentYear = computed(() => new Date(currentDate.value).getFullYear())
 const selectedDate = ref<string | null>(null)
 
 // 选中的星期和时间段
@@ -264,8 +301,7 @@ const calendarDays = computed(() => {
   const firstDayWeek = firstDay.getDay()
 
   const days = []
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // 设置为今天的开始时间
+  // 使用全局变量中的today，确保一致性
   const todayStr = today.toISOString().split('T')[0]
 
   // 添加上个月的日期
@@ -281,6 +317,7 @@ const calendarDays = computed(() => {
       isToday: date === todayStr,
       hasSchedule: hasScheduleForDate(date),
       isPast: isPastDate(date),
+      isOutOfRange: isDateOutOfRange(date),
     })
   }
 
@@ -294,6 +331,7 @@ const calendarDays = computed(() => {
       isToday: date === todayStr,
       hasSchedule: hasScheduleForDate(date),
       isPast: isPastDate(date),
+      isOutOfRange: isDateOutOfRange(date),
     })
   }
 
@@ -310,6 +348,7 @@ const calendarDays = computed(() => {
       isToday: date === todayStr,
       hasSchedule: hasScheduleForDate(date),
       isPast: isPastDate(date),
+      isOutOfRange: isDateOutOfRange(date),
     })
   }
 
@@ -325,11 +364,28 @@ const hasScheduleForDate = (date: string) => {
 // 控制日期详情弹窗的显示
 const showDateDetail = ref(false)
 
-// 选择日期
-const selectDate = (day: any) => {
+// 处理日期点击
+const handleDateClick = (day) => {
+  // 如果不是当前月份的日期，不做任何操作
   if (!day.isCurrentMonth) return
+
+  // 检查日期是否在有效范围内
+  if (isDateOutOfRange(day.date)) {
+    showOutOfRangeToast()
+    return
+  }
+
+  // 检查是否是过去的日期
+  if (day.isPast) {
+    uni.showToast({
+      title: '不能选择过去的日期',
+      icon: 'none',
+    })
+    return
+  }
+
+  // 更新选中的日期
   selectedDate.value = day.date
-  // 不再自动打开详情弹窗
   showDateDetail.value = false
 }
 
@@ -398,49 +454,126 @@ const clearAllTimes = () => {
   selectedSlots.value[selectedDate.value] = []
 }
 
-// 切换到上一个月
+// 使用uni-app原生方法重写月份切换逻辑
 const prevMonth = () => {
-  const current = new Date(currentDate.value)
-  const prevDate = new Date(current.getFullYear(), current.getMonth() - 1, 1)
+  try {
+    const dateObj = new Date(currentDate.value)
 
-  // 获取今天的日期作为起始日期，但只比较年月，不比较日
-  const today = new Date()
-  const startYear = today.getFullYear()
-  const startMonth = today.getMonth()
+    // 获取当前视图的年月
+    const currentViewYear = dateObj.getFullYear()
+    const currentViewMonth = dateObj.getMonth()
 
-  // 只要前一个月的年份和月份不早于今天的年份和月份，就允许切换
-  const prevYear = prevDate.getFullYear()
-  const prevMonthNum = prevDate.getMonth()
+    // 获取前一个月
+    let prevMonthObj
+    if (currentViewMonth === 0) {
+      // 如果是1月，要回到上一年的12月
+      prevMonthObj = new Date(currentViewYear - 1, 11, 1)
+    } else {
+      prevMonthObj = new Date(currentViewYear, currentViewMonth - 1, 1)
+    }
 
-  if (prevYear > startYear || (prevYear === startYear && prevMonthNum >= startMonth)) {
-    const year = prevDate.getFullYear()
-    const month = String(prevDate.getMonth() + 1).padStart(2, '0')
-    const day = String(prevDate.getDate()).padStart(2, '0')
-    currentDate.value = `${year}-${month}-${day}`
+    // 检查是否不早于当前月
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    if (prevMonthObj >= currentMonth) {
+      // 格式化为yyyy-MM-dd
+      const year = prevMonthObj.getFullYear()
+      const month = String(prevMonthObj.getMonth() + 1).padStart(2, '0')
+      // 直接修改currentDate
+      currentDate.value = `${year}-${month}-01`
+      console.log('切换到上个月:', currentDate.value)
+    } else {
+      uni.showToast({
+        title: '不能查看过去的月份',
+        icon: 'none',
+      })
+    }
+  } catch (error) {
+    console.error('prevMonth error:', error)
   }
 }
 
-// 切换到下一个月
 const nextMonth = () => {
-  const current = new Date(currentDate.value)
-  const nextDate = new Date(current.getFullYear(), current.getMonth() + 1, 1)
-  const end = new Date(endDate)
-  if (nextDate <= end) {
-    const year = nextDate.getFullYear()
-    const month = String(nextDate.getMonth() + 1).padStart(2, '0')
-    const day = String(nextDate.getDate()).padStart(2, '0')
-    currentDate.value = `${year}-${month}-${day}`
+  try {
+    const dateObj = new Date(currentDate.value)
+
+    // 获取当前视图的年月
+    const currentViewYear = dateObj.getFullYear()
+    const currentViewMonth = dateObj.getMonth()
+
+    // 获取下一个月
+    let nextMonthObj
+    if (currentViewMonth === 11) {
+      // 如果是12月，要前进到下一年的1月
+      nextMonthObj = new Date(currentViewYear + 1, 0, 1)
+    } else {
+      nextMonthObj = new Date(currentViewYear, currentViewMonth + 1, 1)
+    }
+
+    // 检查是否不晚于最后可预约月份
+    const lastBookableMonth = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 1)
+
+    if (nextMonthObj <= lastBookableMonth) {
+      // 格式化为yyyy-MM-dd
+      const year = nextMonthObj.getFullYear()
+      const month = String(nextMonthObj.getMonth() + 1).padStart(2, '0')
+
+      // 直接修改currentDate
+      currentDate.value = `${year}-${month}-01`
+      console.log('切换到下个月:', currentDate.value)
+    } else {
+      uni.showToast({
+        title: '已到最后可预约月份',
+        icon: 'none',
+      })
+    }
+  } catch (error) {
+    console.error('nextMonth error:', error)
   }
 }
 
 // 处理月份变化
 const handleMonthChange = (e: any) => {
-  const selectedDate = new Date(e.detail.value)
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  // 确保选择的日期在允许的范围内
-  if (selectedDate >= start && selectedDate <= end) {
-    currentDate.value = e.detail.value
+  try {
+    // 获取选择的日期值
+    const dateValue = e.detail.value // 格式为: "2024-06"
+
+    // 添加日份以创建完整日期对象（默认第1天）
+    const dateWithDay = dateValue + '-01'
+    const selectedDate = new Date(dateWithDay)
+
+    // 获取当前月份的第一天
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    // 获取最后一个可预约月份的第一天
+    const lastBookableMonth = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 1)
+
+    console.log(
+      '选择月份:',
+      dateValue,
+      '判断范围:',
+      currentMonth.toISOString().slice(0, 10),
+      lastBookableMonth.toISOString().slice(0, 10),
+    )
+
+    // 检查选择的月份是否在允许范围内
+    if (selectedDate >= currentMonth && selectedDate <= lastBookableMonth) {
+      // 直接使用作为当前日期
+      currentDate.value = dateWithDay
+      console.log('设置月份为:', currentDate.value)
+    } else if (selectedDate < currentMonth) {
+      uni.showToast({
+        title: '不能选择过去的月份',
+        icon: 'none',
+      })
+    } else {
+      uni.showToast({
+        title: '超出可预约的月份范围',
+        icon: 'none',
+      })
+    }
+  } catch (error) {
+    console.error('处理月份变化出错:', error)
   }
 }
 
@@ -813,97 +946,39 @@ const hasBookedSlots = computed(() => {
   return bookedSlots.value[selectedDate.value] && bookedSlots.value[selectedDate.value].length > 0
 })
 
-// 检查日期是否是过去的日期
-const isPastDate = (date: string) => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // 设置为今天的开始时间
-  const checkDate = new Date(date)
-  checkDate.setHours(0, 0, 0, 0) // 设置为检查日期的开始时间
-  return checkDate < today
-}
-
-// 显示过去日期不可修改的提示
-const showPastDateToast = () => {
+// 显示超出范围提示
+const showOutOfRangeToast = () => {
   uni.showToast({
-    title: '过去的日期不可修改',
+    title: '该日期不在可预约范围内',
     icon: 'none',
   })
 }
 </script>
 
 <style lang="scss" scoped>
-// 基础选择器放在最前面
+// 通用样式
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+// 基础选择器
 .day-number {
   font-size: 14px;
-  text-align: center;
   color: #333;
-}
-
-.time-slot {
-  padding: 12px 16px;
-  font-size: 14px;
-  background-color: #f0f2f5;
-  border-radius: 4px;
-  margin-bottom: 10px;
   text-align: center;
-  position: relative;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #eee;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &.selected {
-    background-color: #f0f9ff;
-  }
-
-  .status {
-    font-size: 12px;
-    color: #999;
-
-    &.selected {
-      color: #5bbdca;
-    }
-
-    &.booked {
-      color: #ff6b6b;
-    }
-  }
-
-  &.booked {
-    opacity: 0.6;
-    background-color: #f2f2f2;
-    cursor: not-allowed;
-  }
-}
-
-.date-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.time-ranges {
-  margin-top: 5px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .time-range {
+  display: inline-block;
   padding: 4px 8px;
+  margin-right: 5px;
+  margin-bottom: 5px;
   font-size: 12px;
   color: #5bbdca;
   background-color: #f0f9ff;
   border-radius: 4px;
-  display: inline-block;
-  margin-right: 5px;
-  margin-bottom: 5px;
 
   &.booked {
     color: #ff6b6b;
@@ -914,12 +989,6 @@ const showPastDateToast = () => {
     color: #5bbdca;
     background-color: #f0f9ff;
   }
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
 }
 
 // 组件容器
@@ -968,11 +1037,13 @@ const showPastDateToast = () => {
           }
         }
 
-        .picker {
+        .month-display {
+          min-width: 120px;
           padding: 8px 16px;
           font-size: 16px;
           font-weight: 500;
           color: #333;
+          text-align: center;
           background: #f5f5f5;
           border-radius: 4px;
         }
@@ -1049,101 +1120,20 @@ const showPastDateToast = () => {
           opacity: 0.6;
         }
 
+        &.out-of-range {
+          color: #aaa;
+          cursor: not-allowed;
+          background-color: #f8f8f8;
+          border: 1px dashed #ddd;
+
+          .day-number {
+            color: #aaa;
+          }
+        }
+
         &.other-month .day-number {
           color: #999;
         }
-      }
-    }
-  }
-}
-
-// 弹窗
-.date-detail-popup {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-
-  .popup-mask {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
-  .popup-content {
-    position: relative;
-    width: 100%;
-    max-height: 80vh;
-    padding: 20px;
-    overflow-y: auto;
-    background-color: #fff;
-    border-radius: 16px 16px 0 0;
-
-    .popup-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-
-      .close-btn {
-        padding: 8px;
-        font-size: 24px;
-        color: #999;
-      }
-    }
-
-    .time-slots {
-      margin-bottom: 20px;
-
-      .time-slot-header {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px;
-        margin-bottom: 12px;
-        font-size: 14px;
-        color: #666;
-        background-color: #f5f5f5;
-        border-radius: 8px;
-      }
-
-      .time-slot-list {
-        height: 300px;
-        border: 1px solid #eee;
-        border-radius: 8px;
-      }
-    }
-
-    .popup-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: space-between;
-      padding: 16px 0;
-
-      .action-btn {
-        flex: 1;
-        padding: 8px;
-        font-size: 14px;
-        color: #5bbdca;
-        text-align: center;
-        background-color: #f0f9ff;
-        border-radius: 4px;
-      }
-
-      .confirm {
-        flex: 1;
-        padding: 8px;
-        font-size: 14px;
-        color: #fff;
-        text-align: center;
-        background-color: #5bbdca;
-        border-radius: 4px;
       }
     }
   }
@@ -1158,9 +1148,8 @@ const showPastDateToast = () => {
     margin-bottom: 12px;
 
     .section-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
+      display: block;
+      margin-bottom: 12px;
     }
 
     .add-btn {
@@ -1291,43 +1280,6 @@ const showPastDateToast = () => {
   }
 }
 
-.selected-times {
-  .section-title {
-    display: block;
-    margin-bottom: 12px;
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-  }
-
-  .selected-list {
-    .date-group {
-      margin-bottom: 12px;
-
-      .date {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 14px;
-        color: #666;
-      }
-
-      .time-ranges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-
-        .time-range {
-          padding: 4px 8px;
-          font-size: 12px;
-          color: #5bbdca;
-          background-color: #f0f9ff;
-          border-radius: 4px;
-        }
-      }
-    }
-  }
-}
-
 // 时间段显示
 .time-slot-display {
   padding: 16px;
@@ -1356,5 +1308,154 @@ const showPastDateToast = () => {
     border: 1px dashed #ddd;
     border-radius: 8px;
   }
+}
+
+// 弹窗
+.date-detail-popup {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+
+  .popup-mask {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .popup-content {
+    position: relative;
+    width: 100%;
+    max-height: 80vh;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #fff;
+    border-radius: 16px 16px 0 0;
+
+    .popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+
+      .close-btn {
+        padding: 8px;
+        font-size: 24px;
+        color: #999;
+      }
+    }
+
+    .time-slots {
+      margin-bottom: 20px;
+
+      .time-slot-header {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #666;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+      }
+
+      .time-slot-list {
+        height: 300px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+      }
+    }
+
+    .popup-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      padding: 16px 0;
+
+      .action-btn {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+        color: #5bbdca;
+        text-align: center;
+        background-color: #f0f9ff;
+        border-radius: 4px;
+      }
+
+      .confirm {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+        color: #fff;
+        text-align: center;
+        background-color: #5bbdca;
+        border-radius: 4px;
+      }
+    }
+  }
+}
+
+// 基础选择器（移动到样式表底部）
+.time-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  text-align: center;
+  background-color: #f0f2f5;
+  border-bottom: 1px solid #eee;
+  border-radius: 4px;
+  transition: all 0.3s;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &.selected {
+    background-color: #f0f9ff;
+  }
+
+  .status {
+    font-size: 12px;
+    color: #999;
+
+    &.selected {
+      color: #5bbdca;
+    }
+
+    &.booked {
+      color: #ff6b6b;
+    }
+  }
+
+  &.booked {
+    cursor: not-allowed;
+    background-color: #f2f2f2;
+    opacity: 0.6;
+  }
+}
+
+.date-title {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.time-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
 }
 </style>
