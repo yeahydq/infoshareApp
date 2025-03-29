@@ -1,6 +1,6 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '教员入驻' },
+  style: { navigationBarTitleText: '专业人士注册' },
 }
 </route>
 

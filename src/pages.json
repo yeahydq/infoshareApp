@@ -14,32 +14,33 @@
     }
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#018d71",
-    "backgroundColor": "#F8F8F8",
-    "borderStyle": "black",
-    "height": "50px",
-    "fontSize": "10px",
-    "iconWidth": "24px",
-    "spacing": "3px",
+    "color": "#8a8a8a",
+    "selectedColor": "#2B5CFF",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "height": "56px",
+    "fontSize": "12px",
+    "iconWidth": "28px",
+    "spacing": "4px",
+    "blurEffect": "extralight",
     "list": [
       {
         "pagePath": "pages/weshares/index/index",
-        "iconPath": "static/tabbar/homeHL.png",
-        "selectedIconPath": "static/tabbar/homeHL.png",
+        "iconPath": "/static/tabbar/home.png",
+        "selectedIconPath": "/static/tabbar/home-active.png",
         "text": "首页"
       },
       {
         "pagePath": "pages/weshares/orders/index",
-        "iconPath": "static/tabbar/homeHL.png",
-        "selectedIconPath": "static/tabbar/homeHL.png",
+        "iconPath": "/static/tabbar/message.png",
+        "selectedIconPath": "/static/tabbar/message-active.png",
         "text": "订单"
       },
       {
         "pagePath": "pages/weshares/personal-center/index",
-        "iconPath": "static/tabbar/homeHL.png",
-        "selectedIconPath": "static/tabbar/homeHL.png",
-        "text": "个人中心"
+        "iconPath": "/static/tabbar/mine.png",
+        "selectedIconPath": "/static/tabbar/mine-active.png",
+        "text": "我的"
       }
     ]
   },
@@ -88,6 +89,10 @@
     },
     {
       "path": "pages/testpage/sample4",
+      "type": "page"
+    },
+    {
+      "path": "pages/weshares/index",
       "type": "page"
     },
     {
@@ -209,10 +214,26 @@
       }
     },
     {
+      "path": "pages/weshares/orders/detail",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "订单详情",
+        "navigationStyle": "default"
+      }
+    },
+    {
       "path": "pages/weshares/orders/index",
       "type": "page",
       "style": {
         "navigationBarTitleText": "订单",
+        "navigationStyle": "default"
+      }
+    },
+    {
+      "path": "pages/weshares/orders/review",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "课程评价",
         "navigationStyle": "default"
       }
     },
@@ -250,7 +271,7 @@
       "path": "pages/weshares/registration-complete/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "教员入驻"
+        "navigationBarTitleText": "专业人员注册"
       }
     },
     {
@@ -278,21 +299,39 @@
       "path": "pages/weshares/teacher-registration/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "教员入驻"
+        "navigationBarTitleText": "专业人士注册"
       }
     },
     {
       "path": "pages/weshares/teacher-registration/register-page1",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "教员入驻"
+        "navigationBarTitleText": "专业人员注册"
       }
+    },
+    {
+      "path": "pages/weshares/teacher-registration/register-page2",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人员注册"
+      }
+    },
+    {
+      "path": "pages/weshares/teacher-registration/register-page3",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人才入驻"
+      }
+    },
+    {
+      "path": "pages/weshares/teacher-registration/success",
+      "type": "page"
     },
     {
       "path": "pages/weshares/upload-documents/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "教员入驻"
+        "navigationBarTitleText": "专业人士注册"
       }
     }
   ],

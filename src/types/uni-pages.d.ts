@@ -12,6 +12,7 @@ interface NavigateToOptions {
        "/pages/testpage/sample2" |
        "/pages/testpage/sample3" |
        "/pages/testpage/sample4" |
+       "/pages/weshares/index" |
        "/pages/shareinfo/aboutUs/aboutUs" |
        "/pages/shareinfo/account/account" |
        "/pages/shareinfo/account/setting" |
@@ -40,7 +41,9 @@ interface NavigateToOptions {
        "/pages/weshares/address-management/index" |
        "/pages/weshares/find-teachers/index" |
        "/pages/weshares/help-center/index" |
+       "/pages/weshares/orders/detail" |
        "/pages/weshares/orders/index" |
+       "/pages/weshares/orders/review" |
        "/pages/weshares/personal-center/index" |
        "/pages/weshares/personal-info/index" |
        "/pages/weshares/qr-code/index" |
@@ -51,6 +54,9 @@ interface NavigateToOptions {
        "/pages/weshares/teacher-details/index" |
        "/pages/weshares/teacher-registration/index" |
        "/pages/weshares/teacher-registration/register-page1" |
+       "/pages/weshares/teacher-registration/register-page2" |
+       "/pages/weshares/teacher-registration/register-page3" |
+       "/pages/weshares/teacher-registration/success" |
        "/pages/weshares/upload-documents/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}

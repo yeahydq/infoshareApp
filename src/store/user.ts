@@ -30,6 +30,7 @@ export const useUserStore = defineStore(
     }
   },
   {
+    // 如果需要持久化就写 true, 不需要持久化就写 false（或者去掉这个配置项）
     persist: true,
   },
 )

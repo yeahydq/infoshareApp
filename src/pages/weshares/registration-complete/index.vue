@@ -1,6 +1,6 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '教员入驻' },
+  style: { navigationBarTitleText: '专业人员注册' },
 }
 </route>
 
@@ -30,7 +30,9 @@
         />
       </view>
       <view class="completion-text">填写完成</view>
-      <view class="completion-message">您的教员资料已成功提交，我们将在3个工作日内审核完成</view>
+      <view class="completion-message">
+        您的专业人员资料已成功提交，我们将在3个工作日内审核完成
+      </view>
     </view>
 
     <view class="registration-info" v-if="combinedFormData">
@@ -47,15 +49,15 @@
           <text class="info-value">{{ basicInfo.phone }}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">教学科目:</text>
+          <text class="info-label">专业类型:</text>
           <text class="info-value">{{ basicInfo.subject }}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">教龄:</text>
+          <text class="info-label">从业年限:</text>
           <text class="info-value">{{ basicInfo.experience }} 年</text>
         </view>
         <view class="info-item">
-          <text class="info-label">授课方式:</text>
+          <text class="info-label">服务方式:</text>
           <text class="info-value">{{ basicInfo.teachingMethod }}</text>
         </view>
       </view>
@@ -119,7 +121,7 @@
         </view>
         <view class="modal-body">
           <view class="success-icon">✓</view>
-          <text class="success-message">您的教员入驻申请已成功提交</text>
+          <text class="success-message">您的专业人员注册申请已成功提交</text>
           <text class="success-detail">请耐心等待审核，审核结果将通过短信通知您</text>
         </view>
         <view class="modal-footer">
@@ -170,7 +172,7 @@ const submitting = ref(false)
 // 页面加载时从localStorage获取数据
 onMounted(() => {
   // 获取基本信息
-  const basicInfoStr = localStorage.getItem('teacherRegistrationBasicInfo')
+  const basicInfoStr = localStorage.getItem('professionalRegisterStep1')
   if (basicInfoStr) {
     try {
       const data = JSON.parse(basicInfoStr)
@@ -185,7 +187,7 @@ onMounted(() => {
   }
 
   // 获取上传资料信息
-  const docInfoStr = localStorage.getItem('teacherRegistrationDocuments')
+  const docInfoStr = localStorage.getItem('professionalRegisterStep2')
   if (docInfoStr) {
     try {
       const data = JSON.parse(docInfoStr)
@@ -206,12 +208,12 @@ onMounted(() => {
     // 如果没有数据，可以设置默认数据（仅用于演示）
     basicInfo.name = '张三'
     basicInfo.phone = '13800138000'
-    basicInfo.subject = '数学'
+    basicInfo.subject = '专业技能'
     basicInfo.experience = '5'
-    basicInfo.teachingMethod = '网络授课'
+    basicInfo.teachingMethod = '线上/线下服务'
 
     docInfo.personalIntro =
-      '我是一名有着5年教学经验的数学老师，擅长通过生动形象的例子帮助学生理解难点知识。'
+      '我是一名拥有5年工作经验的专业人员，熟练掌握本专业的各项技能，注重服务质量和客户体验。可以提供专业、可靠、高效的服务。'
     docInfo.educationCerts = ['https://source.unsplash.com/featured/?diploma']
     docInfo.professionalCerts = []
     docInfo.honorCerts = ['https://source.unsplash.com/featured/?award']

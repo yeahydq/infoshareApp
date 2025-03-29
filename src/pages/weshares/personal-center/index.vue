@@ -38,7 +38,7 @@
       </view>
       <view class="service-card" @click="navigateTo(NavigationRoutes.TEACHER_REGISTRATION)">
         <view class="service-icon">👩‍🏫</view>
-        <view class="service-text">教员入驻</view>
+        <view class="service-text">专业人员注册</view>
         <view class="service-icon-arrow">></view>
       </view>
     </view>

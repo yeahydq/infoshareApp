@@ -8,7 +8,7 @@
         </view>
       </view>
       <view v-else class="head-box" @click="login">
-        <image class="photo" src="/static/image/user.png"></image>
+        <image class="photo" src="/static/image/logo.png"></image>
         <view class="name">点击登录</view>
       </view>
       <!-- <view class="login" v-if="!userInfo.avatarUrl" @click="login">点击登录</view> -->
