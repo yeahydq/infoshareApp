@@ -76,23 +76,11 @@
       }
     },
     {
-      "path": "pages/testpage/sample1",
-      "type": "page"
-    },
-    {
-      "path": "pages/testpage/sample2",
-      "type": "page"
-    },
-    {
-      "path": "pages/testpage/sample3",
-      "type": "page"
-    },
-    {
-      "path": "pages/testpage/sample4",
-      "type": "page"
-    },
-    {
       "path": "pages/weshares/index",
+      "type": "page"
+    },
+    {
+      "path": "pages/weshares/time-schedule",
       "type": "page"
     },
     {
@@ -214,6 +202,10 @@
       }
     },
     {
+      "path": "pages/weshares/my/index",
+      "type": "page"
+    },
+    {
       "path": "pages/weshares/orders/detail",
       "type": "page",
       "style": {
@@ -250,6 +242,13 @@
       "type": "page",
       "style": {
         "navigationBarTitleText": "修改信息"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-registration/register-page1",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人员注册"
       }
     },
     {

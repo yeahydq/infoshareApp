@@ -16,5 +16,6 @@ declare module '@vue/runtime-core' {
     FlyNavbar: typeof import('./../components/fly-navbar/fly-navbar.vue')['default']
     NavigationBar: typeof import('./../components/navigation-bar/navigation-bar.vue')['default']
     PageHeader: typeof import('./../components/PageHeader/PageHeader.vue')['default']
+    TimeSchedule: typeof import('./../components/TimeSchedule.vue')['default']
   }
 }

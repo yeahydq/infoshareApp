@@ -64,6 +64,10 @@
         <view class="feature-icon">🔔</view>
         <view class="feature-text">系统公告</view>
       </view>
+      <view class="feature-item" @click="navigateToTimeSchedule">
+        <view class="feature-icon">⏰</view>
+        <view class="feature-text">空闲时间</view>
+      </view>
     </view>
 
     <view class="info-links">
@@ -352,6 +356,13 @@ const downloadFile = (url, userInfo) => {
         duration: 2000,
       })
     },
+  })
+}
+
+// 导航到时间安排页面
+const navigateToTimeSchedule = () => {
+  uni.navigateTo({
+    url: '../time-schedule',
   })
 }
 </script>

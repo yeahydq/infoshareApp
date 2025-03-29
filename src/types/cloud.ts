@@ -44,7 +44,19 @@ export interface Course {
   createTime: Date
 }
 
-export interface Teacher {
+export interface TimeSlot {
+  startTime: string
+  endTime: string
+  date: string
+}
+
+export interface TimeSchedule {
+  professionalId: string
+  slots: TimeSlot[]
+  updateTime: string
+}
+
+export interface Professional {
   _id: string
   name: string
   avatar: string
@@ -52,4 +64,22 @@ export interface Teacher {
   rating: number
   reviewCount: number
   createTime: Date
+  professionalType: string
+  professional_name: string
+  telephone: string
+  major: string
+  professional_score: number
+  salary: number
+  salaryType: '次' | '天' | '小时'
+  self_int: string
+  sex: string
+  university: string
+  degree: string
+  professional_course: string[]
+  professional_trait: string[]
+  photo: string
+  trait: string
+  images: string[]
+  modifyTime: string
+  timeSchedule?: TimeSchedule
 }

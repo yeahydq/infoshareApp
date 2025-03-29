@@ -9,8 +9,8 @@ exports.main = async (event, context) => {
   switch (entityType) {
     case 'student':
       return handleStudent(action, data);
-    case 'teacher':
-      return handleTeacher(action, data);
+    case 'professional':
+      return handleProfessional(action, data);
     default:
       return { error: 'Invalid entity type' };
   }
@@ -29,14 +29,14 @@ const handleStudent = async (action, data) => {
   }
 };
 
-const handleTeacher = async (action, data) => {
+const handleProfessional = async (action, data) => {
   switch (action) {
     case 'register':
-      return registerTeacher(data);
+      return registerProfessional(data);
     case 'update':
-      return updateTeacher(data);
+      return updateProfessional(data);
     case 'delete':
-      return deleteTeacher(data);
+      return deleteProfessional(data);
     default:
       return { error: 'Invalid action' };
   }
@@ -73,31 +73,31 @@ const deleteStudent = async (data) => {
   }
 };
 
-const registerTeacher = async (data) => {
-  const teacherData = extractTeacherFields(data);
+const registerProfessional = async (data) => {
+  const professionalData = extractProfessionalFields(data);
   try {
-    const result = await db.collection('teachers').add({ data: teacherData });
+    const result = await db.collection('professionals').add({ data: professionalData });
     return { success: true, result };
   } catch (error) {
     return { success: false, error };
   }
 };
 
-const updateTeacher = async (data) => {
+const updateProfessional = async (data) => {
   const { _id, ...updateData } = data;
-  const teacherData = extractTeacherFields(updateData);
+  const professionalData = extractProfessionalFields(updateData);
   try {
-    const result = await db.collection('teachers').doc(_id).update({ data: teacherData });
+    const result = await db.collection('professionals').doc(_id).update({ data: professionalData });
     return { success: true, result };
   } catch (error) {
     return { success: false, error };
   }
 };
 
-const deleteTeacher = async (data) => {
+const deleteProfessional = async (data) => {
   try {
     const { _id } = data;
-    const result = await db.collection('teachers').doc(_id).remove();
+    const result = await db.collection('professionals').doc(_id).remove();
     return { success: true, result };
   } catch (error) {
     return { success: false, error };
@@ -132,28 +132,29 @@ const extractStudentFields = (data) => {
     };
 };
 
-const extractTeacherFields = (data) => {
+const extractProfessionalFields = (data) => {
     return {
       name: data.name || '',
       age: data.age || '',
-      subject: data.subject || '',
-      teacher_name: data.teacherName || '',
+      professionalType: data.professionalType || '',
+      professional_name: data.professionalName || '',
       telephone: data.telephone || '',
       major: data.major || '',
-      teacher_score: data.teacherScore || '',
+      professional_score: data.professionalScore || '',
       salary: data.salary || '',
+      salaryType: data.salaryType || '',
       self_int: data.remark || '',
       sex: data.sexValue || '',
       university: data.universityValue || '',
       degree: data.degreeValue || '',
-      teach_course: data.choseCourseValue || '',
-      teach_trait: data.choseTraitValue || '',
+      professional_course: data.choseCourseValue || '',
+      professional_trait: data.choseTraitValue || '',
       photo: data.photoValue || '',
       trait: data.trait.value || '',
       own: data.objectId || '',
       images: data.urlArr.value || '',
       modifyTime: data.nowTime || '',
-      // ...other teacher fields...
+      // ...other professional fields...
     };
 };
 
