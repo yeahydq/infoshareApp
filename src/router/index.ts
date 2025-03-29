@@ -5,24 +5,24 @@ const router = createRouter({
   routes: [
     // ... existing routes ...
     {
-      path: '/weshares/teacher-registration/register-page1',
-      name: 'TeacherRegisterPage1',
-      component: () => import('@/pages/weshares/teacher-registration/register-page1.vue'),
+      path: '/weshares/professional-registration/register-page1',
+      name: 'ProfessionalRegisterPage1',
+      component: () => import('@/pages/weshares/professional-registration/register-page1.vue'),
     },
     {
-      path: '/weshares/teacher-registration/register-page2',
-      name: 'TeacherRegisterPage2',
-      component: () => import('@/pages/weshares/teacher-registration/register-page2.vue'),
+      path: '/weshares/professional-registration/register-page2',
+      name: 'ProfessionalRegisterPage2',
+      component: () => import('@/pages/weshares/professional-registration/register-page2.vue'),
     },
     {
-      path: '/weshares/teacher-registration/register-page3',
-      name: 'TeacherRegisterPage3',
-      component: () => import('@/pages/weshares/teacher-registration/register-page3.vue'),
+      path: '/weshares/professional-registration/register-page3',
+      name: 'ProfessionalRegisterPage3',
+      component: () => import('@/pages/weshares/professional-registration/register-page3.vue'),
     },
     {
-      path: '/weshares/teacher-registration/success',
-      name: 'TeacherRegisterSuccess',
-      component: () => import('@/pages/weshares/teacher-registration/success.vue'),
+      path: '/weshares/professional-registration/success',
+      name: 'ProfessionalRegisterSuccess',
+      component: () => import('@/pages/weshares/professional-registration/success.vue'),
     },
   ],
 })

@@ -96,6 +96,10 @@
       "type": "page"
     },
     {
+      "path": "pages/weshares/time-schedule",
+      "type": "page"
+    },
+    {
       "path": "pages/shareinfo/aboutUs/aboutUs",
       "type": "page"
     },
@@ -214,6 +218,10 @@
       }
     },
     {
+      "path": "pages/weshares/my/index",
+      "type": "page"
+    },
+    {
       "path": "pages/weshares/orders/detail",
       "type": "page",
       "style": {
@@ -250,6 +258,13 @@
       "type": "page",
       "style": {
         "navigationBarTitleText": "修改信息"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-registration/register-page1",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人员注册"
       }
     },
     {

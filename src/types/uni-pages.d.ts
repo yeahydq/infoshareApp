@@ -13,6 +13,7 @@ interface NavigateToOptions {
        "/pages/testpage/sample3" |
        "/pages/testpage/sample4" |
        "/pages/weshares/index" |
+       "/pages/weshares/time-schedule" |
        "/pages/shareinfo/aboutUs/aboutUs" |
        "/pages/shareinfo/account/account" |
        "/pages/shareinfo/account/setting" |
@@ -41,11 +42,13 @@ interface NavigateToOptions {
        "/pages/weshares/address-management/index" |
        "/pages/weshares/find-teachers/index" |
        "/pages/weshares/help-center/index" |
+       "/pages/weshares/my/index" |
        "/pages/weshares/orders/detail" |
        "/pages/weshares/orders/index" |
        "/pages/weshares/orders/review" |
        "/pages/weshares/personal-center/index" |
        "/pages/weshares/personal-info/index" |
+       "/pages/weshares/professional-registration/register-page1" |
        "/pages/weshares/qr-code/index" |
        "/pages/weshares/recommended-teacher/index" |
        "/pages/weshares/registration-complete/index" |
