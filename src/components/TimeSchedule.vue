@@ -835,23 +835,23 @@ const showPastDateToast = () => {
 // 基础选择器放在最前面
 .day-number {
   font-size: 14px;
-  color: #333;
   text-align: center;
+  color: #333;
 }
 
 .time-slot {
+  padding: 12px 16px;
+  font-size: 14px;
+  background-color: #f0f2f5;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  text-align: center;
   position: relative;
+  transition: all 0.3s;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  font-size: 14px;
-  text-align: center;
-  background-color: #f0f2f5;
   border-bottom: 1px solid #eee;
-  border-radius: 4px;
-  transition: all 0.3s;
 
   &:last-child {
     margin-bottom: 0;
@@ -875,35 +875,35 @@ const showPastDateToast = () => {
   }
 
   &.booked {
-    cursor: not-allowed;
-    background-color: #f2f2f2;
     opacity: 0.6;
+    background-color: #f2f2f2;
+    cursor: not-allowed;
   }
 }
 
 .date-title {
-  margin-bottom: 10px;
   font-size: 16px;
   font-weight: 500;
   color: #333;
+  margin-bottom: 10px;
 }
 
 .time-ranges {
+  margin-top: 5px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 5px;
 }
 
 .time-range {
-  display: inline-block;
   padding: 4px 8px;
-  margin-right: 5px;
-  margin-bottom: 5px;
   font-size: 12px;
   color: #5bbdca;
   background-color: #f0f9ff;
   border-radius: 4px;
+  display: inline-block;
+  margin-right: 5px;
+  margin-bottom: 5px;
 
   &.booked {
     color: #ff6b6b;
@@ -914,6 +914,12 @@ const showPastDateToast = () => {
     color: #5bbdca;
     background-color: #f0f9ff;
   }
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
 }
 
 // 组件容器
@@ -1281,15 +1287,42 @@ const showPastDateToast = () => {
         background-color: #f0f9ff;
         border-radius: 4px;
       }
+    }
+  }
+}
 
-      .confirm {
-        flex: 1;
-        padding: 8px;
+.selected-times {
+  .section-title {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .selected-list {
+    .date-group {
+      margin-bottom: 12px;
+
+      .date {
+        display: block;
+        margin-bottom: 8px;
         font-size: 14px;
-        color: #fff;
-        text-align: center;
-        background-color: #5bbdca;
-        border-radius: 4px;
+        color: #666;
+      }
+
+      .time-ranges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .time-range {
+          padding: 4px 8px;
+          font-size: 12px;
+          color: #5bbdca;
+          background-color: #f0f9ff;
+          border-radius: 4px;
+        }
       }
     }
   }
