@@ -121,6 +121,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRegisterStore } from '@/store/registerStore'
 import FileUploader from '@/components/FileUploader/FileUploader.vue'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
@@ -135,6 +136,8 @@ const steps = ref<Step[]>([
   { number: 3, status: 'active' },
   { number: 4, status: '' },
 ])
+
+const registerStore = useRegisterStore()
 
 const formData = reactive({
   idCardFront: '',
@@ -185,23 +188,36 @@ const handleNext = () => {
     return
   }
 
-  // 保存当前数据到本地存储
-  saveFormData()
+  // 保存当前数据到全局状态
+  registerStore.updateStep3({
+    idCardFront: formData.idCardFront,
+    idCardBack: formData.idCardBack,
+    qualification: formData.qualification,
+    education: formData.education,
+    professional: formData.professional,
+    honor: formData.honor,
+  })
+  // 同时保存到本地存储（作为备份）
+  registerStore.saveToStorage()
   // 触发next事件
   emit('next', 3)
 }
 
 // 返回上一步
 const handleBack = () => {
-  // 保存当前数据到本地存储
-  saveFormData()
+  // 保存当前数据到全局状态
+  registerStore.updateStep3({
+    idCardFront: formData.idCardFront,
+    idCardBack: formData.idCardBack,
+    qualification: formData.qualification,
+    education: formData.education,
+    professional: formData.professional,
+    honor: formData.honor,
+  })
+  // 同时保存到本地存储（作为备份）
+  registerStore.saveToStorage()
   // 触发back事件
   emit('back', 3)
-}
-
-// 保存表单数据到本地存储
-const saveFormData = () => {
-  uni.setStorageSync('professionalRegisterStep3', formData)
 }
 
 // 表单验证
@@ -215,9 +231,23 @@ const emit = defineEmits(['next', 'back'])
 
 // 页面加载时获取缓存数据
 onMounted(() => {
-  const cachedData = uni.getStorageSync('professionalRegisterStep3')
-  if (cachedData) {
-    Object.assign(formData, cachedData)
+  // 从全局状态加载数据
+  const storeData = registerStore.step3Data
+  if (storeData) {
+    // 如果存在数据，填充表单
+    Object.assign(formData, storeData)
+  }
+
+  // 检查是否有第二步数据
+  const step2Data = registerStore.step2Data
+  if (!step2Data || !step2Data.serviceArea) {
+    uni.showToast({
+      title: '请先完成专业能力信息',
+      icon: 'none',
+    })
+    setTimeout(() => {
+      emit('back', 3)
+    }, 1500)
   }
 })
 </script>

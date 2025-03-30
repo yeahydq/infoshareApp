@@ -31,10 +31,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRegisterStore } from '@/store/registerStore'
 import registerPage1 from './register-page1.vue'
 import registerPage2 from './register-page2.vue'
 import registerPage3 from './register-page3.vue'
 import registerPage4 from './register-page4.vue'
+
+// 获取注册状态存储
+const registerStore = useRegisterStore()
 
 // 使用字符串直接表示当前活动组件
 const activeComponent = ref('registerPage1')
@@ -78,44 +82,22 @@ const handleBack = (step) => {
 onMounted(() => {
   console.log('Teacher registration index page mounted')
 
-  // 清除所有缓存数据，以便测试
-  console.log('清除所有缓存数据，以便测试')
-  uni.removeStorageSync('professionalRegisterStep1')
-  uni.removeStorageSync('professionalRegisterStep2')
-  uni.removeStorageSync('professionalRegisterStep3')
+  // 初始化全局状态存储
+  registerStore.loadFromStorage()
 
-  // 初始化第一步数据（创建一个空对象）
-  const initStep1Data = uni.getStorageSync('professionalRegisterStep1')
-  if (!initStep1Data) {
-    console.log('Initializing step 1 data with default values')
-    uni.setStorageSync('professionalRegisterStep1', {
-      name: '',
-      gender: '',
-      phone: '',
-      idCard: '',
-      email: '',
-      professionalTypes: [], // 改为数组
-      customType: '',
-      educationRanges: [], // 添加辅导范围
-      skillPrices: {}, // 添加技能价格
-      skillBillingTypes: {}, // 添加计费方式
-    })
-  }
-
-  // 根据缓存决定显示哪个页面
+  // 决定显示哪个页面
   try {
-    const step1Data = uni.getStorageSync('professionalRegisterStep1')
-    const step2Data = uni.getStorageSync('professionalRegisterStep2')
-    const step3Data = uni.getStorageSync('professionalRegisterStep3')
+    const step1Data = registerStore.step1Data
+    const step2Data = registerStore.step2Data
+    const step3Data = registerStore.step3Data
 
-    if (!step1Data || !step2Data || !step3Data) {
-      throw new Error('请先完成前三步信息填写')
-    }
-
-    if (step2Data && Object.keys(step2Data).length > 0) {
+    if (step3Data && step3Data.education) {
+      // 如果有第三步数据，显示第四步
+      activeComponent.value = 'registerPage4'
+    } else if (step2Data && step2Data.serviceArea) {
       // 如果有第二步数据，显示第三步
       activeComponent.value = 'registerPage3'
-    } else if (step1Data && Object.keys(step1Data).length > 0) {
+    } else if (step1Data && step1Data.professionalTypes && step1Data.professionalTypes.length > 0) {
       // 如果有第一步数据，显示第二步
       activeComponent.value = 'registerPage2'
     } else {

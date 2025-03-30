@@ -28,7 +28,13 @@
           姓名
           <text class="required">*</text>
         </text>
-        <input v-model="formData.name" type="text" placeholder="请输入真实姓名" class="input" />
+        <input
+          v-model="formData.name"
+          type="text"
+          placeholder="请输入真实姓名"
+          class="input"
+          @input="updateFormField"
+        />
       </view>
 
       <!-- 性别 -->
@@ -61,6 +67,7 @@
           placeholder="请输入手机号"
           class="input"
           :maxlength="11"
+          @input="updateFormField"
         />
       </view>
 
@@ -76,6 +83,7 @@
           placeholder="请输入身份证号（选填）"
           class="input"
           :maxlength="18"
+          @input="updateFormField"
         />
       </view>
 
@@ -87,6 +95,7 @@
           type="text"
           placeholder="请输入邮箱（选填）"
           class="input"
+          @input="updateFormField"
         />
       </view>
 
@@ -282,9 +291,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useUserStore } from '@/store'
+import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
 const userStore = useUserStore()
+const registerStore = useRegisterStore()
 
 interface Step {
   number: number
@@ -324,16 +335,16 @@ interface FormData {
 }
 
 const formData = reactive<FormData>({
-  name: '测试用户',
-  gender: 'male',
-  phone: '13800138000',
+  name: '',
+  gender: '',
+  phone: '',
   idCard: '',
   email: '',
-  professionalTypes: [], // 默认选择两个专业类型
+  professionalTypes: [],
   customType: '',
-  educationRanges: [], // 默认选择辅导范围
+  educationRanges: [],
   servicePrice: '',
-  billingType: '按小时',
+  billingType: '',
 })
 
 // 专业类型搜索与分类
@@ -377,9 +388,9 @@ const isCategoryCollapsed = (categoryName) => {
   return collapsedCategories[categoryName]
 }
 
-// 专业类型相关数据
-const skillPrices = ref<{ [key: string]: string }>({})
-const skillBillingTypes = ref<{ [key: string]: string }>({})
+// 专业类型相关数据 - 移到FormData外面单独定义
+const skillPrices = reactive<{ [key: string]: string }>({})
+const skillBillingTypes = reactive<{ [key: string]: string }>({})
 const customTypeInput = ref('')
 
 // 计费方式选项
@@ -446,6 +457,9 @@ const changeBillingType = (type: string, e: any) => {
       console.log(`${type}当前价格:`, skillPrices[type])
     })
   }
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 
 // 筛选专业类型
@@ -502,6 +516,9 @@ const toggleProfessionalType = (type: string) => {
 
   // 更新最近选择
   updateRecentTypes(type)
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 
 // 移除专业类型
@@ -509,6 +526,9 @@ const removeProfessionalType = (type: string) => {
   const index = formData.professionalTypes.indexOf(type)
   if (index !== -1) {
     formData.professionalTypes.splice(index, 1)
+
+    // 使用通用的更新函数同步到全局状态
+    updateFormField()
   }
 }
 
@@ -535,6 +555,9 @@ const addCustomType = () => {
   skillPrices[customTypeInput.value] = ''
   skillBillingTypes[customTypeInput.value] = 'hourly'
   customTypeInput.value = ''
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 
 // 更新最近选择列表
@@ -560,6 +583,9 @@ const updateRecentTypes = (type: string) => {
 // 处理性别选择
 const handleGenderChange = (e: any) => {
   formData.gender = e.detail.value
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 
 // 判断是否为辅导类
@@ -582,6 +608,9 @@ const toggleEducationRange = (range: string) => {
   } else {
     formData.educationRanges.splice(index, 1)
   }
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 
 // 修改表单验证
@@ -657,13 +686,14 @@ const validateForm = () => {
 // 处理下一步
 const handleNext = () => {
   if (validateForm()) {
-    // 保存表单数据到本地存储
-    const submitData = {
+    // 保存表单数据到全局状态
+    registerStore.updateStep1({
       ...formData,
       skillPrices,
       skillBillingTypes,
-    }
-    uni.setStorageSync('professionalRegisterStep1', submitData)
+    })
+    // 同时保存到本地存储（作为备份）
+    registerStore.saveToStorage()
     // 触发next事件
     emit('next', 1)
   }
@@ -686,27 +716,34 @@ onMounted(() => {
     console.error('Failed to load recent types', e)
   }
 
-  // 检查是否有缓存数据
-  const cachedData = uni.getStorageSync('professionalRegisterStep1')
-  console.log('Loading cached data:', cachedData)
+  // 从全局状态加载数据
+  const storeData = registerStore.step1Data
+  if (storeData) {
+    // 恢复表单数据
+    formData.name = storeData.name || ''
+    formData.gender = storeData.gender || ''
+    formData.phone = storeData.phone || ''
+    formData.idCard = storeData.idCard || ''
+    formData.email = storeData.email || ''
+    formData.professionalTypes = storeData.professionalTypes || []
+    formData.customType = storeData.customType || ''
+    formData.educationRanges = storeData.educationRanges || []
+    formData.servicePrice = storeData.servicePrice || ''
+    formData.billingType = storeData.billingType || ''
 
-  // 清除旧缓存数据，强制使用默认值进行测试
-  if (cachedData) {
-    // 清除缓存数据
-    console.log('清除旧缓存数据，使用默认测试值')
-    uni.removeStorageSync('professionalRegisterStep1')
-    uni.removeStorageSync('professionalRegisterStep2')
-    uni.removeStorageSync('professionalRegisterStep3')
+    // 恢复价格和计费方式
+    if (storeData.skillPrices) {
+      Object.assign(skillPrices, storeData.skillPrices)
+    }
+
+    if (storeData.skillBillingTypes) {
+      Object.assign(skillBillingTypes, storeData.skillBillingTypes)
+    }
   }
 
   // 确保价格表显示正确
-  console.log('当前设置的价格:', skillPrices.value)
-  console.log('当前设置的计费方式:', skillBillingTypes.value)
-
-  // 强制设置"面议"价格
-  if (skillBillingTypes.value['数学辅导'] === 'negotiable') {
-    skillPrices.value['数学辅导'] = '面议'
-  }
+  console.log('当前设置的价格:', skillPrices)
+  console.log('当前设置的计费方式:', skillBillingTypes)
 })
 
 // 检查是否选择了"其他"类型
@@ -721,11 +758,26 @@ const hasSelectedEducation = computed(() => {
   )
 })
 
+// 添加通用的表单更新函数
+const updateFormField = () => {
+  // 同步更新到全局状态
+  registerStore.updateStep1({
+    ...formData,
+    skillPrices,
+    skillBillingTypes,
+  })
+  // 保存到本地存储
+  registerStore.saveToStorage()
+}
+
 // 添加更新价格的函数
 const updatePrice = (type: string, e: any) => {
   const value = e.detail.value
   console.log(`更新${type}价格为:`, value)
   skillPrices[type] = value
+
+  // 使用通用的更新函数同步到全局状态
+  updateFormField()
 }
 </script>
 

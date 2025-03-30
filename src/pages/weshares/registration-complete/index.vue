@@ -205,20 +205,17 @@ onMounted(() => {
   if (basicInfo.name && docInfo.personalIntro) {
     combinedFormData.value = true
   } else {
-    // 如果没有数据，可以设置默认数据（仅用于演示）
-    basicInfo.name = '张三'
-    basicInfo.phone = '13800138000'
-    basicInfo.subject = '专业技能'
-    basicInfo.experience = '5'
-    basicInfo.teachingMethod = '线上/线下服务'
-
-    docInfo.personalIntro =
-      '我是一名拥有5年工作经验的专业人员，熟练掌握本专业的各项技能，注重服务质量和客户体验。可以提供专业、可靠、高效的服务。'
-    docInfo.educationCerts = ['https://source.unsplash.com/featured/?diploma']
-    docInfo.professionalCerts = []
-    docInfo.honorCerts = ['https://source.unsplash.com/featured/?award']
-
-    combinedFormData.value = true
+    // 如果没有数据，提示用户返回填写信息
+    uni.showToast({
+      title: '请先填写注册信息',
+      icon: 'none',
+      duration: 2000,
+    })
+    setTimeout(() => {
+      uni.navigateBack({
+        delta: 1,
+      })
+    }, 2000)
   }
 })
 

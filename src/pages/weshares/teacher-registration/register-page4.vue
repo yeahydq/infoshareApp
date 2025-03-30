@@ -18,13 +18,35 @@
             <text class="label">姓名</text>
             <text class="value">{{ step1Data.name }}</text>
           </view>
+          <view class="info-item" v-if="step1Data.gender">
+            <text class="label">性别</text>
+            <text class="value">{{ step1Data.gender === 'male' ? '男' : '女' }}</text>
+          </view>
           <view class="info-item" v-if="step1Data.phone">
             <text class="label">联系电话</text>
             <text class="value">{{ step1Data.phone }}</text>
           </view>
-          <view class="info-item" v-if="step1Data.professionalType">
+          <view class="info-item" v-if="step1Data.email">
+            <text class="label">邮箱</text>
+            <text class="value">{{ step1Data.email }}</text>
+          </view>
+          <view class="info-item" v-if="step1Data.idCard">
+            <text class="label">身份证号</text>
+            <text class="value">{{ step1Data.idCard }}</text>
+          </view>
+          <view
+            class="info-item"
+            v-if="step1Data.professionalTypes && step1Data.professionalTypes.length > 0"
+          >
             <text class="label">专业类型</text>
-            <text class="value">{{ step1Data.professionalType }}</text>
+            <text class="value">{{ step1Data.professionalTypes.join(', ') }}</text>
+          </view>
+          <view
+            class="info-item"
+            v-if="step1Data.educationRanges && step1Data.educationRanges.length > 0"
+          >
+            <text class="label">辅导范围</text>
+            <text class="value">{{ step1Data.educationRanges.join(', ') }}</text>
           </view>
         </view>
       </view>
@@ -36,7 +58,7 @@
         <view class="info-group">
           <view class="info-item" v-if="step2Data.experience">
             <text class="label">工作经验</text>
-            <text class="value">{{ step2Data.experience }} 年</text>
+            <text class="value">{{ step2Data.experience }}</text>
           </view>
           <view class="info-item" v-if="step2Data.serviceDescription">
             <text class="label">专业特长</text>
@@ -54,9 +76,37 @@
             <text class="label">服务区域</text>
             <text class="value">{{ step2Data.serviceArea }}</text>
           </view>
-          <view class="info-item" v-if="step2Data.servicePrice">
-            <text class="label">服务价格</text>
-            <text class="value">{{ step2Data.servicePrice }} 元/小时</text>
+        </view>
+      </view>
+
+      <!-- 服务价格信息 -->
+      <view
+        class="preview-section"
+        v-if="
+          step1Data.professionalTypes &&
+          step1Data.professionalTypes.length > 0 &&
+          step1Data.skillPrices &&
+          step1Data.skillBillingTypes
+        "
+      >
+        <view class="section-header">
+          <view class="section-title">服务价格设置</view>
+        </view>
+        <view class="info-group">
+          <view
+            class="info-item price-item"
+            v-for="(type, index) in step1Data.professionalTypes"
+            :key="index"
+          >
+            <text class="label">{{ type }}</text>
+            <text class="value" v-if="step1Data.skillBillingTypes[type] === 'negotiable'">
+              面议
+            </text>
+            <text class="value" v-else-if="step1Data.skillPrices[type]">
+              {{ step1Data.skillPrices[type] }} 元{{
+                getBillingUnitLabel(step1Data.skillBillingTypes[type])
+              }}
+            </text>
           </view>
         </view>
       </view>
@@ -121,6 +171,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
+import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
 interface Step {
@@ -130,9 +181,17 @@ interface Step {
 
 interface Step1Data {
   name?: string
+  gender?: string
   phone?: string
+  email?: string
   idCard?: string
-  professionalType?: string
+  professionalTypes?: string[]
+  customType?: string
+  educationRanges?: string[]
+  servicePrice?: string
+  billingType?: string
+  skillPrices?: Record<string, string>
+  skillBillingTypes?: Record<string, string>
 }
 
 interface Step2Data {
@@ -161,6 +220,8 @@ const steps = ref<Step[]>([
   { number: 4, status: 'active' },
 ])
 
+const registerStore = useRegisterStore()
+
 // 存储前三页的数据
 const step1Data = ref<Step1Data>({})
 const step2Data = ref<Step2Data>({})
@@ -172,6 +233,13 @@ const formData = reactive({
 
 // 返回上一步
 const handleBack = () => {
+  // 保存当前数据到全局状态
+  registerStore.updateStep4({
+    agreement: formData.agreement,
+  })
+  // 同时保存到本地存储（作为备份）
+  registerStore.saveToStorage()
+  // 触发back事件
   emit('back', 4)
 }
 
@@ -204,10 +272,10 @@ const handleSubmit = async () => {
       title: '提交中...',
     })
 
-    // 获取前三步的数据
-    const step1Data = uni.getStorageSync('professionalRegisterStep1')
-    const step2Data = uni.getStorageSync('professionalRegisterStep2')
-    const step3Data = uni.getStorageSync('professionalRegisterStep3')
+    // 从全局状态获取数据
+    const step1Data = registerStore.step1Data
+    const step2Data = registerStore.step2Data
+    const step3Data = registerStore.step3Data
 
     if (!step1Data || !step2Data || !step3Data) {
       throw new Error('请先完成前三步信息填写')
@@ -231,10 +299,8 @@ const handleSubmit = async () => {
     uni.hideLoading()
 
     if (result.success) {
-      // 清除本地存储的数据
-      uni.removeStorageSync('professionalRegisterStep1')
-      uni.removeStorageSync('professionalRegisterStep2')
-      uni.removeStorageSync('professionalRegisterStep3')
+      // 清空全局状态数据
+      registerStore.clearData()
 
       // 显示成功提示
       uni.showToast({
@@ -268,13 +334,13 @@ const emit = defineEmits(['back'])
 
 // 页面加载时获取缓存数据
 onMounted(() => {
-  // 获取前三页的数据
-  step1Data.value = uni.getStorageSync('professionalRegisterStep1') || {}
-  step2Data.value = uni.getStorageSync('professionalRegisterStep2') || {}
-  step3Data.value = uni.getStorageSync('professionalRegisterStep3') || {}
+  // 从全局状态加载数据
+  step1Data.value = registerStore.step1Data
+  step2Data.value = registerStore.step2Data
+  step3Data.value = registerStore.step3Data
 
   // 如果没有前三页的数据，返回第一页
-  if (!step1Data.value || !step2Data.value || !step3Data.value) {
+  if (!step1Data.value.name || !step2Data.value.serviceArea || !step3Data.value) {
     uni.showToast({
       title: '请先完成前三步信息填写',
       icon: 'none',
@@ -282,8 +348,28 @@ onMounted(() => {
     setTimeout(() => {
       emit('back', 4)
     }, 1500)
+    return
   }
+
+  // 恢复第四页数据
+  formData.agreement = registerStore.step4Data.agreement
 })
+
+// 获取计费单位显示文本
+const getBillingUnitLabel = (billingType: string) => {
+  switch (billingType) {
+    case 'hourly':
+      return '/小时'
+    case 'per_time':
+      return '/次'
+    case 'per_project':
+      return '/项目'
+    case 'daily':
+      return '/天'
+    default:
+      return ''
+  }
+}
 </script>
 
 <style lang="scss" scoped>

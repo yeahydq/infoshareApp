@@ -52,7 +52,7 @@
         <text class="label">
           技能标签
           <text class="required">*</text>
-          <text class="hint">(选择3-5个标签，让客户更了解您的特点)</text>
+          <text class="hint">(选择1-5个标签，让客户更了解您的特点)</text>
         </text>
         <view
           class="tag-category"
@@ -86,9 +86,69 @@
           <text class="hint">(选择您可服务的区域)</text>
         </text>
         <view class="area-selector">
-          <picker mode="region" @change="handleAreaChange" :value="areaValue">
+          <picker
+            mode="selector"
+            :range="customAreaData.map((city) => city.name)"
+            @change="
+              (e) =>
+                handleAreaChange({
+                  detail: {
+                    value: {
+                      city: customAreaData[e.detail.value].name,
+                      district: '',
+                      street: '',
+                    },
+                  },
+                })
+            "
+          >
             <view class="picker-view">
-              <text>{{ formData.serviceArea || '请选择服务区域' }}</text>
+              <text>{{ formData.selectedCity || '请选择城市' }}</text>
+              <text class="arrow-down">▼</text>
+            </view>
+          </picker>
+          <picker
+            v-if="formData.selectedCity"
+            mode="selector"
+            :range="selectedCityDistricts.map((district) => district.name)"
+            @change="
+              (e) =>
+                handleAreaChange({
+                  detail: {
+                    value: {
+                      city: formData.selectedCity,
+                      district: selectedCityDistricts[e.detail.value].name,
+                      street: '',
+                    },
+                  },
+                })
+            "
+          >
+            <view class="picker-view">
+              <text>{{ formData.selectedDistrict || '请选择区域' }}</text>
+              <text class="arrow-down">▼</text>
+            </view>
+          </picker>
+          <picker
+            v-if="formData.selectedDistrict"
+            mode="selector"
+            :range="['全区', ...selectedDistrictStreets]"
+            @change="
+              (e) =>
+                handleAreaChange({
+                  detail: {
+                    value: {
+                      city: formData.selectedCity,
+                      district: formData.selectedDistrict,
+                      street:
+                        e.detail.value === 0 ? '' : selectedDistrictStreets[e.detail.value - 1],
+                    },
+                  },
+                })
+            "
+          >
+            <view class="picker-view">
+              <text>{{ formData.selectedStreet || '全区' }}</text>
               <text class="arrow-down">▼</text>
             </view>
           </picker>
@@ -100,6 +160,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRegisterStore } from '@/store/registerStore'
 import FileUploader from '@/components/FileUploader/FileUploader.vue'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
@@ -114,7 +175,12 @@ interface FormData {
   serviceDescription: string
   experience: string
   description: string
+  selectedCity: string
+  selectedDistrict: string
+  selectedStreet: string
 }
+
+const registerStore = useRegisterStore()
 
 // 步骤配置
 const steps = ref<Step[]>([
@@ -130,6 +196,9 @@ const formData = reactive<FormData>({
   serviceDescription: '',
   experience: '',
   description: '',
+  selectedCity: '',
+  selectedDistrict: '',
+  selectedStreet: '',
 })
 
 // 添加缺失的变量定义
@@ -200,7 +269,7 @@ const skillTagCategories = [
 // 根据专业类型过滤技能标签
 const filteredSkillTagCategories = computed(() => {
   // 获取第一步的专业类型数据
-  const step1Data = uni.getStorageSync('professionalRegisterStep1')
+  const step1Data = registerStore.step1Data
   if (!step1Data || !step1Data.professionalTypes) {
     return []
   }
@@ -317,9 +386,147 @@ const filteredSkillTagCategories = computed(() => {
     .filter((category) => category.tags.length > 0)
 })
 
-// 处理地区选择
+// 在 script setup 部分添加以下代码
+const customAreaData = [
+  {
+    name: '广州市',
+    districts: [
+      {
+        name: '天河区',
+        streets: [
+          '天河街道',
+          '冼村街道',
+          '猎德街道',
+          '员村街道',
+          '石牌街道',
+          '天河南街道',
+          '林和街道',
+          '沙河街道',
+          '五山街道',
+          '棠下街道',
+        ],
+      },
+      {
+        name: '海珠区',
+        streets: [
+          '江南街道',
+          '海幢街道',
+          '南华街道',
+          '龙凤街道',
+          '沙园街道',
+          '瑞宝街道',
+          '昌岗街道',
+          '素社街道',
+          '滨江街道',
+          '江南中街道',
+        ],
+      },
+      {
+        name: '越秀区',
+        streets: [
+          '北京街道',
+          '人民街道',
+          '光塔街道',
+          '六榕街道',
+          '流花街道',
+          '东风街道',
+          '洪桥街道',
+          '广卫街道',
+          '大东街道',
+          '农林街道',
+        ],
+      },
+    ],
+  },
+  {
+    name: '深圳市',
+    districts: [
+      {
+        name: '福田区',
+        streets: [
+          '福田街道',
+          '华强北街道',
+          '南园街道',
+          '沙头街道',
+          '梅林街道',
+          '莲花街道',
+          '香蜜湖街道',
+          '福保街道',
+          '华富街道',
+          '园岭街道',
+        ],
+      },
+      {
+        name: '南山区',
+        streets: [
+          '南头街道',
+          '南山街道',
+          '沙河街道',
+          '蛇口街道',
+          '招商街道',
+          '粤海街道',
+          '桃源街道',
+          '西丽街道',
+          '前海街道',
+          '后海街道',
+        ],
+      },
+      {
+        name: '罗湖区',
+        streets: [
+          '桂园街道',
+          '黄贝街道',
+          '东门街道',
+          '翠竹街道',
+          '南湖街道',
+          '笋岗街道',
+          '东湖街道',
+          '莲塘街道',
+          '东晓街道',
+          '清水河街道',
+        ],
+      },
+    ],
+  },
+  {
+    name: '佛山市',
+    districts: [
+      {
+        name: '禅城区',
+        streets: ['祖庙街道', '石湾街道', '张槎街道', '南庄街道', '石湾镇街道'],
+      },
+      {
+        name: '南海区',
+        streets: ['桂城街道', '大沥街道', '里水街道', '狮山街道', '丹灶街道'],
+      },
+      {
+        name: '顺德区',
+        streets: ['大良街道', '容桂街道', '伦教街道', '勒流街道', '陈村街道'],
+      },
+    ],
+  },
+]
+
+// 添加计算属性
+const selectedCityDistricts = computed(() => {
+  return customAreaData.find((city) => city.name === formData.selectedCity)?.districts || []
+})
+
+const selectedDistrictStreets = computed(() => {
+  return (
+    selectedCityDistricts.value.find((district) => district.name === formData.selectedDistrict)
+      ?.streets || []
+  )
+})
+
+// 修改地区选择处理函数
 const handleAreaChange = (e: any) => {
-  formData.serviceArea = e.detail.value.join(' ')
+  const { city, district, street } = e.detail.value
+  formData.selectedCity = city
+  formData.selectedDistrict = district
+  formData.selectedStreet = street || ''
+  // 如果有选择街道，则显示街道，否则显示全区
+  formData.serviceArea = street ? `${city} ${district} ${street}` : `${city} ${district}`
 }
 
 // 切换标签选择状态
@@ -339,12 +546,42 @@ const toggleSkillTag = (tag: string) => {
   }
 }
 
+// 从全局状态加载数据
+const loadFromStore = () => {
+  try {
+    const storeData = registerStore.step2Data
+    if (storeData) {
+      formData.skillTags = storeData.skillTags || []
+      formData.serviceArea = storeData.serviceArea || ''
+      formData.serviceDescription = storeData.serviceDescription || ''
+      formData.experience = storeData.experience || ''
+      formData.description = storeData.description || ''
+      formData.selectedCity = storeData.selectedCity || ''
+      formData.selectedDistrict = storeData.selectedDistrict || ''
+      formData.selectedStreet = storeData.selectedStreet || ''
+    }
+  } catch (error) {
+    console.error('加载第二步数据失败:', error)
+  }
+}
+
 // 处理下一步
 const handleNext = () => {
   formSubmitted.value = true
   if (validateForm()) {
-    // 保存表单数据到本地存储
-    saveToStorage()
+    // 保存表单数据到全局状态
+    registerStore.updateStep2({
+      skillTags: formData.skillTags,
+      serviceArea: formData.serviceArea,
+      serviceDescription: formData.serviceDescription,
+      experience: formData.experience,
+      description: formData.description,
+      selectedCity: formData.selectedCity,
+      selectedDistrict: formData.selectedDistrict,
+      selectedStreet: formData.selectedStreet,
+    })
+    // 同时保存到本地存储（作为备份）
+    registerStore.saveToStorage()
     // 触发next事件
     emit('next', 2)
   }
@@ -352,8 +589,19 @@ const handleNext = () => {
 
 // 处理返回
 const handleBack = () => {
-  // 保存当前数据到本地存储
-  saveToStorage()
+  // 保存当前数据到全局状态
+  registerStore.updateStep2({
+    skillTags: formData.skillTags,
+    serviceArea: formData.serviceArea,
+    serviceDescription: formData.serviceDescription,
+    experience: formData.experience,
+    description: formData.description,
+    selectedCity: formData.selectedCity,
+    selectedDistrict: formData.selectedDistrict,
+    selectedStreet: formData.selectedStreet,
+  })
+  // 同时保存到本地存储（作为备份）
+  registerStore.saveToStorage()
   // 触发back事件
   emit('back', 2)
 }
@@ -365,18 +613,15 @@ const emit = defineEmits(['next', 'back'])
 onMounted(() => {
   console.log('Register page 2 mounted')
 
-  // 检查是否有缓存数据
-  const cachedData = uni.getStorageSync('professionalRegisterStep2')
-  if (cachedData) {
-    // 如果存在缓存数据，填充表单
-    Object.assign(formData, cachedData)
-  }
+  // 从全局状态加载数据
+  loadFromStore()
 
-  const step1Data = uni.getStorageSync('professionalRegisterStep1')
+  // 检查是否有第一步数据
+  const step1Data = registerStore.step1Data
   console.log('Step 1 data:', step1Data)
 
   // 如果没有第一步数据，返回上一页
-  if (!step1Data) {
+  if (!step1Data || !step1Data.professionalTypes || step1Data.professionalTypes.length === 0) {
     console.error('No step 1 data found')
     uni.showToast({
       title: '请先完成基本信息',
@@ -536,27 +781,11 @@ onMounted(() => {
   }
 })
 
-// 从本地存储加载数据
-const loadFromStorage = () => {
-  try {
-    const data = uni.getStorageSync('professionalRegisterStep2')
-    if (data) {
-      formData.skillTags = data.skillTags || []
-      formData.serviceArea = data.serviceArea || ''
-      formData.serviceDescription = data.serviceDescription || ''
-      formData.experience = data.experience || ''
-      formData.description = data.description || ''
-    }
-  } catch (error) {
-    console.error('加载第二步数据失败:', error)
-  }
-}
-
 // 表单验证
 const validateForm = () => {
-  if (!formData.skillTags || formData.skillTags.length < 3) {
+  if (!formData.skillTags || formData.skillTags.length < 1) {
     uni.showToast({
-      title: '请选择3-5个技能标签',
+      title: '请至少选择1个技能标签',
       icon: 'none',
     })
     return false
@@ -579,18 +808,6 @@ const validateForm = () => {
   }
 
   return true
-}
-
-// 保存表单数据到本地存储
-const saveToStorage = () => {
-  const data = {
-    skillTags: formData.skillTags,
-    serviceArea: formData.serviceArea,
-    serviceDescription: formData.serviceDescription,
-    experience: formData.experience,
-    description: formData.description,
-  }
-  uni.setStorageSync('professionalRegisterStep2', data)
 }
 </script>
 
@@ -748,6 +965,31 @@ const saveToStorage = () => {
     font-size: 32rpx;
     font-weight: 500;
     color: #333;
+  }
+}
+
+.area-selector {
+  display: flex;
+  gap: 10rpx;
+
+  .picker-view {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    height: 80rpx;
+    padding: 0 16rpx;
+    background-color: #f8f8f8;
+    border-radius: 8rpx;
+
+    text {
+      font-size: 26rpx;
+      color: #333;
+
+      &.arrow-down {
+        color: #999;
+      }
+    }
   }
 }
 </style>
