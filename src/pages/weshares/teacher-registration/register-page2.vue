@@ -7,7 +7,7 @@
 <template>
   <PageLayout
     title="专业人员注册 (2/4)"
-    subtitle="您的专业能力和服务信息"
+    subtitle="完善您的服务信息，让客户更了解您"
     :steps="steps"
     :showBack="true"
     @next="handleNext"
@@ -25,13 +25,12 @@
           工作经验
           <text class="required">*</text>
         </text>
-        <input
+        <textarea
           v-model="formData.experience"
-          type="number"
-          placeholder="请输入工作年限"
-          class="input"
+          placeholder="请描述您的从业经验、专业特长和优势"
+          class="textarea"
+          :maxlength="500"
         />
-        <text class="unit">年</text>
       </view>
 
       <!-- 专业描述 -->
@@ -42,8 +41,9 @@
         </text>
         <textarea
           v-model="formData.serviceDescription"
-          placeholder="请详细描述您的专业特长、取得的成就和擅长领域"
+          placeholder="请详细描述您的服务内容和特点，让客户更了解您"
           class="textarea"
+          :maxlength="500"
         />
       </view>
 
@@ -52,30 +52,25 @@
         <text class="label">
           技能标签
           <text class="required">*</text>
-          <text class="hint">(请选择3-5个最能体现您专业能力的标签)</text>
+          <text class="hint">(选择3-5个标签，让客户更了解您的特点)</text>
         </text>
-
-        <view class="tags-container">
-          <view
-            v-for="(category, categoryIndex) in availableTags"
-            :key="categoryIndex"
-            class="category"
-          >
-            <view class="category-title">{{ category.category }}</view>
-            <view class="tags-list">
-              <view
-                v-for="(tag, tagIndex) in category.tags"
-                :key="`${categoryIndex}-${tagIndex}`"
-                :class="['tag', formData.skillTags.includes(tag) ? 'active' : '']"
-                @tap="toggleTag(tag)"
-              >
-                {{ tag }}
-              </view>
+        <view
+          class="tag-category"
+          v-for="(category, index) in filteredSkillTagCategories"
+          :key="index"
+        >
+          <view class="category-title">{{ category.name }}</view>
+          <view class="tags-container">
+            <view
+              v-for="(tag, tagIndex) in category.tags"
+              :key="tagIndex"
+              :class="['tag', formData.skillTags.includes(tag) ? 'active' : '']"
+              @tap="toggleSkillTag(tag)"
+            >
+              {{ tag }}
             </view>
           </view>
         </view>
-
-        <view class="selected-count">已选择 {{ formData.skillTags.length }} 个标签</view>
       </view>
 
       <!-- 服务信息分区 -->
@@ -88,28 +83,15 @@
         <text class="label">
           服务区域
           <text class="required">*</text>
+          <text class="hint">(选择您可服务的区域)</text>
         </text>
-        <picker mode="region" @change="handleRegionChange" class="picker">
-          <view class="picker-text">
-            {{ formData.serviceArea || '请选择服务区域' }}
-          </view>
-        </picker>
-      </view>
-
-      <!-- 服务价格 -->
-      <view class="form-item">
-        <text class="label">
-          服务价格
-          <text class="required">*</text>
-        </text>
-        <view class="price-input">
-          <input
-            v-model="formData.servicePrice"
-            type="number"
-            placeholder="请输入服务价格"
-            class="input"
-          />
-          <text class="unit">元/小时</text>
+        <view class="area-selector">
+          <picker mode="region" @change="handleAreaChange" :value="areaValue">
+            <view class="picker-view">
+              <text>{{ formData.serviceArea || '请选择服务区域' }}</text>
+              <text class="arrow-down">▼</text>
+            </view>
+          </picker>
         </view>
       </view>
     </view>
@@ -117,15 +99,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import FileUploader from '@/components/FileUploader/FileUploader.vue'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
 interface Step {
   number: number
-  status: '' | 'completed' | 'active'
+  status: '' | 'active' | 'completed'
 }
 
+interface FormData {
+  skillTags: string[]
+  serviceArea: string
+  serviceDescription: string
+  experience: string
+  description: string
+}
+
+// 步骤配置
 const steps = ref<Step[]>([
   { number: 1, status: 'completed' },
   { number: 2, status: 'active' },
@@ -133,136 +124,219 @@ const steps = ref<Step[]>([
   { number: 4, status: '' },
 ])
 
-interface FormData {
-  skillTags: string[]
-  serviceArea: string
-  servicePrice: string
-  serviceDescription: string
-  experience: string
-  description: string
-  qualification?: string
-}
-
-// 表单数据
-const formData = ref<FormData>({
+const formData = reactive<FormData>({
   skillTags: [],
   serviceArea: '',
-  servicePrice: '',
   serviceDescription: '',
   experience: '',
   description: '',
 })
 
-// 表单是否已提交（用于显示验证错误）
+// 添加缺失的变量定义
 const formSubmitted = ref(false)
+const availableTags = ref<Array<{ category: string; tags: string[] }>>([])
 
-// 根据专业类型显示不同的技能标签
-const availableTags = ref<{ category: string; tags: string[] }[]>([])
+// 地区选择器的值
+const areaValue = ref<string[]>([])
 
-// 选择资质证书
-const chooseQualification = async () => {
-  try {
-    const res = await uni.chooseImage({
-      count: 1,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-    })
-    formData.value.qualification = res.tempFilePaths[0]
-  } catch (error) {
-    console.error('选择图片失败:', error)
+// 技能标签分类
+const skillTagCategories = [
+  {
+    name: '教学特色',
+    tags: [
+      '重点提高',
+      '查漏补缺',
+      '考前辅导',
+      '学习规划',
+      '思维训练',
+      '难题突破',
+      '兴趣培养',
+      '一对一辅导',
+      '小班教学',
+      '在线辅导',
+    ],
+  },
+  {
+    name: '教师特点',
+    tags: [
+      '耐心细致',
+      '经验丰富',
+      '因材施教',
+      '善于沟通',
+      '认真负责',
+      '专业认证',
+      '教学经验丰富',
+      '解题思路清晰',
+    ],
+  },
+  {
+    name: '维修技能',
+    tags: [
+      '故障排查',
+      '上门维修',
+      '快速响应',
+      '技术精湛',
+      '设备安装',
+      '保养维护',
+      '24小时服务',
+      '价格透明',
+    ],
+  },
+  {
+    name: '服务特点',
+    tags: [
+      '专业可靠',
+      '准时守约',
+      '服务周到',
+      '保修服务',
+      '经验丰富',
+      '工具齐全',
+      '售后保障',
+      '安全规范',
+    ],
+  },
+]
+
+// 根据专业类型过滤技能标签
+const filteredSkillTagCategories = computed(() => {
+  // 获取第一步的专业类型数据
+  const step1Data = uni.getStorageSync('professionalRegisterStep1')
+  if (!step1Data || !step1Data.professionalTypes) {
+    return []
   }
-}
+
+  // 根据专业类型过滤标签
+  return skillTagCategories
+    .map((category) => ({
+      name: category.name,
+      tags: category.tags.filter((tag) => {
+        // 根据专业类型过滤标签
+        const professionalTypes = step1Data.professionalTypes
+        const educationRanges = step1Data.educationRanges || []
+
+        // 辅导类标签
+        if (
+          professionalTypes.includes('语文辅导') ||
+          professionalTypes.includes('数学辅导') ||
+          professionalTypes.includes('英语辅导') ||
+          professionalTypes.includes('物理辅导')
+        ) {
+          // 根据辅导范围过滤标签
+          if (educationRanges.includes('小学')) {
+            return (
+              tag.includes('耐心') ||
+              tag.includes('认真') ||
+              tag.includes('兴趣') ||
+              tag.includes('基础') ||
+              tag.includes('培养')
+            )
+          } else if (educationRanges.includes('初中')) {
+            return (
+              tag.includes('耐心') ||
+              tag.includes('认真') ||
+              tag.includes('基础') ||
+              tag.includes('提高') ||
+              tag.includes('巩固')
+            )
+          } else if (educationRanges.includes('高中')) {
+            return (
+              tag.includes('经验') ||
+              tag.includes('专业') ||
+              tag.includes('提高') ||
+              tag.includes('冲刺') ||
+              tag.includes('突破')
+            )
+          }
+
+          // 根据辅导科目过滤
+          if (professionalTypes.includes('语文辅导')) {
+            return (
+              tag.includes('写作') ||
+              tag.includes('阅读') ||
+              tag.includes('表达') ||
+              tag.includes('作文') ||
+              tag.includes('文言文')
+            )
+          } else if (professionalTypes.includes('数学辅导')) {
+            return (
+              tag.includes('思维') ||
+              tag.includes('解题') ||
+              tag.includes('逻辑') ||
+              tag.includes('计算') ||
+              tag.includes('公式')
+            )
+          } else if (professionalTypes.includes('英语辅导')) {
+            return (
+              tag.includes('口语') ||
+              tag.includes('听力') ||
+              tag.includes('语法') ||
+              tag.includes('阅读') ||
+              tag.includes('写作')
+            )
+          } else if (professionalTypes.includes('物理辅导')) {
+            return (
+              tag.includes('实验') ||
+              tag.includes('原理') ||
+              tag.includes('应用') ||
+              tag.includes('公式') ||
+              tag.includes('计算')
+            )
+          }
+
+          // 默认辅导类标签
+          return (
+            tag.includes('耐心') ||
+            tag.includes('认真') ||
+            tag.includes('沟通') ||
+            tag.includes('经验')
+          )
+        } else if (
+          professionalTypes.includes('水管') ||
+          professionalTypes.includes('电路') ||
+          professionalTypes.includes('空调') ||
+          professionalTypes.includes('保洁')
+        ) {
+          // 维修服务类标签
+          return (
+            tag.includes('技术') ||
+            tag.includes('专业') ||
+            tag.includes('经验') ||
+            tag.includes('服务') ||
+            tag.includes('维修') ||
+            tag.includes('安装') ||
+            tag.includes('保养') ||
+            tag.includes('及时') ||
+            tag.includes('响应')
+          )
+        }
+
+        // 默认显示所有标签
+        return true
+      }),
+    }))
+    .filter((category) => category.tags.length > 0)
+})
 
 // 处理地区选择
-const handleRegionChange = (e: any) => {
-  formData.value.serviceArea = e.detail.value
+const handleAreaChange = (e: any) => {
+  formData.serviceArea = e.detail.value.join(' ')
 }
 
-// 技能标签数据
-// const skillTags = [
-//   {
-//     title: '专业技能',
-//     tags: ['专业技能1', '专业技能2', '专业技能3'],
-//   },
-//   {
-//     title: '服务类型',
-//     tags: ['服务类型1', '服务类型2', '服务类型3'],
-//   },
-// ]
-
 // 切换标签选择状态
-const toggleTag = (tag: string) => {
-  const index = formData.value.skillTags.indexOf(tag)
+const toggleSkillTag = (tag: string) => {
+  const index = formData.skillTags.indexOf(tag)
   if (index === -1) {
-    if (formData.value.skillTags.length < 5) {
-      formData.value.skillTags.push(tag)
-    } else {
+    if (formData.skillTags.length >= 5) {
       uni.showToast({
         title: '最多选择5个标签',
         icon: 'none',
       })
+      return
     }
+    formData.skillTags.push(tag)
   } else {
-    formData.value.skillTags.splice(index, 1)
+    formData.skillTags.splice(index, 1)
   }
-}
-
-// 返回上一步
-const handleBack = () => {
-  // 保存当前数据到本地存储
-  saveToStorage()
-  // 触发back事件
-  emit('back', 2)
-}
-
-// 保存表单数据到本地存储
-const saveToStorage = () => {
-  const data = {
-    skillTags: formData.value.skillTags,
-    serviceArea: formData.value.serviceArea,
-    servicePrice: formData.value.servicePrice,
-    serviceDescription: formData.value.serviceDescription,
-    experience: formData.value.experience,
-    description: formData.value.description,
-  }
-  uni.setStorageSync('professionalRegisterStep2', data)
-}
-
-// 表单验证
-const validateForm = () => {
-  if (!formData.value.skillTags || formData.value.skillTags.length < 3) {
-    uni.showToast({
-      title: '请选择3-5个技能标签',
-      icon: 'none',
-    })
-    return false
-  }
-
-  if (!formData.value.serviceArea) {
-    uni.showToast({
-      title: '请选择服务区域',
-      icon: 'none',
-    })
-    return false
-  }
-
-  if (!formData.value.servicePrice) {
-    uni.showToast({
-      title: '请输入服务价格',
-      icon: 'none',
-    })
-    return false
-  }
-
-  if (!formData.value.serviceDescription) {
-    uni.showToast({
-      title: '请填写服务描述',
-      icon: 'none',
-    })
-    return false
-  }
-
-  return true
 }
 
 // 处理下一步
@@ -276,6 +350,14 @@ const handleNext = () => {
   }
 }
 
+// 处理返回
+const handleBack = () => {
+  // 保存当前数据到本地存储
+  saveToStorage()
+  // 触发back事件
+  emit('back', 2)
+}
+
 // 定义emit
 const emit = defineEmits(['next', 'back'])
 
@@ -287,7 +369,7 @@ onMounted(() => {
   const cachedData = uni.getStorageSync('professionalRegisterStep2')
   if (cachedData) {
     // 如果存在缓存数据，填充表单
-    Object.assign(formData.value, cachedData)
+    Object.assign(formData, cachedData)
   }
 
   const step1Data = uni.getStorageSync('professionalRegisterStep1')
@@ -306,153 +388,150 @@ onMounted(() => {
     return
   }
 
-  console.log('Setting available tags for type:', step1Data.professionalType)
+  console.log('Setting available tags for type:', step1Data.professionalTypes)
 
-  if (step1Data && step1Data.professionalType) {
-    // 根据专业类型设置不同的技能标签
-    switch (step1Data.professionalType) {
-      case '一对一家教':
-      case '小学课程辅导':
-      case '中学课程辅导':
-      case '高考辅导':
-      case '语言辅导员':
+  // 根据专业类型设置不同的标签
+  if (step1Data && step1Data.professionalTypes) {
+    if (
+      step1Data.professionalTypes.includes('语文辅导') ||
+      step1Data.professionalTypes.includes('数学辅导') ||
+      step1Data.professionalTypes.includes('英语辅导') ||
+      step1Data.professionalTypes.includes('物理辅导')
+    ) {
+      // 设置辅导类标签
+      const educationRanges = step1Data.educationRanges || []
+      const professionalTypes = step1Data.professionalTypes || []
+
+      // 根据辅导类型和范围设置标签
+      if (professionalTypes.includes('语文辅导')) {
         availableTags.value = [
           {
-            category: '辅导年级',
-            tags: ['幼儿', '小学低年级', '小学高年级', '初中', '高中', '大学生', '成人'],
+            category: '语文教学',
+            tags: ['写作指导', '阅读理解', '文学鉴赏', '语法讲解', '作文批改', '文言文解析'],
           },
           {
-            category: '辅导科目',
-            tags: [
-              '语文',
-              '数学',
-              '英语',
-              '物理',
-              '化学',
-              '生物',
-              '历史',
-              '地理',
-              '政治',
-              '综合科学',
-            ],
-          },
-          {
-            category: '服务特色',
-            tags: [
-              '重点提高',
-              '查漏补缺',
-              '考前辅导',
-              '学习规划',
-              '思维训练',
-              '难题突破',
-              '兴趣培养',
-            ],
+            category: '教学特色',
+            tags: ['趣味教学', '系统讲解', '重点突破', '查漏补缺', '考试技巧', '应试指导'],
           },
         ]
-        break
-      case '钢琴老师':
-      case '小提琴老师':
-      case '声乐教师':
-      case '美术辅导':
-      case '书法老师':
-      case '舞蹈辅导':
+      } else if (professionalTypes.includes('数学辅导')) {
         availableTags.value = [
           {
-            category: '教学对象',
-            tags: ['幼儿启蒙', '儿童', '青少年', '成人', '专业考级'],
+            category: '数学教学',
+            tags: ['思维训练', '解题技巧', '公式推导', '几何证明', '应用题解析', '计算方法'],
           },
           {
-            category: '教学内容',
-            tags: ['基础入门', '技巧提升', '考级辅导', '比赛准备', '兴趣培养', '专业训练'],
-          },
-          {
-            category: '教学风格',
-            tags: ['耐心细致', '循序渐进', '趣味教学', '严格专业', '个性化辅导', '启发式教学'],
+            category: '教学特色',
+            tags: ['逻辑思维', '系统讲解', '重点突破', '查漏补缺', '考试技巧', '应试指导'],
           },
         ]
-        break
-      case '水电工':
-      case '电工':
-      case '管道工':
+      } else if (professionalTypes.includes('英语辅导')) {
         availableTags.value = [
           {
-            category: '服务类型',
-            tags: ['日常维修', '紧急维修', '定期保养', '故障检测', '设备安装', '线路改造'],
+            category: '英语教学',
+            tags: ['口语训练', '听力练习', '阅读理解', '语法讲解', '写作指导', '词汇积累'],
           },
           {
-            category: '专业领域',
-            tags: ['电路维修', '水管维修', '下水道疏通', '设备安装', '故障排查', '安全检测'],
-          },
-          {
-            category: '服务特色',
-            tags: ['快速响应', '专业可靠', '价格合理', '保修服务', '24小时服务', '经验丰富'],
+            category: '教学特色',
+            tags: ['趣味教学', '系统讲解', '重点突破', '查漏补缺', '考试技巧', '应试指导'],
           },
         ]
-        break
-      case '木工':
-      case '泥瓦工':
-      case '油漆工':
+      } else if (professionalTypes.includes('物理辅导')) {
         availableTags.value = [
           {
-            category: '服务类型',
-            tags: ['装修施工', '家具制作', '维修翻新', '定制安装', '局部改造', '整体装修'],
+            category: '物理教学',
+            tags: ['概念讲解', '公式推导', '实验分析', '题型解析', '应用题解答', '图形分析'],
           },
           {
-            category: '专业领域',
-            tags: ['木工制作', '墙面施工', '地面施工', '家具安装', '门窗安装', '橱柜安装'],
-          },
-          {
-            category: '服务特色',
-            tags: ['工艺精湛', '质量保证', '按时完工', '价格合理', '售后保障', '经验丰富'],
+            category: '教学特色',
+            tags: ['实验演示', '系统讲解', '重点突破', '查漏补缺', '考试技巧', '应试指导'],
           },
         ]
-        break
-      case '空调维修工':
+      }
+
+      // 根据教育阶段添加标签
+      if (educationRanges.includes('小学')) {
+        availableTags.value.push({
+          category: '小学教育特点',
+          tags: ['兴趣培养', '基础打牢', '趣味教学', '习惯养成', '亲切耐心', '方法指导'],
+        })
+      }
+
+      if (educationRanges.includes('初中')) {
+        availableTags.value.push({
+          category: '初中教育特点',
+          tags: ['基础巩固', '重点突破', '考点梳理', '错题分析', '综合能力', '应试技巧'],
+        })
+      }
+
+      if (educationRanges.includes('高中')) {
+        availableTags.value.push({
+          category: '高中教育特点',
+          tags: ['系统复习', '难点攻克', '解题技巧', '高考指导', '知识拓展', '综合提升'],
+        })
+      }
+    } else if (
+      step1Data.professionalTypes.includes('水管') ||
+      step1Data.professionalTypes.includes('电路') ||
+      step1Data.professionalTypes.includes('空调') ||
+      step1Data.professionalTypes.includes('保洁')
+    ) {
+      // 设置维修服务标签
+      const professionalTypes = step1Data.professionalTypes || []
+
+      if (professionalTypes.includes('水管')) {
         availableTags.value = [
           {
-            category: '服务类型',
-            tags: ['空调安装', '空调维修', '空调清洗', '空调加氟', '空调移机', '故障检测'],
+            category: '水管维修技能',
+            tags: ['水管安装', '水管更换', '漏水维修', '阀门更换', '水管疏通', '下水道疏通'],
           },
           {
-            category: '专业领域',
-            tags: ['家用空调', '商用空调', '中央空调', '新风系统', '制冷设备', '制热设备'],
-          },
-          {
-            category: '服务特色',
-            tags: ['快速响应', '专业维修', '价格透明', '保修服务', '定期保养', '经验丰富'],
+            category: '服务特点',
+            tags: ['专业可靠', '价格透明', '准时守约', '保修服务', '工具齐全', '清洁施工'],
           },
         ]
-        break
-      case '家政服务':
-      case '保姆':
-      case '月嫂':
-      case '育儿嫂':
+      } else if (professionalTypes.includes('电路')) {
         availableTags.value = [
           {
-            category: '服务类型',
-            tags: ['日常保洁', '育儿服务', '月嫂服务', '老人护理', '病患护理', '家庭管家'],
+            category: '电路维修技能',
+            tags: ['电路检测', '线路维修', '开关安装', '插座安装', '照明安装', '电路改造'],
           },
           {
-            category: '专业领域',
-            tags: ['家务整理', '烹饪服务', '育儿护理', '老人照料', '病患照料', '家庭管理'],
-          },
-          {
-            category: '服务特色',
-            tags: ['经验丰富', '耐心细致', '专业可靠', '责任心强', '沟通良好', '服务周到'],
+            category: '服务特点',
+            tags: ['安全规范', '专业技术', '经验丰富', '保修服务', '快速响应', '设备齐全'],
           },
         ]
-        break
-      default:
+      } else if (professionalTypes.includes('空调')) {
         availableTags.value = [
           {
-            category: '专业技能',
-            tags: ['专业认证', '经验丰富', '技能过硬', '服务周到', '价格合理'],
+            category: '空调维修技能',
+            tags: ['空调安装', '空调清洗', '故障排查', '加氟服务', '空调维修', '空调保养'],
           },
           {
-            category: '服务特色',
-            tags: ['及时响应', '信誉保证', '售后保障', '24小时服务', '上门服务'],
+            category: '服务特点',
+            tags: ['专业认证', '经验丰富', '上门服务', '保修服务', '24小时服务', '快速响应'],
           },
         ]
+      } else if (professionalTypes.includes('保洁')) {
+        availableTags.value = [
+          {
+            category: '保洁技能',
+            tags: ['日常保洁', '深度清洁', '开荒保洁', '家居清洁', '办公清洁', '玻璃清洁'],
+          },
+          {
+            category: '服务特点',
+            tags: ['认真负责', '经验丰富', '自带工具', '服务专业', '价格合理', '保质保量'],
+          },
+        ]
+      }
+    } else {
+      // 其他类型的标签
+      availableTags.value = [
+        {
+          category: '其他服务特点',
+          tags: ['专业可靠', '经验丰富', '认真负责', '耐心细致', '服务周到', '价格合理'],
+        },
+      ]
     }
   }
 })
@@ -462,18 +541,56 @@ const loadFromStorage = () => {
   try {
     const data = uni.getStorageSync('professionalRegisterStep2')
     if (data) {
-      formData.value = {
-        skillTags: data.skillTags || [],
-        serviceArea: data.serviceArea || '',
-        servicePrice: data.servicePrice || '',
-        serviceDescription: data.serviceDescription || '',
-        experience: data.experience || '',
-        description: data.description || '',
-      }
+      formData.skillTags = data.skillTags || []
+      formData.serviceArea = data.serviceArea || ''
+      formData.serviceDescription = data.serviceDescription || ''
+      formData.experience = data.experience || ''
+      formData.description = data.description || ''
     }
   } catch (error) {
     console.error('加载第二步数据失败:', error)
   }
+}
+
+// 表单验证
+const validateForm = () => {
+  if (!formData.skillTags || formData.skillTags.length < 3) {
+    uni.showToast({
+      title: '请选择3-5个技能标签',
+      icon: 'none',
+    })
+    return false
+  }
+
+  if (!formData.serviceArea) {
+    uni.showToast({
+      title: '请选择服务区域',
+      icon: 'none',
+    })
+    return false
+  }
+
+  if (!formData.serviceDescription) {
+    uni.showToast({
+      title: '请填写服务描述',
+      icon: 'none',
+    })
+    return false
+  }
+
+  return true
+}
+
+// 保存表单数据到本地存储
+const saveToStorage = () => {
+  const data = {
+    skillTags: formData.skillTags,
+    serviceArea: formData.serviceArea,
+    serviceDescription: formData.serviceDescription,
+    experience: formData.experience,
+    description: formData.description,
+  }
+  uni.setStorageSync('professionalRegisterStep2', data)
 }
 </script>
 

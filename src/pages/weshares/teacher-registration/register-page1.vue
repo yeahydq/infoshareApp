@@ -163,6 +163,30 @@
             >
               {{ type }}
             </view>
+
+            <!-- 在教育分类中添加辅导范围选择 -->
+            <view
+              v-if="category.name === '教育' && hasSelectedEducation"
+              class="education-ranges-container"
+            >
+              <text class="range-label">
+                辅导范围
+                <text class="required">*</text>
+              </text>
+              <view class="education-ranges">
+                <view
+                  v-for="(range, index) in educationRanges"
+                  :key="index"
+                  :class="[
+                    'range-item',
+                    formData.educationRanges.includes(range.value) ? 'active' : '',
+                  ]"
+                  @tap="toggleEducationRange(range.value)"
+                >
+                  {{ range.label }}
+                </view>
+              </view>
+            </view>
           </view>
         </view>
 
@@ -234,8 +258,9 @@
             <view class="col-price">
               <block v-if="skillBillingTypes[type] !== 'negotiable'">
                 <input
-                  type="number"
-                  v-model="skillPrices[type]"
+                  type="digit"
+                  :value="skillPrices[type] === '面议' ? '' : skillPrices[type]"
+                  @input="(e) => updatePrice(type, e)"
                   class="price-input"
                   placeholder="输入"
                 />
@@ -255,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useUserStore } from '@/store'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 
@@ -274,14 +299,41 @@ const steps = ref<Step[]>([
   { number: 4, status: '' },
 ])
 
-const formData = reactive({
-  professionalTypes: [] as string[],
-  name: '',
-  gender: '',
-  phone: '',
+// 专业类型选项
+const professionalTypes = ['语文辅导', '数学辅导', '英语辅导', '物理辅导', '其他']
+
+// 删除旧的教育阶段选择，改为辅导范围
+const educationRanges = [
+  { label: '小学', value: '小学' },
+  { label: '初中', value: '初中' },
+  { label: '高中', value: '高中' },
+]
+
+// 修改表单数据结构
+interface FormData {
+  name: string
+  gender: string
+  phone: string
+  idCard: string
+  email: string
+  professionalTypes: string[]
+  customType: string
+  educationRanges: string[] // 改为辅导范围
+  servicePrice: string
+  billingType: string
+}
+
+const formData = reactive<FormData>({
+  name: '测试用户',
+  gender: 'male',
+  phone: '13800138000',
   idCard: '',
   email: '',
-  wechat: userStore.userInfo.openid || '',
+  professionalTypes: [], // 默认选择两个专业类型
+  customType: '',
+  educationRanges: [], // 默认选择辅导范围
+  servicePrice: '',
+  billingType: '按小时',
 })
 
 // 专业类型搜索与分类
@@ -289,93 +341,12 @@ const searchKeyword = ref('')
 const recentTypes = ref<string[]>([])
 const allCategories = [
   {
-    name: '个人辅导',
-    types: [
-      '一对一家教',
-      '小学课程辅导',
-      '中学课程辅导',
-      '高考辅导',
-      '语言辅导员',
-      '钢琴老师',
-      '小提琴老师',
-      '声乐教师',
-      '美术辅导',
-      '书法老师',
-      '舞蹈辅导',
-    ],
+    name: '教育',
+    types: ['语文辅导', '数学辅导', '英语辅导', '物理辅导'],
   },
   {
     name: '维修服务',
-    types: [
-      '水电工',
-      '电工',
-      '管道工',
-      '木工',
-      '泥瓦工',
-      '空调维修工',
-      '家电维修工',
-      '电脑维修工',
-      '手机维修工',
-      '汽车维修工',
-    ],
-  },
-  {
-    name: '家居服务',
-    types: [
-      '室内装修师',
-      '油漆工',
-      '园艺师',
-      '保洁',
-      '搬家工人',
-      '安装工',
-      '配锁匠',
-      '卫浴安装工',
-      '厨卫装修工',
-    ],
-  },
-  {
-    name: '健康医疗',
-    types: [
-      '保健医生',
-      '护士',
-      '营养师',
-      '理疗师',
-      '心理咨询师',
-      '康复师',
-      '健身教练',
-      '瑜伽教练',
-      '中医按摩师',
-    ],
-  },
-  {
-    name: '生活服务',
-    types: [
-      '家政服务',
-      '保姆',
-      '月嫂',
-      '育儿嫂',
-      '宠物美容师',
-      '美发师',
-      '化妆师',
-      '摄影师',
-      '婚礼策划师',
-      '活动主持人',
-    ],
-  },
-  {
-    name: '专业服务',
-    types: [
-      '翻译',
-      '设计师',
-      '法律顾问',
-      '会计师',
-      '财务顾问',
-      '税务顾问',
-      '程序员',
-      '网站开发',
-      '网络工程师',
-      '平面设计师',
-    ],
+    types: ['水管', '电路', '空调', '保洁'],
   },
   {
     name: '其他',
@@ -406,10 +377,9 @@ const isCategoryCollapsed = (categoryName) => {
   return collapsedCategories[categoryName]
 }
 
-// 技能价格
-const skillPrices = reactive<Record<string, string>>({})
-// 计费方式
-const skillBillingTypes = reactive<Record<string, string>>({})
+// 专业类型相关数据
+const skillPrices = ref<{ [key: string]: string }>({})
+const skillBillingTypes = ref<{ [key: string]: string }>({})
 const customTypeInput = ref('')
 
 // 计费方式选项
@@ -454,14 +424,27 @@ const getBillingTypeIndex = (type: string) => {
 const changeBillingType = (type: string, e: any) => {
   const index = e.detail.value
   const billingType = billingOptions[index].value
+  console.log(`更改${type}计费方式为:`, billingType)
+
+  // 保存之前的计费方式
+  const oldBillingType = skillBillingTypes[type]
+
+  // 更新计费方式
   skillBillingTypes[type] = billingType
 
-  // 如果选择私聊，则不需要设置具体价格
+  // 如果选择私聊，设置价格为"面议"
   if (billingType === 'negotiable') {
     skillPrices[type] = '面议'
-  } else if (skillPrices[type] === '面议') {
-    // 如果从私聊切换到其他方式，清空价格
+    console.log(`设置${type}价格为面议`, skillPrices[type])
+  } else if (oldBillingType === 'negotiable' || skillPrices[type] === '面议') {
+    // 如果从私聊切换到其他方式，或者价格是"面议"，清空价格
+    console.log(`从面议切换到${billingType}，清空价格`)
     skillPrices[type] = ''
+
+    // 强制更新UI
+    nextTick(() => {
+      console.log(`${type}当前价格:`, skillPrices[type])
+    })
   }
 }
 
@@ -579,7 +562,29 @@ const handleGenderChange = (e: any) => {
   formData.gender = e.detail.value
 }
 
-// 表单验证
+// 判断是否为辅导类
+const isEducationType = computed(() => {
+  return formData.professionalTypes.some((type) =>
+    ['语文辅导', '数学辅导', '英语辅导', '物理辅导'].includes(type),
+  )
+})
+
+// 判断是否为维修服务类
+const isRepairType = computed(() => {
+  return formData.professionalTypes.some((type) => ['水管', '电路', '空调', '保洁'].includes(type))
+})
+
+// 切换辅导范围
+const toggleEducationRange = (range: string) => {
+  const index = formData.educationRanges.indexOf(range)
+  if (index === -1) {
+    formData.educationRanges.push(range)
+  } else {
+    formData.educationRanges.splice(index, 1)
+  }
+}
+
+// 修改表单验证
 const validateForm = () => {
   if (!formData.name) {
     uni.showToast({
@@ -588,6 +593,7 @@ const validateForm = () => {
     })
     return false
   }
+
   if (!formData.gender) {
     uni.showToast({
       title: '请选择性别',
@@ -595,6 +601,7 @@ const validateForm = () => {
     })
     return false
   }
+
   if (!formData.phone) {
     uni.showToast({
       title: '请输入手机号',
@@ -602,29 +609,23 @@ const validateForm = () => {
     })
     return false
   }
-  if (!/^1[3-9]\d{9}$/.test(formData.phone)) {
+
+  if (!formData.professionalTypes.length) {
     uni.showToast({
-      title: '请输入正确的手机号',
+      title: '请选择专业类型',
       icon: 'none',
     })
     return false
   }
-  if (
-    formData.idCard &&
-    !/^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dX]$/.test(formData.idCard)
-  ) {
-    uni.showToast({
-      title: '请输入正确的身份证号',
-      icon: 'none',
-    })
-    return false
-  }
-  if (formData.professionalTypes.length === 0) {
-    uni.showToast({
-      title: '请至少选择一个专业类型',
-      icon: 'none',
-    })
-    return false
+
+  if (isEducationType.value) {
+    if (!formData.educationRanges.length) {
+      uni.showToast({
+        title: '请选择辅导范围',
+        icon: 'none',
+      })
+      return false
+    }
   }
 
   // 检查每个专业类型是否设置了价格和计费方式
@@ -637,7 +638,11 @@ const validateForm = () => {
       return false
     }
 
-    if (skillBillingTypes[type] !== 'negotiable' && !skillPrices[type]) {
+    // 修复验证逻辑：只有当计费方式不是"私聊"且价格为空时才提示
+    if (
+      skillBillingTypes[type] !== 'negotiable' &&
+      (!skillPrices[type] || skillPrices[type] === '')
+    ) {
       uni.showToast({
         title: `请设置"${type}"的服务价格`,
         icon: 'none',
@@ -669,6 +674,8 @@ const emit = defineEmits(['next', 'back'])
 
 // 页面加载时初始化
 onMounted(() => {
+  console.log('Register page 1 mounted')
+
   // 加载最近选择的专业类型
   try {
     const savedRecentTypes = uni.getStorageSync('recentProfessionalTypes')
@@ -681,16 +688,24 @@ onMounted(() => {
 
   // 检查是否有缓存数据
   const cachedData = uni.getStorageSync('professionalRegisterStep1')
+  console.log('Loading cached data:', cachedData)
+
+  // 清除旧缓存数据，强制使用默认值进行测试
   if (cachedData) {
-    // 如果存在缓存数据，填充表单
-    Object.assign(formData, cachedData)
-    // 恢复技能价格和计费方式
-    if (cachedData.skillPrices) {
-      Object.assign(skillPrices, cachedData.skillPrices)
-    }
-    if (cachedData.skillBillingTypes) {
-      Object.assign(skillBillingTypes, cachedData.skillBillingTypes)
-    }
+    // 清除缓存数据
+    console.log('清除旧缓存数据，使用默认测试值')
+    uni.removeStorageSync('professionalRegisterStep1')
+    uni.removeStorageSync('professionalRegisterStep2')
+    uni.removeStorageSync('professionalRegisterStep3')
+  }
+
+  // 确保价格表显示正确
+  console.log('当前设置的价格:', skillPrices.value)
+  console.log('当前设置的计费方式:', skillBillingTypes.value)
+
+  // 强制设置"面议"价格
+  if (skillBillingTypes.value['数学辅导'] === 'negotiable') {
+    skillPrices.value['数学辅导'] = '面议'
   }
 })
 
@@ -698,19 +713,24 @@ onMounted(() => {
 const hasSelectedOther = computed(() => {
   return formData.professionalTypes.includes('其他')
 })
+
+// 判断是否选择了教育类型
+const hasSelectedEducation = computed(() => {
+  return formData.professionalTypes.some((type) =>
+    ['语文辅导', '数学辅导', '英语辅导', '物理辅导'].includes(type),
+  )
+})
+
+// 添加更新价格的函数
+const updatePrice = (type: string, e: any) => {
+  const value = e.detail.value
+  console.log(`更新${type}价格为:`, value)
+  skillPrices[type] = value
+}
 </script>
 
 <style lang="scss" scoped>
-// 基础样式
-.input {
-  width: 100%;
-  height: 80rpx;
-  padding: 0 20rpx;
-  font-size: 28rpx;
-  background-color: #f8f8f8;
-  border-radius: 8rpx;
-}
-
+// 移除所有独立的基础选择器，统一在表单组件内部定义样式
 .form {
   .form-item {
     margin-bottom: 30rpx;
@@ -721,15 +741,23 @@ const hasSelectedOther = computed(() => {
       font-size: 28rpx;
       color: #333;
 
-      .required {
-        margin-left: 4rpx;
-        color: #ff4d4f;
-      }
-
+      // 将所有相关样式统一在这里定义
       .hint {
         margin-left: 4rpx;
         color: #999;
       }
+
+      .required {
+        margin-left: 4rpx;
+        color: #ff4d4f;
+      }
+    }
+
+    // 如果表单项下方需要提示文本，使用不同的类名避免冲突
+    .form-hint {
+      margin-top: 10rpx;
+      font-size: 24rpx;
+      color: #999;
     }
 
     .radio-group {
@@ -744,6 +772,15 @@ const hasSelectedOther = computed(() => {
       }
     }
   }
+}
+
+.input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
 }
 
 .search-box {
@@ -1197,5 +1234,40 @@ const hasSelectedOther = computed(() => {
     font-size: 24rpx;
     color: #666;
   }
+}
+
+.education-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.range-item {
+  padding: 16rpx 32rpx;
+  font-size: 28rpx;
+  color: #666;
+  background-color: #f8f8f8;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 30rpx;
+  transition: all 0.3s ease;
+
+  &.active {
+    color: #fff;
+    background-color: #07c160;
+    border-color: #07c160;
+  }
+}
+
+.education-ranges-container {
+  width: 100%;
+  padding-top: 20rpx;
+  margin-top: 20rpx;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.range-label {
+  display: block;
+  margin-bottom: 16rpx;
 }
 </style>

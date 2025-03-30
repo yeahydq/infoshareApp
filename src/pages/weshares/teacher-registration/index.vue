@@ -78,15 +78,27 @@ const handleBack = (step) => {
 onMounted(() => {
   console.log('Teacher registration index page mounted')
 
+  // 清除所有缓存数据，以便测试
+  console.log('清除所有缓存数据，以便测试')
+  uni.removeStorageSync('professionalRegisterStep1')
+  uni.removeStorageSync('professionalRegisterStep2')
+  uni.removeStorageSync('professionalRegisterStep3')
+
   // 初始化第一步数据（创建一个空对象）
   const initStep1Data = uni.getStorageSync('professionalRegisterStep1')
   if (!initStep1Data) {
     console.log('Initializing step 1 data with default values')
     uni.setStorageSync('professionalRegisterStep1', {
       name: '',
+      gender: '',
       phone: '',
       idCard: '',
-      professionalType: '', // 移除默认值
+      email: '',
+      professionalTypes: [], // 改为数组
+      customType: '',
+      educationRanges: [], // 添加辅导范围
+      skillPrices: {}, // 添加技能价格
+      skillBillingTypes: {}, // 添加计费方式
     })
   }
 
