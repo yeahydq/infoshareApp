@@ -15,6 +15,7 @@ declare module '@vue/runtime-core' {
     FlyHeader: typeof import('./../components/fly-header/fly-header.vue')['default']
     FlyLogin: typeof import('./../components/fly-login/fly-login.vue')['default']
     FlyNavbar: typeof import('./../components/fly-navbar/fly-navbar.vue')['default']
+    ImageCropper: typeof import('./../components/ImageCropper/ImageCropper.vue')['default']
     NavigationBar: typeof import('./../components/navigation-bar/navigation-bar.vue')['default']
     PageHeader: typeof import('./../components/PageHeader/PageHeader.vue')['default']
     PageLayout: typeof import('./../components/PageLayout/PageLayout.vue')['default']

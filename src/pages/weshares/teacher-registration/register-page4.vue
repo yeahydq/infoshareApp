@@ -118,23 +118,104 @@
         <view class="upload-status">
           <view class="status-item" v-if="step3Data.education">
             <text class="label">学历证书</text>
-            <text class="status uploaded">已上传</text>
+            <text class="status" :class="getFileStatusClass(step3Data.education.split(',')[0])">
+              {{ getFileStatusText(step3Data.education.split(',')[0]) }}
+            </text>
+            <view class="image-preview-container" v-if="step3Data.education">
+              <scroll-view scroll-x>
+                <view class="image-preview-list">
+                  <view
+                    class="preview-item"
+                    v-for="(path, index) in getImageList(step3Data.education)"
+                    :key="index"
+                    @click="previewImage(getImageList(step3Data.education), index)"
+                  >
+                    <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
           </view>
           <view class="status-item" v-if="step3Data.professional">
             <text class="label">专业证书</text>
-            <text class="status uploaded">已上传</text>
+            <text class="status" :class="getFileStatusClass(step3Data.professional.split(',')[0])">
+              {{ getFileStatusText(step3Data.professional.split(',')[0]) }}
+            </text>
+            <view class="image-preview-container" v-if="step3Data.professional">
+              <scroll-view scroll-x>
+                <view class="image-preview-list">
+                  <view
+                    class="preview-item"
+                    v-for="(path, index) in getImageList(step3Data.professional)"
+                    :key="index"
+                    @click="previewImage(getImageList(step3Data.professional), index)"
+                  >
+                    <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
           </view>
           <view class="status-item" v-if="step3Data.qualification">
             <text class="label">专业资格证书</text>
-            <text class="status uploaded">已上传</text>
+            <text class="status" :class="getFileStatusClass(step3Data.qualification)">
+              {{ getFileStatusText(step3Data.qualification) }}
+            </text>
+            <view class="image-preview-container" v-if="step3Data.qualification">
+              <view class="preview-item" @click="previewImage([step3Data.qualification])">
+                <image
+                  class="preview-image"
+                  :src="getImageSrc(step3Data.qualification)"
+                  mode="aspectFill"
+                ></image>
+              </view>
+            </view>
           </view>
           <view class="status-item" v-if="step3Data.idCardFront && step3Data.idCardBack">
             <text class="label">身份证照片</text>
-            <text class="status uploaded">已上传</text>
+            <text class="status" :class="getFileStatusClass(step3Data.idCardFront)">
+              {{ getFileStatusText(step3Data.idCardFront) }}
+            </text>
+            <view class="id-card-container">
+              <view class="id-card-preview">
+                <view class="preview-item" @click="previewImage([step3Data.idCardFront])">
+                  <text class="preview-label">正面</text>
+                  <image
+                    class="preview-image"
+                    :src="getImageSrc(step3Data.idCardFront)"
+                    mode="aspectFill"
+                  ></image>
+                </view>
+                <view class="preview-item" @click="previewImage([step3Data.idCardBack])">
+                  <text class="preview-label">反面</text>
+                  <image
+                    class="preview-image"
+                    :src="getImageSrc(step3Data.idCardBack)"
+                    mode="aspectFill"
+                  ></image>
+                </view>
+              </view>
+            </view>
           </view>
           <view class="status-item" v-if="step3Data.honor">
             <text class="label">荣誉证书</text>
-            <text class="status uploaded">已上传</text>
+            <text class="status" :class="getFileStatusClass(step3Data.honor.split(',')[0])">
+              {{ getFileStatusText(step3Data.honor.split(',')[0]) }}
+            </text>
+            <view class="image-preview-container" v-if="step3Data.honor">
+              <scroll-view scroll-x>
+                <view class="image-preview-list">
+                  <view
+                    class="preview-item"
+                    v-for="(path, index) in getImageList(step3Data.honor)"
+                    :key="index"
+                    @click="previewImage(getImageList(step3Data.honor), index)"
+                  >
+                    <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
           </view>
         </view>
       </view>
@@ -370,6 +451,109 @@ const getBillingUnitLabel = (billingType: string) => {
       return ''
   }
 }
+
+// 获取图片列表
+const getImageList = (path: string | undefined): string[] => {
+  if (!path) return []
+  return path.split(',').filter(Boolean)
+}
+
+// 获取图片源
+const getImageSrc = (path: string): string => {
+  if (!path) return ''
+
+  // 尝试从映射中获取真实路径
+  try {
+    const mappings = uni.getStorageSync('filePathMappings') || {}
+    if (mappings[path]) {
+      console.log('预览页从映射获取文件路径:', path, '->', mappings[path])
+      return mappings[path]
+    }
+  } catch (err) {
+    console.error('预览页从映射获取文件路径失败:', err)
+  }
+
+  // 尝试从缓存中获取
+  if (path.includes('file_')) {
+    try {
+      const cachedFiles = uni.getStorageSync('cachedFiles') || {}
+      if (cachedFiles[path]) {
+        return cachedFiles[path].tempFilePath
+      }
+    } catch (error) {
+      console.error('获取缓存文件失败:', error)
+    }
+  }
+
+  return path
+}
+
+// 检查文件是否仅本地缓存（未上传到服务器）
+const isLocalCachedOnly = (path: string): boolean => {
+  // 如果路径包含file_前缀，表示这是一个本地缓存文件标识符
+  if (!path || !path.includes('file_')) {
+    return false
+  }
+
+  // 判断是本地缓存文件
+  return true
+}
+
+// 获取证件状态文本
+const getFileStatusText = (path: string): string => {
+  if (!path) return ''
+
+  if (isLocalCachedOnly(path)) {
+    return '已缓存本地'
+  } else {
+    return '已上传'
+  }
+}
+
+// 获取证件状态样式类
+const getFileStatusClass = (path: string): string => {
+  if (!path) return ''
+
+  if (isLocalCachedOnly(path)) {
+    return 'cached'
+  } else {
+    return 'uploaded'
+  }
+}
+
+// 预览图片
+const previewImage = (imageList: string[], index = 0) => {
+  if (!imageList || imageList.length === 0) {
+    uni.showToast({
+      title: '没有可预览的图片',
+      icon: 'none',
+    })
+    return
+  }
+
+  // 处理图片路径
+  const urls = imageList.map((path) => getImageSrc(path)).filter(Boolean)
+
+  if (urls.length === 0) {
+    uni.showToast({
+      title: '图片加载失败',
+      icon: 'none',
+    })
+    return
+  }
+
+  uni.previewImage({
+    urls,
+    current: urls[index] || urls[0],
+    fail: (err) => {
+      console.error('预览图片失败:', err)
+      uni.showToast({
+        title: '预览图片失败',
+        icon: 'none',
+      })
+    },
+  })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -450,6 +634,14 @@ const getBillingUnitLabel = (billingType: string) => {
         font-size: 30rpx;
         line-height: 1.5;
         color: #333;
+
+        &.uploaded {
+          color: #07c160;
+        }
+
+        &.cached {
+          color: #ff9900;
+        }
       }
     }
   }
@@ -540,6 +732,90 @@ const getBillingUnitLabel = (billingType: string) => {
       margin-left: 8rpx;
       font-size: 24rpx;
       content: '✓';
+    }
+  }
+}
+
+.image-preview-container {
+  padding: 16rpx;
+  margin-top: 16rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+
+  .image-preview-list {
+    display: flex;
+    flex-wrap: nowrap;
+  }
+
+  .preview-item {
+    position: relative;
+    width: 160rpx;
+    height: 160rpx;
+    margin-right: 16rpx;
+    overflow: hidden;
+    border-radius: 8rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+
+    &:last-child {
+      margin-right: 0;
+    }
+
+    .preview-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      padding: 4rpx 8rpx;
+      font-size: 20rpx;
+      color: #fff;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 0 0 8rpx 0;
+    }
+
+    .preview-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}
+
+.id-card-container {
+  padding: 16rpx;
+  margin-top: 16rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+
+  .id-card-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .preview-item {
+      position: relative;
+      width: 48%;
+      height: 180rpx;
+      overflow: hidden;
+      border-radius: 8rpx;
+      box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+
+      .preview-label {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        padding: 4rpx 8rpx;
+        font-size: 20rpx;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 0 0 8rpx 0;
+      }
+
+      .preview-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
   }
 }
