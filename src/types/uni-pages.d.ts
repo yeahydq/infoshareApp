@@ -56,6 +56,7 @@ interface NavigateToOptions {
        "/pages/weshares/teacher-registration/register-page2" |
        "/pages/weshares/teacher-registration/register-page3" |
        "/pages/weshares/teacher-registration/register-page4" |
+       "/pages/weshares/teacher-registration/status" |
        "/pages/weshares/teacher-registration/success" |
        "/pages/weshares/upload-documents/index";
 }

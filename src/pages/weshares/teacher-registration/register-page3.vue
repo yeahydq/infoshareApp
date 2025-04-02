@@ -198,37 +198,55 @@ const formSubmitted = ref(false)
 // 处理身份证正面照片上传
 const handleIdCardFrontChange = (files: string[]) => {
   formData.idCardFront = files[0] || ''
-  console.log('身份证正面更新:', formData.idCardFront)
+  // 更新到store
+  registerStore.updateStep3({
+    idCardFront: files[0] || '',
+  })
 }
 
 // 处理身份证反面照片上传
 const handleIdCardBackChange = (files: string[]) => {
   formData.idCardBack = files[0] || ''
-  console.log('身份证反面更新:', formData.idCardBack)
+  // 更新到store
+  registerStore.updateStep3({
+    idCardBack: files[0] || '',
+  })
 }
 
 // 处理专业资格证书上传
 const handleQualificationChange = (files: string[]) => {
   formData.qualification = files[0] || ''
-  console.log('专业资格证书更新:', formData.qualification)
+  // 更新到store
+  registerStore.updateStep3({
+    qualification: files[0] || '',
+  })
 }
 
 // 处理学历证书上传
 const handleEducationChange = (files: string[]) => {
-  formData.education = files.length > 0 ? files.join(',') : ''
-  console.log('学历证书更新:', formData.education)
+  formData.education = files.join(',')
+  // 更新到store
+  registerStore.updateStep3({
+    education: files.join(','),
+  })
 }
 
 // 处理专业证书上传
 const handleProfessionalChange = (files: string[]) => {
-  formData.professional = files.length > 0 ? files.join(',') : ''
-  console.log('专业证书更新:', formData.professional)
+  formData.professional = files.join(',')
+  // 更新到store
+  registerStore.updateStep3({
+    professional: files.join(','),
+  })
 }
 
 // 处理荣誉证书上传
 const handleHonorChange = (files: string[]) => {
-  formData.honor = files.length > 0 ? files.join(',') : ''
-  console.log('荣誉证书更新:', formData.honor)
+  formData.honor = files.join(',')
+  // 更新到store
+  registerStore.updateStep3({
+    honor: files.join(','),
+  })
 }
 
 // 获取文件列表
@@ -347,13 +365,17 @@ const validateForm = () => {
 // 定义emit
 const emit = defineEmits(['next', 'back'])
 
-// 页面加载时获取缓存数据
+// 在组件挂载时，从store中恢复数据
 onMounted(() => {
-  // 从全局状态加载数据
-  const storeData = registerStore.step3Data
-  if (storeData) {
-    // 如果存在数据，填充表单
-    Object.assign(formData, storeData)
+  // 从store中恢复数据
+  const step3Data = registerStore.step3Data
+  if (step3Data) {
+    formData.idCardFront = step3Data.idCardFront || ''
+    formData.idCardBack = step3Data.idCardBack || ''
+    formData.qualification = step3Data.qualification || ''
+    formData.education = step3Data.education || ''
+    formData.professional = step3Data.professional || ''
+    formData.honor = step3Data.honor || ''
   }
 
   // 检查是否有第二步数据

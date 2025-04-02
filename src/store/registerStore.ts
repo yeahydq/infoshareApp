@@ -43,6 +43,9 @@ export const useRegisterStore = defineStore('register', {
       agreement: false,
       status: '',
     } as Step4Data,
+
+    // 添加修改模式标志
+    isModifyMode: false,
   }),
 
   actions: {
@@ -62,6 +65,16 @@ export const useRegisterStore = defineStore('register', {
       this.step4Data = { ...this.step4Data, ...data }
     },
 
+    // 设置修改模式
+    setModifyMode(isModify: boolean) {
+      this.isModifyMode = isModify
+      try {
+        uni.setStorageSync('professionalRegisterModifyMode', isModify)
+      } catch (error) {
+        console.error('保存修改模式状态失败:', error)
+      }
+    },
+
     // 加载本地存储数据初始化状态
     loadFromStorage() {
       try {
@@ -69,11 +82,13 @@ export const useRegisterStore = defineStore('register', {
         const step2Storage = uni.getStorageSync('professionalRegisterStep2')
         const step3Storage = uni.getStorageSync('professionalRegisterStep3')
         const step4Storage = uni.getStorageSync('professionalRegisterStep4')
+        const modifyModeStorage = uni.getStorageSync('professionalRegisterModifyMode')
 
         if (step1Storage) this.step1Data = { ...this.step1Data, ...step1Storage }
         if (step2Storage) this.step2Data = { ...this.step2Data, ...step2Storage }
         if (step3Storage) this.step3Data = { ...this.step3Data, ...step3Storage }
         if (step4Storage) this.step4Data = { ...this.step4Data, ...step4Storage }
+        if (modifyModeStorage !== '') this.isModifyMode = modifyModeStorage
       } catch (error) {
         console.error('加载注册数据失败:', error)
       }
@@ -86,6 +101,7 @@ export const useRegisterStore = defineStore('register', {
         uni.setStorageSync('professionalRegisterStep2', this.step2Data)
         uni.setStorageSync('professionalRegisterStep3', this.step3Data)
         uni.setStorageSync('professionalRegisterStep4', this.step4Data)
+        uni.setStorageSync('professionalRegisterModifyMode', this.isModifyMode)
       } catch (error) {
         console.error('保存注册数据失败:', error)
       }
@@ -98,6 +114,7 @@ export const useRegisterStore = defineStore('register', {
         uni.removeStorageSync('professionalRegisterStep2')
         uni.removeStorageSync('professionalRegisterStep3')
         uni.removeStorageSync('professionalRegisterStep4')
+        uni.removeStorageSync('professionalRegisterModifyMode')
 
         this.step1Data = {
           name: '',
@@ -135,6 +152,7 @@ export const useRegisterStore = defineStore('register', {
           agreement: false,
           status: '',
         }
+        this.isModifyMode = false
       } catch (error) {
         console.error('清空注册数据失败:', error)
       }

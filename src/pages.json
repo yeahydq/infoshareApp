@@ -326,6 +326,10 @@
       "type": "page"
     },
     {
+      "path": "pages/weshares/teacher-registration/status",
+      "type": "page"
+    },
+    {
       "path": "pages/weshares/teacher-registration/success",
       "type": "page"
     },

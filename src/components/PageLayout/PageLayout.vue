@@ -25,8 +25,15 @@
     <!-- 底部按钮 -->
     <view class="footer">
       <view class="btn-group">
-        <button v-if="showBack" class="back-btn" @tap="handleBack">上一步</button>
-        <button v-if="!hideNextBtn" class="next-btn" @tap="handleNext">
+        <button v-if="showBack" class="back-btn" @click.stop="handleBack" @tap.stop="handleBack">
+          {{ backBtnText }}
+        </button>
+        <button
+          v-if="!hideNextBtn"
+          class="next-btn"
+          @click.stop="handleNext"
+          @tap.stop="handleNext"
+        >
           {{ isLastStep ? '提交申请' : '下一步' }}
         </button>
       </view>
@@ -42,13 +49,32 @@ interface Step {
   status: 'active' | 'completed' | ''
 }
 
-const props = defineProps<{
-  title: string
-  subtitle: string
-  steps: Step[]
-  showBack?: boolean
-  hideNextBtn?: boolean
-}>()
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+  subtitle: {
+    type: String,
+    required: true,
+  },
+  steps: {
+    type: Array as () => Step[],
+    required: true,
+  },
+  showBack: {
+    type: Boolean,
+    default: false,
+  },
+  hideNextBtn: {
+    type: Boolean,
+    default: false,
+  },
+  backBtnText: {
+    type: String,
+    default: '上一步',
+  },
+})
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -166,12 +192,14 @@ const handleBack = () => {
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 100;
+  z-index: 9999;
   padding: 20rpx;
   background-color: #fff;
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
 
   .btn-group {
+    position: relative;
+    z-index: 10001;
     display: flex;
     gap: 20rpx;
     padding: 0 20rpx;
@@ -179,6 +207,8 @@ const handleBack = () => {
 
   .back-btn,
   .next-btn {
+    position: relative;
+    z-index: 10001;
     display: flex;
     flex: 1;
     align-items: center;
@@ -189,12 +219,16 @@ const handleBack = () => {
   }
 
   .back-btn {
+    min-width: 200rpx;
+    padding: 0 20rpx;
     color: #666;
     background-color: #f0f0f0;
     border: 1px solid #ddd;
   }
 
   .next-btn {
+    min-width: 200rpx;
+    padding: 0 20rpx;
     color: #fff;
     background-color: #07c160;
 

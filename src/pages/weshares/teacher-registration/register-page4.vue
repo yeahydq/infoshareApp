@@ -7,7 +7,13 @@
     @back="handleBack"
     @next="handleSubmit"
     :hideNextBtn="isApplicationPending"
+    :backBtnText="isApplicationPending ? '修改资料' : '上一步'"
   >
+    <!-- 添加备用修改按钮，确保用户可以点击 -->
+    <view v-if="isApplicationPending" class="edit-button-floating" @tap="handleBackFromFloating">
+      <text>点击修改资料</text>
+    </view>
+
     <view class="preview-container">
       <!-- 审核状态显示 -->
       <view v-if="isApplicationPending" class="status-banner">
@@ -15,6 +21,8 @@
         <view class="status-info">
           <view class="status-title">您的申请正在审核中</view>
           <view class="status-desc">我们的工作人员正在审核您的资料，请耐心等待</view>
+          <!-- 添加内联修改按钮 -->
+          <view class="modify-link" @tap="handleBackFromInline">点击此处修改资料</view>
         </view>
       </view>
 
@@ -62,9 +70,7 @@
       </view>
 
       <view class="preview-section">
-        <view class="section-header">
-          <view class="section-title">专业能力与服务信息</view>
-        </view>
+        <view class="section-title">专业能力与服务信息</view>
         <view class="info-group">
           <view class="info-item" v-if="step2Data.experience">
             <text class="label">工作经验</text>
@@ -289,6 +295,21 @@
         </text>
       </view>
     </view>
+
+    <!-- 修改确认弹窗 -->
+    <view class="modify-confirm-overlay" v-if="showModifyConfirm">
+      <view class="modify-confirm-dialog">
+        <view class="modify-confirm-title">确认修改申请</view>
+        <view class="modify-confirm-content">
+          <text>您已完成信息修改，确认提交这些变更吗？</text>
+          <text class="warning-text">注意：修改后的信息需要重新审核，请耐心等待审核结果。</text>
+        </view>
+        <view class="modify-confirm-buttons">
+          <button class="cancel-btn" @click="cancelModify">取消</button>
+          <button class="confirm-btn" @click="confirmModify">确认修改</button>
+        </view>
+      </view>
+    </view>
   </PageLayout>
 </template>
 
@@ -297,7 +318,7 @@ import { ref, onMounted, reactive, computed } from 'vue'
 import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { useUserStore } from '@/store'
-import { login } from '@/service/auth'
+import { login } from '@/service/auth/index'
 
 interface Step {
   number: number
@@ -353,17 +374,75 @@ const step1Data = ref<Step1Data>({})
 const step2Data = ref<Step2Data>({})
 const step3Data = ref<Step3Data>({})
 
-const formData = reactive({
+// 定义表单数据类型
+interface FormData {
+  name: string
+  gender: string
+  phone: string
+  email: string
+  idCard: string
+  professionalTypes: string[]
+  educationRanges: string[]
+  skillPrices: Record<string, number>
+  skillBillingTypes: Record<string, string>
+  skillTags: string[]
+  serviceArea: string
+  serviceDescription: string
+  experience: string
+  selectedCity: string
+  selectedDistrict: string
+  selectedStreet: string
+  idCardFront: string
+  idCardBack: string
+  qualification: string
+  education: string
+  professional: string
+  honor: string
+  agreement: boolean
+}
+
+// 定义表单数据
+const formData = ref<FormData>({
+  name: '',
+  gender: '',
+  phone: '',
+  email: '',
+  idCard: '',
+  professionalTypes: [],
+  educationRanges: [],
+  skillPrices: {},
+  skillBillingTypes: {},
+  skillTags: [],
+  serviceArea: '',
+  serviceDescription: '',
+  experience: '',
+  selectedCity: '',
+  selectedDistrict: '',
+  selectedStreet: '',
+  idCardFront: '',
+  idCardBack: '',
+  qualification: '',
+  education: '',
+  professional: '',
+  honor: '',
   agreement: false,
 })
 
-const isApplicationPending = computed(() => registerStore.step4Data?.status === 'pending')
+const isApplicationPending = computed(() => false)
 
-// 返回上一步
+// 新增的状态和属性
+const showModifyConfirm = ref(false)
+const isModifyMode = computed(() => registerStore.isModifyMode)
+
+// 定义是否可以提交的标志
+const canSubmit = ref(false)
+
+// 修改handleBack函数
 const handleBack = () => {
+  console.log('触发上一步操作')
   // 保存当前数据到全局状态
   registerStore.updateStep4({
-    agreement: formData.agreement,
+    agreement: formData.value.agreement,
   })
   // 同时保存到本地存储（作为备份）
   registerStore.saveToStorage()
@@ -371,14 +450,182 @@ const handleBack = () => {
   emit('back', 4)
 }
 
+// 取消修改
+const cancelModify = () => {
+  showModifyConfirm.value = false
+}
+
+// 确认修改
+const confirmModify = async () => {
+  showModifyConfirm.value = false
+
+  try {
+    // 显示加载提示
+    uni.showLoading({
+      title: '提交修改中...',
+    })
+
+    // 从全局状态获取数据
+    const step1Data = registerStore.step1Data
+    const step2Data = registerStore.step2Data
+    const step3Data = registerStore.step3Data
+
+    if (!step1Data || !step2Data || !step3Data) {
+      throw new Error('请先完成前三步信息填写')
+    }
+
+    // 复制一份数据用于处理
+    const formDataToSubmit = {
+      ...step1Data,
+      ...step2Data,
+      ...step3Data,
+    }
+
+    // 处理文件上传 - 只上传修改过的文件
+    const uploadPromises = []
+    const fileFields = [
+      'idCardFront',
+      'idCardBack',
+      'qualification',
+      'education',
+      'professional',
+      'honor',
+    ]
+
+    console.log('准备上传修改的文件...')
+
+    // 保存上传前的路径，用于日志记录
+    const originalPaths = {}
+    const updatedFiles = {}
+
+    // 处理所有文件上传
+    for (const field of fileFields) {
+      if (!formDataToSubmit[field]) continue
+      originalPaths[field] = formDataToSubmit[field]
+
+      // 处理单个文件
+      if (field === 'idCardFront' || field === 'idCardBack' || field === 'qualification') {
+        if (!isLocalPath(formDataToSubmit[field])) continue
+
+        uploadPromises.push(
+          uploadFile(formDataToSubmit[field], field).then((fileID) => {
+            formDataToSubmit[field] = fileID as string
+            updatedFiles[field] = fileID
+            console.log(`${field}上传成功: ${fileID}`)
+          }),
+        )
+      }
+      // 处理多个文件（逗号分隔的情况）
+      else if (formDataToSubmit[field].includes(',')) {
+        const paths = formDataToSubmit[field].split(',')
+        const uploadedPaths: string[] = []
+        let hasLocalFiles = false
+
+        for (let i = 0; i < paths.length; i++) {
+          const path = paths[i].trim()
+          if (!path) {
+            uploadedPaths[i] = ''
+            continue
+          }
+
+          if (isLocalPath(path)) {
+            hasLocalFiles = true
+            uploadPromises.push(
+              uploadFile(path, `${field}_${i}`).then((fileID) => {
+                uploadedPaths[i] = fileID as string
+                console.log(`${field}_${i}上传成功: ${fileID}`)
+              }),
+            )
+          } else {
+            uploadedPaths[i] = path // 保留原路径
+          }
+        }
+
+        // 如果存在本地文件，等待上传完成后更新路径
+        if (hasLocalFiles) {
+          uploadPromises.push(
+            Promise.all(uploadPromises).then(() => {
+              const filePaths = uploadedPaths.filter(Boolean).join(',')
+              formDataToSubmit[field] = filePaths
+              updatedFiles[field] = filePaths
+            }),
+          )
+        }
+      }
+    }
+
+    // 等待所有文件上传完成
+    if (uploadPromises.length > 0) {
+      console.log(`开始上传${uploadPromises.length}个文件...`)
+      await Promise.all(uploadPromises)
+      console.log('所有文件上传完成!')
+
+      // 记录上传前后的路径变化
+      console.log('文件路径变化:', {
+        original: originalPaths,
+        uploaded: updatedFiles,
+      })
+    } else {
+      console.log('没有需要上传的文件')
+    }
+
+    // 准备要更新的数据
+    const updateData = {
+      action: 'updateFiles',
+      professionalId: userStore.userInfo.professionalId,
+      updatedFiles,
+      basicInfo: step1Data,
+      serviceInfo: step2Data,
+    }
+
+    // 调用云函数更新数据
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: updateData,
+    })
+
+    // 隐藏加载提示
+    uni.hideLoading()
+
+    if (result.success) {
+      // 清除修改模式
+      registerStore.setModifyMode(false)
+
+      // 显示成功提示
+      uni.showToast({
+        title: '修改成功',
+        icon: 'success',
+      })
+
+      // 重新获取申请信息
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/weshares/teacher-registration/index',
+        })
+      }, 1500)
+    } else {
+      throw new Error(result.message || '修改失败')
+    }
+  } catch (error: any) {
+    // 隐藏加载提示
+    uni.hideLoading()
+
+    // 显示错误提示
+    uni.showToast({
+      title: error.message || '修改失败，请重试',
+      icon: 'none',
+    })
+  }
+}
+
 // 处理服务协议勾选
 const handleAgreementChange = (e: any) => {
-  formData.agreement = e.detail.value.length > 0
+  formData.value.agreement = e.detail.value.length > 0
 }
 
 // 表单验证
 const validateForm = () => {
-  if (!formData.agreement) {
+  if (!formData.value.agreement) {
     uni.showToast({
       title: '请阅读并同意服务协议',
       icon: 'none',
@@ -390,15 +637,6 @@ const validateForm = () => {
 
 // 处理提交
 const handleSubmit = async () => {
-  // 如果申请正在审核中，不允许再次提交
-  if (isApplicationPending.value) {
-    uni.showToast({
-      title: '您的申请正在审核中，请勿重复提交',
-      icon: 'none',
-    })
-    return
-  }
-
   if (!validateForm()) {
     return
   }
@@ -418,26 +656,132 @@ const handleSubmit = async () => {
       throw new Error('请先完成前三步信息填写')
     }
 
-    // 合并所有数据
-    const submitData = {
+    // 复制一份数据用于处理
+    const formDataToSubmit = {
       ...step1Data,
       ...step2Data,
       ...step3Data,
-      agreement: formData.agreement,
+      agreement: formData.value.agreement,
     }
 
-    // 调用云函数提交数据
+    // 处理文件上传 - 先上传所有文件到云存储
+    const uploadPromises = []
+    const fileFields = [
+      'idCardFront',
+      'idCardBack',
+      'qualification',
+      'education',
+      'professional',
+      'honor',
+    ]
+
+    console.log('准备上传文件...')
+
+    // 保存上传前的路径，用于日志记录
+    const originalPaths = {}
+
+    // 处理所有文件上传
+    for (const field of fileFields) {
+      if (!formDataToSubmit[field]) continue
+      originalPaths[field] = formDataToSubmit[field]
+
+      // 处理单个文件
+      if (field === 'idCardFront' || field === 'idCardBack' || field === 'qualification') {
+        if (!isLocalPath(formDataToSubmit[field])) continue
+
+        uploadPromises.push(
+          uploadFile(formDataToSubmit[field], field).then((fileID) => {
+            formDataToSubmit[field] = fileID
+            console.log(`${field}上传成功: ${fileID}`)
+          }),
+        )
+      }
+      // 处理多个文件（逗号分隔的情况）
+      else if (formDataToSubmit[field].includes(',')) {
+        const paths = formDataToSubmit[field].split(',')
+        const uploadedPaths: string[] = []
+
+        for (let i = 0; i < paths.length; i++) {
+          const path = paths[i].trim()
+          if (!path || !isLocalPath(path)) {
+            uploadedPaths[i] = path // 保留原路径
+            continue
+          }
+
+          uploadPromises.push(
+            uploadFile(path, `${field}_${i}`).then((fileID) => {
+              uploadedPaths[i] = fileID as string
+              console.log(`${field}_${i}上传成功: ${fileID}`)
+            }),
+          )
+        }
+
+        // 等待当前字段的所有文件上传完成后，更新formDataToSubmit
+        if (uploadPromises.length > 0) {
+          uploadPromises.push(
+            Promise.all(uploadPromises).then(() => {
+              formDataToSubmit[field] = uploadedPaths.join(',')
+            }),
+          )
+        }
+      }
+    }
+
+    // 等待所有文件上传完成
+    if (uploadPromises.length > 0) {
+      console.log(`开始上传${uploadPromises.length}个文件...`)
+      await Promise.all(uploadPromises)
+      console.log('所有文件上传完成!')
+
+      // 记录上传前后的路径变化
+      console.log('文件路径变化:', {
+        original: originalPaths,
+        uploaded: {
+          idCardFront: formDataToSubmit.idCardFront,
+          idCardBack: formDataToSubmit.idCardBack,
+          qualification: formDataToSubmit.qualification,
+          education: formDataToSubmit.education,
+          professional: formDataToSubmit.professional,
+          honor: formDataToSubmit.honor,
+        },
+      })
+    } else {
+      console.log('没有需要上传的文件')
+    }
+
+    // 调用云函数提交数据（这时formDataToSubmit中的文件路径已经是云存储fileID）
     const { result } = await uni.cloud.callFunction({
       name: 'profRegister',
-      data: submitData,
+      data: formDataToSubmit,
     })
 
     // 隐藏加载提示
     uni.hideLoading()
 
     if (result.success) {
-      // 清空全局状态数据
-      registerStore.clearData()
+      // 更新本地用户状态
+      const currentUserInfo = userStore.userInfo || {}
+      userStore.setUserInfo({
+        ...currentUserInfo,
+        professionalStatus: 'pending',
+        professionalId: result.professionalId,
+        updateTime: new Date().getTime(),
+      })
+
+      // 打印用户状态更新后的信息
+      console.log('用户状态已更新:', {
+        professionalStatus: 'pending',
+        professionalId: result.professionalId,
+        updateTime: new Date().getTime(),
+      })
+
+      // 更新全局状态
+      registerStore.updateStep4({
+        status: 'pending',
+      })
+
+      // 清空其他注册数据，但保留提交状态
+      // 注意：不要完全清空，否则预览页将无法显示
 
       // 显示成功提示
       uni.showToast({
@@ -445,10 +789,10 @@ const handleSubmit = async () => {
         icon: 'success',
       })
 
-      // 延迟跳转到成功页面
+      // 延迟跳转到第五页，使用navigateTo
       setTimeout(() => {
-        uni.redirectTo({
-          url: '/pages/weshares/teacher-registration/success',
+        uni.navigateTo({
+          url: '/pages/weshares/index/index',
         })
       }, 1500)
     } else {
@@ -466,50 +810,165 @@ const handleSubmit = async () => {
   }
 }
 
-// 定义emit
-const emit = defineEmits(['back'])
+// 检查是否是本地路径
+const isLocalPath = (path) => {
+  if (!path) return false
+  return (
+    path.startsWith('wxfile://') ||
+    path.includes('tmp') ||
+    path.startsWith('http://tmp') ||
+    path.startsWith('file_') ||
+    path.startsWith('https://tmp')
+  )
+}
 
-// 页面加载时获取缓存数据
-onMounted(() => {
-  // 从全局状态加载数据
-  step1Data.value = registerStore.step1Data
-  step2Data.value = registerStore.step2Data
-  step3Data.value = registerStore.step3Data
+// 上传文件到云存储
+const uploadFile = (filePath: string, fileType: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const openid = userStore.userInfo?.openid
+    if (!openid) {
+      reject(new Error('用户未登录，无法上传文件'))
+      return
+    }
 
-  // 如果没有前三页的数据，返回第一页
-  if (!step1Data.value.name || !step2Data.value.serviceArea || !step3Data.value) {
-    uni.showToast({
-      title: '请先完成前三步信息填写',
-      icon: 'none',
-    })
-    setTimeout(() => {
-      emit('back', 4)
-    }, 1500)
-    return
-  }
+    // 获取本地文件实际路径
+    let actualPath = filePath
 
-  // 恢复第四页数据
-  formData.agreement = registerStore.step4Data.agreement
+    // 处理缓存的文件路径
+    if (filePath.includes('file_')) {
+      try {
+        const cachedFiles = uni.getStorageSync('cachedFiles') || {}
+        if (cachedFiles[filePath]) {
+          actualPath = cachedFiles[filePath].tempFilePath
+          console.log(`从缓存获取实际路径: ${filePath} -> ${actualPath}`)
+        }
+      } catch (error) {
+        console.error('获取缓存文件失败:', error)
+      }
+    }
 
-  // 检查用户是否已登录
-  if (!userStore.userInfo?.openid) {
-    uni.showModal({
-      title: '提示',
-      content: '请先登录后再进行专业人员注册',
-      showCancel: false,
-      success: () => {
-        login().catch((err) => {
-          console.error('登录失败:', err)
-          uni.showToast({
-            title: '登录失败，请重试',
-            icon: 'none',
-            duration: 2000,
-          })
-          // 返回上一页
-          uni.navigateBack()
-        })
+    // 生成文件名和路径
+    const timestamp = Date.now()
+    const fileExtension = actualPath.split('.').pop()?.toLowerCase() || 'jpg'
+    const fileName = `${fileType}_${timestamp}.${fileExtension}`
+    const cloudPath = `professional/${openid}/${fileName}`
+
+    console.log(`上传文件: ${actualPath} -> ${cloudPath}`)
+
+    wx.cloud.uploadFile({
+      cloudPath,
+      filePath: actualPath,
+      success: (res) => {
+        const fileID = res.fileID
+        console.log('上传成功:', fileID)
+
+        // 保存到本地缓存映射中，记录云文件ID和本地路径的对应关系
+        try {
+          const cloudFileMappings = uni.getStorageSync('cloudFileMappings') || {}
+          cloudFileMappings[fileID] = {
+            localId: filePath.includes('file_') ? filePath : null, // 保留原始本地ID
+            tempFilePath: actualPath, // 临时文件路径
+            uploadTime: Date.now(), // 上传时间
+            fileType, // 文件类型标记
+            fileName, // 文件名
+          }
+          uni.setStorageSync('cloudFileMappings', cloudFileMappings)
+          console.log(`文件映射已缓存: ${fileID}`)
+        } catch (error) {
+          console.error('缓存文件映射失败:', error)
+        }
+
+        resolve(fileID)
+      },
+      fail: (err) => {
+        console.error('上传失败:', err)
+        reject(err)
       },
     })
+  })
+}
+
+// 定义emit
+const emit = defineEmits(['back', 'editFromReview'])
+
+// 页面加载时获取缓存数据
+onMounted(async () => {
+  console.log('Register page 4 mounted')
+  console.log('当前用户状态:', userStore.userInfo)
+  console.log('当前store状态:', registerStore.$state)
+
+  // 从store中恢复数据
+  const step1Data = registerStore.step1Data
+  const step2Data = registerStore.step2Data
+  const step3Data = registerStore.step3Data
+  const step4Data = registerStore.step4Data
+
+  // 如果是审核中状态，需要从云端获取最新的申请数据
+  if (isApplicationPending.value) {
+    try {
+      const { result } = await uni.cloud.callFunction({
+        name: 'profRegister',
+        data: {
+          action: 'getApplication',
+        },
+      })
+
+      if (result && result.application) {
+        // 更新store中的数据
+        registerStore.updateStep1(result.application)
+        registerStore.updateStep2(result.application)
+        registerStore.updateStep3(result.application)
+        registerStore.updateStep4({
+          agreement: true,
+          status: result.application.status,
+        })
+        // 保存到本地存储
+        registerStore.saveToStorage()
+      }
+    } catch (error) {
+      console.error('获取申请数据失败:', error)
+      uni.showToast({
+        title: '获取申请数据失败',
+        icon: 'none',
+      })
+    }
+  }
+
+  // 更新本地数据
+  if (step1Data) {
+    Object.assign(formData, step1Data)
+  }
+  if (step2Data) {
+    Object.assign(formData, step2Data)
+  }
+  if (step3Data) {
+    Object.assign(formData, step3Data)
+  }
+  if (step4Data) {
+    formData.value.agreement = step4Data.agreement
+  }
+
+  // 只在非修改模式下显示确认弹窗
+  if (!registerStore.isModifyMode) {
+    // 显示确认弹窗
+    uni.showModal({
+      title: '确认信息',
+      content: '请确认您填写的信息无误，提交后将进入审核阶段',
+      confirmText: '确认无误',
+      cancelText: '返回修改',
+      success: (res) => {
+        if (res.confirm) {
+          // 用户点击确认，可以提交
+          canSubmit.value = true
+        } else {
+          // 用户点击取消，返回上一步
+          handleBack()
+        }
+      },
+    })
+  } else {
+    // 修改模式下直接允许提交
+    canSubmit.value = true
   }
 })
 
@@ -535,9 +994,47 @@ const getImageList = (path: string | undefined): string[] => {
   return path.split(',').filter(Boolean)
 }
 
-// 获取图片源
+// 获取图片源 - 优化以支持本地缓存和云存储
 const getImageSrc = (path: string): string => {
   if (!path) return ''
+
+  // 如果是云存储路径
+  if (path.startsWith('cloud://')) {
+    try {
+      // 1. 检查是否有本地缓存
+      const cloudFileMappings = uni.getStorageSync('cloudFileMappings') || {}
+      if (cloudFileMappings[path] && cloudFileMappings[path].tempFilePath) {
+        // 检查临时文件是否仍然存在
+        try {
+          const fs = uni.getFileSystemManager()
+          fs.accessSync(cloudFileMappings[path].tempFilePath)
+          console.log(`从本地缓存加载云文件: ${path}`)
+          return cloudFileMappings[path].tempFilePath
+        } catch (e) {
+          console.log(`本地缓存文件不存在，需要重新下载: ${path}`)
+          // 文件不存在，需要重新下载
+        }
+      }
+
+      // 2. 没有本地缓存，从临时映射获取（可能是本次会话中刚下载的）
+      const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+      if (tempFileMappings[path]) {
+        console.log(`从临时映射获取云文件: ${path}`)
+        return tempFileMappings[path]
+      }
+
+      // 3. 本地没有，触发异步下载（不阻塞UI）
+      setTimeout(() => {
+        downloadCloudFile(path)
+      }, 100)
+
+      // 4. 返回云文件ID作为临时路径（小程序会尝试直接加载）
+      return path
+    } catch (err) {
+      console.error('获取云存储图片缓存失败:', err)
+      return path
+    }
+  }
 
   // 尝试从映射中获取真实路径
   try {
@@ -563,6 +1060,64 @@ const getImageSrc = (path: string): string => {
   }
 
   return path
+}
+
+// 下载云存储文件到本地
+const downloadCloudFile = (fileID: string) => {
+  // 检查是否正在下载
+  const downloading = uni.getStorageSync('downloadingFiles') || {}
+  if (downloading[fileID]) {
+    console.log(`文件正在下载中，跳过: ${fileID}`)
+    return
+  }
+
+  // 标记为正在下载
+  downloading[fileID] = true
+  uni.setStorageSync('downloadingFiles', downloading)
+
+  console.log(`开始下载云文件: ${fileID}`)
+  wx.cloud.downloadFile({
+    fileID,
+    success: (res) => {
+      console.log(`云文件下载成功: ${fileID} -> ${res.tempFilePath}`)
+
+      // 保存到临时映射中，用于当前会话
+      try {
+        const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+        tempFileMappings[fileID] = res.tempFilePath
+        uni.setStorageSync('tempFileMappings', tempFileMappings)
+
+        // 同时更新长期缓存映射
+        const cloudFileMappings = uni.getStorageSync('cloudFileMappings') || {}
+        cloudFileMappings[fileID] = {
+          ...cloudFileMappings[fileID],
+          tempFilePath: res.tempFilePath,
+          lastDownloaded: Date.now(),
+        }
+        uni.setStorageSync('cloudFileMappings', cloudFileMappings)
+
+        console.log(`云文件缓存映射已更新: ${fileID}`)
+      } catch (error) {
+        console.error('保存云文件映射失败:', error)
+      }
+
+      // 移除下载标记
+      const downloading = uni.getStorageSync('downloadingFiles') || {}
+      delete downloading[fileID]
+      uni.setStorageSync('downloadingFiles', downloading)
+
+      // 触发视图刷新（注意：这里可能需要使用其他机制根据您的UI框架）
+      // 由于Vue的响应式，如果图片已经在模板中渲染，可以不需要额外操作
+    },
+    fail: (err) => {
+      console.error(`云文件下载失败: ${fileID}`, err)
+
+      // 移除下载标记
+      const downloading = uni.getStorageSync('downloadingFiles') || {}
+      delete downloading[fileID]
+      uni.setStorageSync('downloadingFiles', downloading)
+    },
+  })
 }
 
 // 检查文件是否仅本地缓存（未上传到服务器）
@@ -630,6 +1185,50 @@ const previewImage = (imageList: string[], index = 0) => {
       })
     },
   })
+}
+
+// 修改浮动按钮处理函数
+const handleBackFromFloating = () => {
+  console.log('从浮动按钮触发修改资料，直接跳转到第3页')
+  // 显示提示消息以确认点击生效
+  uni.showToast({
+    title: '正在进入修改模式...',
+    icon: 'none',
+    duration: 1500,
+  })
+
+  registerStore.setModifyMode(true) // 设置为修改模式
+
+  // 保存当前数据
+  registerStore.updateStep4({
+    agreement: formData.value.agreement,
+  })
+  registerStore.saveToStorage()
+
+  // 发送特殊事件，表示从审核状态页面进入修改模式
+  emit('editFromReview', 4)
+}
+
+// 修改内联链接处理函数
+const handleBackFromInline = () => {
+  console.log('从内联链接触发修改资料，直接跳转到第3页')
+  // 显示提示消息以确认点击生效
+  uni.showToast({
+    title: '正在进入修改模式...',
+    icon: 'none',
+    duration: 1500,
+  })
+
+  registerStore.setModifyMode(true) // 设置为修改模式
+
+  // 保存当前数据
+  registerStore.updateStep4({
+    agreement: formData.value.agreement,
+  })
+  registerStore.saveToStorage()
+
+  // 发送特殊事件，表示从审核状态页面进入修改模式
+  emit('editFromReview', 4)
 }
 </script>
 
@@ -924,8 +1523,20 @@ const previewImage = (imageList: string[], index = 0) => {
     }
 
     .status-desc {
+      margin-bottom: 10rpx;
       font-size: 24rpx;
       color: #8c7811;
+    }
+
+    .modify-link {
+      display: inline-block;
+      padding: 8rpx 20rpx;
+      margin-top: 10rpx;
+      font-size: 24rpx;
+      color: #fff;
+      background-color: #f1c40f;
+      border-radius: 30rpx;
+      box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
     }
   }
 }
@@ -1013,6 +1624,125 @@ const previewImage = (imageList: string[], index = 0) => {
     font-size: 24rpx;
     line-height: 1.6;
     color: #666;
+  }
+}
+
+// 修改确认弹窗样式
+.modify-confirm-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.65);
+}
+
+.modify-confirm-dialog {
+  position: relative;
+  z-index: 10500;
+  width: 80%;
+  max-width: 600rpx;
+  padding: 40rpx;
+  background-color: #fff;
+  border: 3rpx solid #07c160;
+  border-radius: 16rpx;
+  box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.25);
+}
+
+.modify-confirm-title {
+  padding-bottom: 15rpx;
+  margin-bottom: 30rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  border-bottom: 1rpx solid #eee;
+}
+
+.modify-confirm-content {
+  margin-bottom: 40rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  line-height: 1.6;
+  color: #666;
+  text-align: center;
+
+  text {
+    display: block;
+    margin-bottom: 10rpx;
+  }
+
+  .warning-text {
+    margin-top: 16rpx;
+    font-size: 26rpx;
+    font-weight: bold;
+    color: #ff6b00;
+  }
+}
+
+.modify-confirm-buttons {
+  display: flex;
+  justify-content: space-between;
+
+  button {
+    flex: 1;
+    padding: 16rpx 0;
+    margin: 0 10rpx;
+    font-size: 28rpx;
+    border-radius: 8rpx;
+  }
+
+  .cancel-btn {
+    color: #666;
+    background-color: #f2f2f2;
+    border: 1rpx solid #ddd;
+  }
+
+  .confirm-btn {
+    font-weight: bold;
+    color: #fff;
+    background-color: #07c160;
+    border: 1rpx solid #07c160;
+  }
+}
+
+// 确保底部按钮上面没有覆盖物
+.page-container {
+  padding-bottom: 150rpx;
+}
+
+// 添加备用修改按钮，确保用户可以点击
+.edit-button-floating {
+  position: fixed;
+  top: 180rpx;
+  right: 20rpx;
+  z-index: 10002;
+  padding: 15rpx 25rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #fff;
+  background-color: #07c160;
+  border-radius: 50rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.25);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.25);
+    transform: scale(1);
   }
 }
 </style>

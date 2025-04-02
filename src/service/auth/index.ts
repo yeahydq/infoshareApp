@@ -76,14 +76,58 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
           downloadFile(userInfo.avatarUrlCloud, userInfo)
           userInfo.phone = result[0].phone
           userInfo.address = result[0].address
-          // 设置专业人员状态信息
-          userInfo.professionalStatus = result[0].professionalStatus || ''
-          userInfo.professionalId = result[0].professionalId || ''
+
+          // 设置专业人员状态信息，确保获取所有相关字段
+          userInfo.professionalStatus = result[0].professionalStatus || null
+          userInfo.professionalId = result[0].professionalId || null
+          userInfo.updateTime = result[0].updateTime || new Date().getTime()
+
+          console.log('登录成功，用户专业人员状态:', {
+            professionalStatus: userInfo.professionalStatus,
+            professionalId: userInfo.professionalId,
+          })
+
           // 修改库变量
           const userStore = useUserStore()
           userStore.setUserInfo(userInfo)
+
           // 缓存到本地
           wx.setStorageSync('userInfo', userInfo)
+
+          // 登录后主动调用云函数检查专业人员状态
+          if (userInfo.openid) {
+            console.log('登录后主动检查专业人员申请状态')
+            checkProfessionalStatus(userInfo.openid)
+              .then((profInfo) => {
+                if (profInfo) {
+                  console.log('专业人员状态更新:', profInfo)
+                  // 如果状态有变化，更新本地状态
+                  if (
+                    profInfo.hasApplication &&
+                    (!userInfo.professionalId ||
+                      !userInfo.professionalStatus ||
+                      userInfo.professionalId !== profInfo.professionalId ||
+                      userInfo.professionalStatus !== profInfo.status)
+                  ) {
+                    const updatedInfo = {
+                      ...userInfo,
+                      professionalId: profInfo.professionalId,
+                      professionalStatus: profInfo.status,
+                      updateTime: new Date().getTime(),
+                    }
+
+                    // 更新Store和本地存储
+                    userStore.setUserInfo(updatedInfo)
+                    wx.setStorageSync('userInfo', updatedInfo)
+                    console.log('用户专业人员状态已更新:', updatedInfo)
+                  }
+                }
+              })
+              .catch((err) => {
+                console.error('检查专业人员状态失败:', err)
+              })
+          }
+
           resolve(userInfo)
         } else if (registerIdc) {
           SubmitRegister(userInfo).then(resolve).catch(reject)
@@ -178,6 +222,46 @@ const downloadFile = (url: string, userInfo: any) => {
           icon: 'none',
           duration: 2000,
         })
+        reject(err)
+      },
+    })
+  })
+}
+
+// 辅助函数：检查专业人员状态
+const checkProfessionalStatus = (openid: string) => {
+  return new Promise<{
+    hasApplication: boolean
+    professionalId: string | null
+    status: string | null
+  }>((resolve, reject) => {
+    wx.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'checkApplication',
+      },
+      success: (res: any) => {
+        console.log('检查专业人员状态结果:', res.result)
+        if (res.result && res.result.success) {
+          if (res.result.hasApplication && res.result.application) {
+            resolve({
+              hasApplication: true,
+              professionalId: res.result.application._id,
+              status: res.result.application.status || 'pending',
+            })
+          } else {
+            resolve({
+              hasApplication: false,
+              professionalId: null,
+              status: null,
+            })
+          }
+        } else {
+          reject(new Error('获取专业人员状态失败'))
+        }
+      },
+      fail: (err) => {
+        console.error('调用检查专业人员状态接口失败:', err)
         reject(err)
       },
     })
