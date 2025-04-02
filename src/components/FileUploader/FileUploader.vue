@@ -23,13 +23,26 @@
       </view>
 
       <!-- 单文件预览 -->
-      <view v-if="showPreview && value" class="preview-container">
-        <image
-          class="preview-image"
-          :src="getImageSrc(value)"
-          mode="aspectFit"
-          @click="handlePreview([value])"
-        />
+      <view v-if="showPreview" class="preview-container">
+        <template v-if="value">
+          <view class="preview-wrapper">
+            <image
+              class="preview-image"
+              :src="getImageSrc(value)"
+              mode="aspectFit"
+              @click="handlePreview([value])"
+            />
+            <view class="delete-icon" @click.stop="handleDelete">×</view>
+          </view>
+        </template>
+        <template v-else>
+          <view class="upload-box" @click="handleSingleUpload">
+            <view class="placeholder">
+              <text class="icon">+</text>
+              <text class="text">{{ placeholder || '点击上传' }}</text>
+            </view>
+          </view>
+        </template>
       </view>
     </template>
 
@@ -361,6 +374,25 @@ export default {
         content: '确定删除此文件吗？',
         success: (res) => {
           if (res.confirm) {
+            // 清理本地存储
+            const mappings = uni.getStorageSync('filePathMappings') || {}
+            const cachedFiles = uni.getStorageSync('cachedFiles') || {}
+
+            // 删除文件路径映射
+            if (props.value) {
+              delete mappings[props.value]
+            }
+
+            // 删除缓存文件信息
+            if (props.value) {
+              delete cachedFiles[props.value]
+            }
+
+            // 保存更新后的映射和缓存
+            uni.setStorageSync('filePathMappings', mappings)
+            uni.setStorageSync('cachedFiles', cachedFiles)
+
+            // 更新组件状态
             emit('update:value', '')
           }
         },
@@ -374,9 +406,32 @@ export default {
         content: '确定删除此文件吗？',
         success: (res) => {
           if (res.confirm) {
+            // 清理本地存储
+            const mappings = uni.getStorageSync('filePathMappings') || {}
+            const cachedFiles = uni.getStorageSync('cachedFiles') || {}
+
+            // 获取要删除的文件名
+            const fileToDelete = props.fileList[index]
+
+            // 删除文件路径映射
+            if (fileToDelete) {
+              delete mappings[fileToDelete]
+            }
+
+            // 删除缓存文件信息
+            if (fileToDelete) {
+              delete cachedFiles[fileToDelete]
+            }
+
+            // 保存更新后的映射和缓存
+            uni.setStorageSync('filePathMappings', mappings)
+            uni.setStorageSync('cachedFiles', cachedFiles)
+
+            // 更新组件状态
             const newFileList = [...props.fileList]
             newFileList.splice(index, 1)
             emit('update:fileList', newFileList)
+            emit('change', newFileList)
           }
         },
       })
@@ -558,6 +613,11 @@ export default {
 
     // 获取图片显示路径
     const getImageSrc = (path, index = 0) => {
+      // 如果路径为空，不返回占位图
+      if (!path) {
+        return ''
+      }
+
       const key = `${path}-${index}`
       if (imageLoadStatus.value[key] === 'error') {
         console.log('使用占位图:', placeholderImage.value)
@@ -805,5 +865,27 @@ export default {
   margin-top: 5px;
   font-size: 12px;
   color: #ff4d4f;
+}
+
+.preview-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.preview-wrapper .delete-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  color: #fff;
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
 }
 </style>

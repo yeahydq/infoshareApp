@@ -189,19 +189,19 @@ const handleQualificationChange = (files: string[]) => {
 
 // 处理学历证书上传
 const handleEducationChange = (files: string[]) => {
-  formData.education = files.join(',')
+  formData.education = files.length > 0 ? files.join(',') : ''
   console.log('学历证书更新:', formData.education)
 }
 
 // 处理专业证书上传
 const handleProfessionalChange = (files: string[]) => {
-  formData.professional = files.join(',')
+  formData.professional = files.length > 0 ? files.join(',') : ''
   console.log('专业证书更新:', formData.professional)
 }
 
 // 处理荣誉证书上传
 const handleHonorChange = (files: string[]) => {
-  formData.honor = files.join(',')
+  formData.honor = files.length > 0 ? files.join(',') : ''
   console.log('荣誉证书更新:', formData.honor)
 }
 
