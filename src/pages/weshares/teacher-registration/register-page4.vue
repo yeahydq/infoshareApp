@@ -314,7 +314,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, nextTick } from 'vue'
 import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { useUserStore } from '@/store'
@@ -481,189 +481,6 @@ const confirmModify = async () => {
       ...step3Data,
     }
 
-    // 处理文件上传 - 只上传修改过的文件
-    const uploadPromises = []
-    const fileFields = [
-      'idCardFront',
-      'idCardBack',
-      'qualification',
-      'education',
-      'professional',
-      'honor',
-    ]
-
-    console.log('准备上传修改的文件...')
-
-    // 保存上传前的路径，用于日志记录
-    const originalPaths = {}
-    const updatedFiles = {}
-
-    // 处理所有文件上传
-    for (const field of fileFields) {
-      if (!formDataToSubmit[field]) continue
-      originalPaths[field] = formDataToSubmit[field]
-
-      // 处理单个文件
-      if (field === 'idCardFront' || field === 'idCardBack' || field === 'qualification') {
-        if (!isLocalPath(formDataToSubmit[field])) continue
-
-        uploadPromises.push(
-          uploadFile(formDataToSubmit[field], field).then((fileID) => {
-            formDataToSubmit[field] = fileID as string
-            updatedFiles[field] = fileID
-            console.log(`${field}上传成功: ${fileID}`)
-          }),
-        )
-      }
-      // 处理多个文件（逗号分隔的情况）
-      else if (formDataToSubmit[field].includes(',')) {
-        const paths = formDataToSubmit[field].split(',')
-        const uploadedPaths: string[] = []
-        let hasLocalFiles = false
-
-        for (let i = 0; i < paths.length; i++) {
-          const path = paths[i].trim()
-          if (!path) {
-            uploadedPaths[i] = ''
-            continue
-          }
-
-          if (isLocalPath(path)) {
-            hasLocalFiles = true
-            uploadPromises.push(
-              uploadFile(path, `${field}_${i}`).then((fileID) => {
-                uploadedPaths[i] = fileID as string
-                console.log(`${field}_${i}上传成功: ${fileID}`)
-              }),
-            )
-          } else {
-            uploadedPaths[i] = path // 保留原路径
-          }
-        }
-
-        // 如果存在本地文件，等待上传完成后更新路径
-        if (hasLocalFiles) {
-          uploadPromises.push(
-            Promise.all(uploadPromises).then(() => {
-              const filePaths = uploadedPaths.filter(Boolean).join(',')
-              formDataToSubmit[field] = filePaths
-              updatedFiles[field] = filePaths
-            }),
-          )
-        }
-      }
-    }
-
-    // 等待所有文件上传完成
-    if (uploadPromises.length > 0) {
-      console.log(`开始上传${uploadPromises.length}个文件...`)
-      await Promise.all(uploadPromises)
-      console.log('所有文件上传完成!')
-
-      // 记录上传前后的路径变化
-      console.log('文件路径变化:', {
-        original: originalPaths,
-        uploaded: updatedFiles,
-      })
-    } else {
-      console.log('没有需要上传的文件')
-    }
-
-    // 准备要更新的数据
-    const updateData = {
-      action: 'updateFiles',
-      professionalId: userStore.userInfo.professionalId,
-      updatedFiles,
-      basicInfo: step1Data,
-      serviceInfo: step2Data,
-    }
-
-    // 调用云函数更新数据
-    const { result } = await uni.cloud.callFunction({
-      name: 'profRegister',
-      data: updateData,
-    })
-
-    // 隐藏加载提示
-    uni.hideLoading()
-
-    if (result.success) {
-      // 清除修改模式
-      registerStore.setModifyMode(false)
-
-      // 显示成功提示
-      uni.showToast({
-        title: '修改成功',
-        icon: 'success',
-      })
-
-      // 重新获取申请信息
-      setTimeout(() => {
-        uni.navigateTo({
-          url: '/pages/weshares/teacher-registration/index',
-        })
-      }, 1500)
-    } else {
-      throw new Error(result.message || '修改失败')
-    }
-  } catch (error: any) {
-    // 隐藏加载提示
-    uni.hideLoading()
-
-    // 显示错误提示
-    uni.showToast({
-      title: error.message || '修改失败，请重试',
-      icon: 'none',
-    })
-  }
-}
-
-// 处理服务协议勾选
-const handleAgreementChange = (e: any) => {
-  formData.value.agreement = e.detail.value.length > 0
-}
-
-// 表单验证
-const validateForm = () => {
-  if (!formData.value.agreement) {
-    uni.showToast({
-      title: '请阅读并同意服务协议',
-      icon: 'none',
-    })
-    return false
-  }
-  return true
-}
-
-// 处理提交
-const handleSubmit = async () => {
-  if (!validateForm()) {
-    return
-  }
-
-  try {
-    // 显示加载提示
-    uni.showLoading({
-      title: '提交中...',
-    })
-
-    // 从全局状态获取数据
-    const step1Data = registerStore.step1Data
-    const step2Data = registerStore.step2Data
-    const step3Data = registerStore.step3Data
-
-    if (!step1Data || !step2Data || !step3Data) {
-      throw new Error('请先完成前三步信息填写')
-    }
-
-    // 复制一份数据用于处理
-    const formDataToSubmit = {
-      ...step1Data,
-      ...step2Data,
-      ...step3Data,
-      agreement: formData.value.agreement,
-    }
-
     // 处理文件上传 - 先上传所有文件到云存储
     const uploadPromises = []
     const fileFields = [
@@ -676,19 +493,30 @@ const handleSubmit = async () => {
     ]
 
     console.log('准备上传文件...')
+    console.log('需要检查的文件字段:', fileFields)
+    console.log('表单数据:', formDataToSubmit)
 
     // 保存上传前的路径，用于日志记录
     const originalPaths = {}
 
     // 处理所有文件上传
     for (const field of fileFields) {
-      if (!formDataToSubmit[field]) continue
+      if (!formDataToSubmit[field]) {
+        console.log(`${field}: 无文件路径`)
+        continue
+      }
+
       originalPaths[field] = formDataToSubmit[field]
+      console.log(`检查${field}文件路径:`, formDataToSubmit[field])
 
       // 处理单个文件
       if (field === 'idCardFront' || field === 'idCardBack' || field === 'qualification') {
-        if (!isLocalPath(formDataToSubmit[field])) continue
+        if (!isLocalPath(formDataToSubmit[field])) {
+          console.log(`${field}: 不是本地路径，跳过上传`)
+          continue
+        }
 
+        console.log(`${field}: 是本地路径，需要上传`)
         uploadPromises.push(
           uploadFile(formDataToSubmit[field], field).then((fileID) => {
             formDataToSubmit[field] = fileID
@@ -700,32 +528,69 @@ const handleSubmit = async () => {
       else if (formDataToSubmit[field].includes(',')) {
         const paths = formDataToSubmit[field].split(',')
         const uploadedPaths: string[] = []
+        let hasLocalFiles = false
+
+        console.log(`${field}: 包含多个文件路径:`, paths)
 
         for (let i = 0; i < paths.length; i++) {
           const path = paths[i].trim()
-          if (!path || !isLocalPath(path)) {
-            uploadedPaths[i] = path // 保留原路径
+          if (!path) {
+            uploadedPaths[i] = ''
             continue
           }
 
-          uploadPromises.push(
-            uploadFile(path, `${field}_${i}`).then((fileID) => {
-              uploadedPaths[i] = fileID as string
-              console.log(`${field}_${i}上传成功: ${fileID}`)
-            }),
-          )
+          console.log(`${field}[${i}]: 检查路径 ${path}`)
+          if (isLocalPath(path)) {
+            console.log(`${field}[${i}]: 是本地路径，需要上传`)
+            hasLocalFiles = true
+            uploadPromises.push(
+              uploadFile(path, `${field}_${i}`).then((fileID) => {
+                uploadedPaths[i] = fileID as string
+                console.log(`${field}_${i}上传成功: ${fileID}`)
+              }),
+            )
+          } else {
+            console.log(`${field}[${i}]: 不是本地路径，跳过上传`)
+            uploadedPaths[i] = path // 保留原路径
+          }
         }
 
-        // 等待当前字段的所有文件上传完成后，更新formDataToSubmit
-        if (uploadPromises.length > 0) {
+        // 如果存在本地文件，等待上传完成后更新路径
+        if (hasLocalFiles) {
+          // 修正这里的逻辑，不要重复添加Promise
+          const fieldPromise = Promise.all(uploadPromises).then(() => {
+            const filePaths = uploadedPaths.filter(Boolean).join(',')
+            formDataToSubmit[field] = filePaths
+            console.log(`${field}更新为: ${filePaths}`)
+          })
+
+          // 确保fieldPromise也被添加到uploadPromises中
+          if (!uploadPromises.includes(fieldPromise)) {
+            uploadPromises.push(fieldPromise)
+          }
+        }
+      } else {
+        // 处理单个文件但不是idCardFront/idCardBack/qualification的情况
+        if (isLocalPath(formDataToSubmit[field])) {
+          console.log(`${field}: 是本地路径，需要上传`)
           uploadPromises.push(
-            Promise.all(uploadPromises).then(() => {
-              formDataToSubmit[field] = uploadedPaths.join(',')
+            uploadFile(formDataToSubmit[field], field).then((fileID) => {
+              formDataToSubmit[field] = fileID
+              console.log(`${field}上传成功: ${fileID}`)
             }),
           )
+        } else {
+          console.log(`${field}: 不是本地路径，跳过上传`)
         }
       }
     }
+
+    // 检查isLocalPath函数是否正常工作
+    console.log('isLocalPath函数测试:')
+    console.log('wxfile://temp: ', isLocalPath('wxfile://temp'))
+    console.log('http://tmp: ', isLocalPath('http://tmp'))
+    console.log('file_123: ', isLocalPath('file_123'))
+    console.log('cloud://: ', isLocalPath('cloud://xxx'))
 
     // 等待所有文件上传完成
     if (uploadPromises.length > 0) {
@@ -746,13 +611,19 @@ const handleSubmit = async () => {
         },
       })
     } else {
-      console.log('没有需要上传的文件')
+      console.log('没有需要上传的文件，原因可能是:')
+      console.log('1. 文件路径已经是云存储路径')
+      console.log('2. 没有设置文件路径')
+      console.log('3. isLocalPath函数未能正确识别本地路径')
     }
 
     // 调用云函数提交数据（这时formDataToSubmit中的文件路径已经是云存储fileID）
     const { result } = await uni.cloud.callFunction({
       name: 'profRegister',
-      data: formDataToSubmit,
+      data: {
+        action: 'submit',
+        ...formDataToSubmit,
+      },
     })
 
     // 隐藏加载提示
@@ -847,65 +718,127 @@ const uploadFile = (filePath: string, fileType: string): Promise<string> => {
       }
     }
 
+    // 检查文件是否存在
+    try {
+      const fs = uni.getFileSystemManager()
+      fs.accessSync(actualPath)
+      console.log(`文件存在: ${actualPath}`)
+    } catch (error) {
+      console.error(`文件不存在: ${actualPath}`, error)
+      reject(new Error('文件不存在或无法访问'))
+      return
+    }
+
     // 生成文件名和路径
     const timestamp = Date.now()
     const fileExtension = actualPath.split('.').pop()?.toLowerCase() || 'jpg'
     const fileName = `${fileType}_${timestamp}.${fileExtension}`
     const cloudPath = `professional/${openid}/${fileName}`
 
-    console.log(`上传文件: ${actualPath} -> ${cloudPath}`)
+    console.log(`准备上传文件: ${actualPath} -> ${cloudPath}`)
 
-    wx.cloud.uploadFile({
-      cloudPath,
-      filePath: actualPath,
-      success: (res) => {
-        const fileID = res.fileID
-        console.log('上传成功:', fileID)
+    // 添加重试机制
+    const maxRetries = 3
+    let retryCount = 0
 
-        // 保存到本地缓存映射中，记录云文件ID和本地路径的对应关系
-        try {
-          const cloudFileMappings = uni.getStorageSync('cloudFileMappings') || {}
-          cloudFileMappings[fileID] = {
-            localId: filePath.includes('file_') ? filePath : null, // 保留原始本地ID
-            tempFilePath: actualPath, // 临时文件路径
-            uploadTime: Date.now(), // 上传时间
-            fileType, // 文件类型标记
-            fileName, // 文件名
+    const uploadWithRetry = () => {
+      wx.cloud.uploadFile({
+        cloudPath,
+        filePath: actualPath,
+        success: (res) => {
+          const fileID = res.fileID
+          if (!fileID) {
+            console.error('上传成功但未获取到fileID')
+            if (retryCount < maxRetries) {
+              retryCount++
+              console.log(`重试上传 (${retryCount}/${maxRetries})...`)
+              setTimeout(uploadWithRetry, 1000 * retryCount)
+            } else {
+              reject(new Error('上传失败：未获取到文件ID'))
+            }
+            return
           }
-          uni.setStorageSync('cloudFileMappings', cloudFileMappings)
-          console.log(`文件映射已缓存: ${fileID}`)
-        } catch (error) {
-          console.error('缓存文件映射失败:', error)
-        }
 
-        resolve(fileID)
-      },
-      fail: (err) => {
-        console.error('上传失败:', err)
-        reject(err)
-      },
-    })
+          console.log('上传成功:', fileID)
+
+          // 保存到本地缓存映射中
+          try {
+            const cloudFileMappings = uni.getStorageSync('cloudFileMappings') || {}
+            cloudFileMappings[fileID] = {
+              localId: filePath.includes('file_') ? filePath : null,
+              tempFilePath: actualPath,
+              uploadTime: Date.now(),
+              fileType,
+              fileName,
+            }
+            uni.setStorageSync('cloudFileMappings', cloudFileMappings)
+            console.log(`文件映射已缓存: ${fileID}`)
+          } catch (error) {
+            console.error('缓存文件映射失败:', error)
+          }
+
+          resolve(fileID)
+        },
+        fail: (err) => {
+          console.error('上传失败:', err)
+          if (retryCount < maxRetries) {
+            retryCount++
+            console.log(`重试上传 (${retryCount}/${maxRetries})...`)
+            setTimeout(uploadWithRetry, 1000 * retryCount)
+          } else {
+            reject(new Error(`上传失败: ${err.errMsg || '未知错误'}`))
+          }
+        },
+      })
+    }
+
+    // 开始上传
+    uploadWithRetry()
   })
 }
 
 // 定义emit
 const emit = defineEmits(['back', 'editFromReview'])
 
-// 页面加载时获取缓存数据
+// 页面加载时恢复数据
 onMounted(async () => {
-  console.log('Register page 4 mounted')
+  console.log('register-page4 onMounted')
   console.log('当前用户状态:', userStore.userInfo)
   console.log('当前store状态:', registerStore.$state)
 
   // 从store中恢复数据
-  const step1Data = registerStore.step1Data
-  const step2Data = registerStore.step2Data
-  const step3Data = registerStore.step3Data
-  const step4Data = registerStore.step4Data
+  const storeStep1Data = registerStore.step1Data
+  const storeStep2Data = registerStore.step2Data
+  const storeStep3Data = registerStore.step3Data
+  const storeStep4Data = registerStore.step4Data
 
-  // 如果是审核中状态，需要从云端获取最新的申请数据
-  if (isApplicationPending.value) {
+  console.log('从store恢复的数据:', {
+    storeStep1Data,
+    storeStep2Data,
+    storeStep3Data,
+    storeStep4Data,
+  })
+
+  // 直接赋值给ref对象
+  step1Data.value = { ...storeStep1Data }
+  step2Data.value = { ...storeStep2Data }
+  step3Data.value = { ...storeStep3Data }
+
+  // 打印赋值后的本地数据
+  console.log('本地ref数据:', {
+    step1Data: step1Data.value,
+    step2Data: step2Data.value,
+    step3Data: step3Data.value,
+  })
+
+  if (storeStep4Data) {
+    formData.value.agreement = storeStep4Data.agreement
+  }
+
+  // 如果是审核中状态，从云端获取最新数据
+  if (userStore.userInfo?.professionalStatus === 'pending') {
     try {
+      console.log('获取云端最新数据')
       const { result } = await uni.cloud.callFunction({
         name: 'profRegister',
         data: {
@@ -913,20 +846,61 @@ onMounted(async () => {
         },
       })
 
-      if (result && result.application) {
+      if (result.success && result.application) {
+        console.log('获取到云端数据:', result.application)
+
         // 更新store中的数据
         registerStore.updateStep1(result.application)
         registerStore.updateStep2(result.application)
         registerStore.updateStep3(result.application)
-        registerStore.updateStep4({
-          agreement: true,
-          status: result.application.status,
-        })
-        // 保存到本地存储
+        registerStore.updateStep4(result.application)
+
+        // 保存到本地
         registerStore.saveToStorage()
+
+        // 更新本地数据
+        // 使用直接赋值而不是Object.assign
+        step1Data.value = { ...result.application }
+        step2Data.value = { ...result.application }
+        step3Data.value = { ...result.application }
+
+        console.log('更新后的本地数据:', {
+          step1DataAfterUpdate: step1Data.value,
+          step2DataAfterUpdate: step2Data.value,
+          step3DataAfterUpdate: step3Data.value,
+        })
+
+        // 强制更新图片显示
+        nextTick(() => {
+          // 更新图片预览
+          if (result.application.idCardFront) {
+            step3Data.value.idCardFront = result.application.idCardFront
+          }
+          if (result.application.idCardBack) {
+            step3Data.value.idCardBack = result.application.idCardBack
+          }
+          if (result.application.qualification) {
+            step3Data.value.qualification = result.application.qualification
+          }
+          if (result.application.education) {
+            step3Data.value.education = result.application.education
+          }
+          if (result.application.professional) {
+            step3Data.value.professional = result.application.professional
+          }
+          if (result.application.honor) {
+            step3Data.value.honor = result.application.honor
+          }
+        })
+      } else {
+        console.error('获取云端数据失败:', result)
+        uni.showToast({
+          title: '获取申请数据失败',
+          icon: 'none',
+        })
       }
     } catch (error) {
-      console.error('获取申请数据失败:', error)
+      console.error('获取云端数据出错:', error)
       uni.showToast({
         title: '获取申请数据失败',
         icon: 'none',
@@ -934,42 +908,16 @@ onMounted(async () => {
     }
   }
 
-  // 更新本地数据
-  if (step1Data) {
-    Object.assign(formData, step1Data)
-  }
-  if (step2Data) {
-    Object.assign(formData, step2Data)
-  }
-  if (step3Data) {
-    Object.assign(formData, step3Data)
-  }
-  if (step4Data) {
-    formData.value.agreement = step4Data.agreement
+  // 如果是修改模式，显示确认对话框
+  if (registerStore.isModifyMode) {
+    console.log('显示修改确认对话框')
+    showModifyConfirm.value = true
   }
 
-  // 只在非修改模式下显示确认弹窗
-  if (!registerStore.isModifyMode) {
-    // 显示确认弹窗
-    uni.showModal({
-      title: '确认信息',
-      content: '请确认您填写的信息无误，提交后将进入审核阶段',
-      confirmText: '确认无误',
-      cancelText: '返回修改',
-      success: (res) => {
-        if (res.confirm) {
-          // 用户点击确认，可以提交
-          canSubmit.value = true
-        } else {
-          // 用户点击取消，返回上一步
-          handleBack()
-        }
-      },
-    })
-  } else {
-    // 修改模式下直接允许提交
-    canSubmit.value = true
-  }
+  // 延迟检查数据是否正确加载
+  setTimeout(() => {
+    checkDataLoaded()
+  }, 500)
 })
 
 // 获取计费单位显示文本
@@ -1229,6 +1177,296 @@ const handleBackFromInline = () => {
 
   // 发送特殊事件，表示从审核状态页面进入修改模式
   emit('editFromReview', 4)
+}
+
+// 检查数据是否正确加载
+const checkDataLoaded = () => {
+  console.log('检查数据加载状态:')
+  console.log('step1Data:', step1Data.value)
+  console.log('step2Data:', step2Data.value)
+  console.log('step3Data:', step3Data.value)
+
+  // 检查是否有数据
+  const hasStep1Data = step1Data.value.name || step1Data.value.phone || step1Data.value.email
+  const hasStep2Data =
+    step2Data.value.experience ||
+    step2Data.value.serviceDescription ||
+    (step2Data.value.skillTags && step2Data.value.skillTags.length > 0)
+  const hasStep3Data =
+    step3Data.value.idCardFront || step3Data.value.education || step3Data.value.qualification
+
+  console.log('数据加载状态:', {
+    hasStep1Data,
+    hasStep2Data,
+    hasStep3Data,
+  })
+
+  // 如果数据未加载，尝试从store重新获取
+  if (!hasStep1Data || !hasStep2Data || !hasStep3Data) {
+    console.log('数据未完全加载，重新从store获取')
+
+    // 重新从store获取数据
+    const storeStep1Data = registerStore.step1Data
+    const storeStep2Data = registerStore.step2Data
+    const storeStep3Data = registerStore.step3Data
+
+    console.log('store中的数据:', {
+      storeStep1Data,
+      storeStep2Data,
+      storeStep3Data,
+    })
+
+    // 直接赋值给ref对象
+    step1Data.value = { ...storeStep1Data }
+    step2Data.value = { ...storeStep2Data }
+    step3Data.value = { ...storeStep3Data }
+  }
+}
+
+// 处理服务协议勾选
+const handleAgreementChange = (e: any) => {
+  formData.value.agreement = e.detail.value.length > 0
+}
+
+// 表单验证
+const validateForm = () => {
+  if (!formData.value.agreement) {
+    uni.showToast({
+      title: '请阅读并同意服务协议',
+      icon: 'none',
+    })
+    return false
+  }
+  return true
+}
+
+// 处理提交
+const handleSubmit = async () => {
+  if (!validateForm()) {
+    return
+  }
+
+  try {
+    // 显示加载提示
+    uni.showLoading({
+      title: '提交中...',
+    })
+
+    // 从全局状态获取数据
+    const step1Data = registerStore.step1Data
+    const step2Data = registerStore.step2Data
+    const step3Data = registerStore.step3Data
+
+    if (!step1Data || !step2Data || !step3Data) {
+      throw new Error('请先完成前三步信息填写')
+    }
+
+    // 复制一份数据用于处理
+    const formDataToSubmit = {
+      ...step1Data,
+      ...step2Data,
+      ...step3Data,
+      agreement: formData.value.agreement,
+    }
+
+    // 处理文件上传 - 先上传所有文件到云存储
+    const uploadPromises = []
+    const fileFields = [
+      'idCardFront',
+      'idCardBack',
+      'qualification',
+      'education',
+      'professional',
+      'honor',
+    ]
+
+    console.log('准备上传文件...')
+    console.log('需要检查的文件字段:', fileFields)
+    console.log('表单数据:', formDataToSubmit)
+
+    // 保存上传前的路径，用于日志记录
+    const originalPaths = {}
+
+    // 处理所有文件上传
+    for (const field of fileFields) {
+      if (!formDataToSubmit[field]) {
+        console.log(`${field}: 无文件路径`)
+        continue
+      }
+
+      originalPaths[field] = formDataToSubmit[field]
+      console.log(`检查${field}文件路径:`, formDataToSubmit[field])
+
+      // 处理单个文件
+      if (field === 'idCardFront' || field === 'idCardBack' || field === 'qualification') {
+        if (!isLocalPath(formDataToSubmit[field])) {
+          console.log(`${field}: 不是本地路径，跳过上传`)
+          continue
+        }
+
+        console.log(`${field}: 是本地路径，需要上传`)
+        uploadPromises.push(
+          uploadFile(formDataToSubmit[field], field).then((fileID) => {
+            formDataToSubmit[field] = fileID
+            console.log(`${field}上传成功: ${fileID}`)
+          }),
+        )
+      }
+      // 处理多个文件（逗号分隔的情况）
+      else if (formDataToSubmit[field].includes(',')) {
+        const paths = formDataToSubmit[field].split(',')
+        const uploadedPaths: string[] = []
+        let hasLocalFiles = false
+
+        console.log(`${field}: 包含多个文件路径:`, paths)
+
+        for (let i = 0; i < paths.length; i++) {
+          const path = paths[i].trim()
+          if (!path) {
+            uploadedPaths[i] = ''
+            continue
+          }
+
+          console.log(`${field}[${i}]: 检查路径 ${path}`)
+          if (isLocalPath(path)) {
+            console.log(`${field}[${i}]: 是本地路径，需要上传`)
+            hasLocalFiles = true
+            uploadPromises.push(
+              uploadFile(path, `${field}_${i}`).then((fileID) => {
+                uploadedPaths[i] = fileID as string
+                console.log(`${field}_${i}上传成功: ${fileID}`)
+              }),
+            )
+          } else {
+            console.log(`${field}[${i}]: 不是本地路径，跳过上传`)
+            uploadedPaths[i] = path // 保留原路径
+          }
+        }
+
+        // 如果存在本地文件，等待上传完成后更新路径
+        if (hasLocalFiles) {
+          // 修正这里的逻辑，不要重复添加Promise
+          const fieldPromise = Promise.all(uploadPromises).then(() => {
+            const filePaths = uploadedPaths.filter(Boolean).join(',')
+            formDataToSubmit[field] = filePaths
+            console.log(`${field}更新为: ${filePaths}`)
+          })
+
+          // 确保fieldPromise也被添加到uploadPromises中
+          if (!uploadPromises.includes(fieldPromise)) {
+            uploadPromises.push(fieldPromise)
+          }
+        }
+      } else {
+        // 处理单个文件但不是idCardFront/idCardBack/qualification的情况
+        if (isLocalPath(formDataToSubmit[field])) {
+          console.log(`${field}: 是本地路径，需要上传`)
+          uploadPromises.push(
+            uploadFile(formDataToSubmit[field], field).then((fileID) => {
+              formDataToSubmit[field] = fileID
+              console.log(`${field}上传成功: ${fileID}`)
+            }),
+          )
+        } else {
+          console.log(`${field}: 不是本地路径，跳过上传`)
+        }
+      }
+    }
+
+    // 检查isLocalPath函数是否正常工作
+    console.log('isLocalPath函数测试:')
+    console.log('wxfile://temp: ', isLocalPath('wxfile://temp'))
+    console.log('http://tmp: ', isLocalPath('http://tmp'))
+    console.log('file_123: ', isLocalPath('file_123'))
+    console.log('cloud://: ', isLocalPath('cloud://xxx'))
+
+    // 等待所有文件上传完成
+    if (uploadPromises.length > 0) {
+      console.log(`开始上传${uploadPromises.length}个文件...`)
+      await Promise.all(uploadPromises)
+      console.log('所有文件上传完成!')
+
+      // 记录上传前后的路径变化
+      console.log('文件路径变化:', {
+        original: originalPaths,
+        uploaded: {
+          idCardFront: formDataToSubmit.idCardFront,
+          idCardBack: formDataToSubmit.idCardBack,
+          qualification: formDataToSubmit.qualification,
+          education: formDataToSubmit.education,
+          professional: formDataToSubmit.professional,
+          honor: formDataToSubmit.honor,
+        },
+      })
+    } else {
+      console.log('没有需要上传的文件，原因可能是:')
+      console.log('1. 文件路径已经是云存储路径')
+      console.log('2. 没有设置文件路径')
+      console.log('3. isLocalPath函数未能正确识别本地路径')
+    }
+
+    // 调用云函数提交数据（这时formDataToSubmit中的文件路径已经是云存储fileID）
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'submit',
+        ...formDataToSubmit,
+      },
+    })
+
+    // 隐藏加载提示
+    uni.hideLoading()
+
+    if (result.success) {
+      // 更新本地用户状态
+      const currentUserInfo = userStore.userInfo || {}
+      userStore.setUserInfo({
+        ...currentUserInfo,
+        professionalStatus: 'pending',
+        professionalId: result.professionalId,
+        updateTime: new Date().getTime(),
+      })
+
+      // 打印用户状态更新后的信息
+      console.log('用户状态已更新:', {
+        professionalStatus: 'pending',
+        professionalId: result.professionalId,
+        updateTime: new Date().getTime(),
+      })
+
+      // 更新全局状态
+      registerStore.updateStep4({
+        status: 'pending',
+      })
+
+      // 清空其他注册数据，但保留提交状态
+      // 注意：不要完全清空，否则预览页将无法显示
+
+      // 显示成功提示
+      uni.showToast({
+        title: '提交成功',
+        icon: 'success',
+      })
+
+      // 延迟跳转到第五页，使用navigateTo
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/weshares/index/index',
+        })
+      }, 1500)
+    } else {
+      throw new Error(result.message || '提交失败')
+    }
+  } catch (error: any) {
+    // 隐藏加载提示
+    uni.hideLoading()
+
+    // 显示错误提示
+    uni.showToast({
+      title: error.message || '提交失败，请重试',
+      icon: 'none',
+    })
+  }
 }
 </script>
 
