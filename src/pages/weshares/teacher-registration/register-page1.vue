@@ -293,9 +293,33 @@ import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useUserStore } from '@/store'
 import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
+import { login } from '@/service/auth'
 
 const userStore = useUserStore()
 const registerStore = useRegisterStore()
+
+// 检查用户是否已登录
+onMounted(() => {
+  if (!userStore.userInfo?.openid) {
+    uni.showModal({
+      title: '提示',
+      content: '请先登录后再进行专业人员注册',
+      showCancel: false,
+      success: () => {
+        login().catch((err) => {
+          console.error('登录失败:', err)
+          uni.showToast({
+            title: '登录失败，请重试',
+            icon: 'none',
+            duration: 2000,
+          })
+          // 返回上一页
+          uni.navigateBack()
+        })
+      },
+    })
+  }
+})
 
 interface Step {
   number: number
