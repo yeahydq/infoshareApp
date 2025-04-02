@@ -31,6 +31,8 @@ exports.main = async (event, context) => {
         city: true,
         country: true,
         gender: true,
+        professionalStatus: true,
+        professionalId: true,
       })
       .get()
   }

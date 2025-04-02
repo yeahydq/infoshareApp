@@ -76,6 +76,9 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
           downloadFile(userInfo.avatarUrlCloud, userInfo)
           userInfo.phone = result[0].phone
           userInfo.address = result[0].address
+          // 设置专业人员状态信息
+          userInfo.professionalStatus = result[0].professionalStatus || ''
+          userInfo.professionalId = result[0].professionalId || ''
           // 修改库变量
           const userStore = useUserStore()
           userStore.setUserInfo(userInfo)

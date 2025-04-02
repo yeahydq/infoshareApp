@@ -6,8 +6,18 @@
     :showBack="true"
     @back="handleBack"
     @next="handleSubmit"
+    :hideNextBtn="isApplicationPending"
   >
     <view class="preview-container">
+      <!-- 审核状态显示 -->
+      <view v-if="isApplicationPending" class="status-banner">
+        <view class="status-icon">⏳</view>
+        <view class="status-info">
+          <view class="status-title">您的申请正在审核中</view>
+          <view class="status-desc">我们的工作人员正在审核您的资料，请耐心等待</view>
+        </view>
+      </view>
+
       <!-- 信息预览区域 -->
       <view class="preview-section">
         <view class="section-header">
@@ -221,7 +231,7 @@
       </view>
 
       <!-- 服务协议 -->
-      <view class="agreement-section">
+      <view class="agreement-section" v-if="!isApplicationPending">
         <view class="agreement-title">服务协议</view>
         <scroll-view scroll-y class="agreement-content">
           <text class="agreement-text">
@@ -240,8 +250,40 @@
         </view>
       </view>
 
+      <!-- 审核中提示（替代协议部分） -->
+      <view class="agreement-section" v-if="isApplicationPending">
+        <view class="agreement-title">审核进度</view>
+        <view class="review-progress">
+          <view class="progress-step active">
+            <view class="step-dot"></view>
+            <view class="step-info">
+              <view class="step-title">提交申请</view>
+              <view class="step-time">已完成</view>
+            </view>
+          </view>
+          <view class="progress-step active">
+            <view class="step-dot"></view>
+            <view class="step-info">
+              <view class="step-title">资料审核中</view>
+              <view class="step-time">处理中</view>
+            </view>
+          </view>
+          <view class="progress-step">
+            <view class="step-dot"></view>
+            <view class="step-info">
+              <view class="step-title">审核完成</view>
+              <view class="step-time">待完成</view>
+            </view>
+          </view>
+        </view>
+        <view class="review-tips">
+          <text>我们会在1-3个工作日内完成审核，请耐心等待</text>
+          <text>审核结果将通过短信通知您，请保持手机畅通</text>
+        </view>
+      </view>
+
       <!-- 提交说明 -->
-      <view class="submit-notice">
+      <view class="submit-notice" v-if="!isApplicationPending">
         <text class="notice-text">
           提交后，我们将在1-3个工作日内完成审核，审核结果将通过短信通知您。
         </text>
@@ -315,6 +357,8 @@ const formData = reactive({
   agreement: false,
 })
 
+const isApplicationPending = computed(() => registerStore.step4Data?.status === 'pending')
+
 // 返回上一步
 const handleBack = () => {
   // 保存当前数据到全局状态
@@ -346,6 +390,15 @@ const validateForm = () => {
 
 // 处理提交
 const handleSubmit = async () => {
+  // 如果申请正在审核中，不允许再次提交
+  if (isApplicationPending.value) {
+    uni.showToast({
+      title: '您的申请正在审核中，请勿重复提交',
+      icon: 'none',
+    })
+    return
+  }
+
   if (!validateForm()) {
     return
   }
@@ -375,7 +428,7 @@ const handleSubmit = async () => {
 
     // 调用云函数提交数据
     const { result } = await uni.cloud.callFunction({
-      name: 'submitProfessionalRegistration',
+      name: 'profRegister',
       data: submitData,
     })
 
@@ -841,6 +894,125 @@ const previewImage = (imageList: string[], index = 0) => {
         object-fit: cover;
       }
     }
+  }
+}
+
+// 添加审核状态条样式
+.status-banner {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  background: linear-gradient(45deg, #fdf0cc, #f7e8b0);
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.05);
+
+  .status-icon {
+    margin-right: 20rpx;
+    font-size: 64rpx;
+    color: #f1c40f;
+  }
+
+  .status-info {
+    flex: 1;
+
+    .status-title {
+      margin-bottom: 6rpx;
+      font-size: 32rpx;
+      font-weight: 600;
+      color: #7d6608;
+    }
+
+    .status-desc {
+      font-size: 24rpx;
+      color: #8c7811;
+    }
+  }
+}
+
+// 审核进度样式
+.review-progress {
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx 10rpx;
+
+  .progress-step {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding-left: 20rpx;
+    margin-bottom: 40rpx;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:not(:last-child):before {
+      position: absolute;
+      top: 24rpx;
+      left: 12rpx;
+      z-index: 0;
+      width: 2rpx;
+      height: calc(100% + 16rpx);
+      content: '';
+      background-color: #e0e0e0;
+    }
+
+    .step-dot {
+      position: relative;
+      z-index: 1;
+      width: 24rpx;
+      height: 24rpx;
+      margin-right: 20rpx;
+      background-color: #fff;
+      border: 2rpx solid #ccc;
+      border-radius: 50%;
+    }
+
+    &.active {
+      .step-dot {
+        background-color: #07c160;
+        border-color: #07c160;
+      }
+
+      .step-title {
+        font-weight: 500;
+        color: #07c160;
+      }
+
+      &:not(:last-child):before {
+        background-color: #07c160;
+      }
+    }
+
+    .step-info {
+      flex: 1;
+
+      .step-title {
+        margin-bottom: 4rpx;
+        font-size: 28rpx;
+        color: #333;
+      }
+
+      .step-time {
+        font-size: 24rpx;
+        color: #999;
+      }
+    }
+  }
+}
+
+.review-tips {
+  padding: 20rpx;
+  margin-top: 30rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+
+  text {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: #666;
   }
 }
 </style>

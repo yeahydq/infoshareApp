@@ -1,7 +1,6 @@
 <template>
   <view class="success-container">
     <view class="success-content">
-      <image src="/static/images/success.png" mode="aspectFit" class="success-icon" />
       <text class="success-title">提交成功</text>
       <text class="success-desc">您的入驻申请已提交，我们将在1-3个工作日内完成审核</text>
     </view>
@@ -34,8 +33,8 @@
 <script setup lang="ts">
 // 查看审核状态
 const handleViewStatus = () => {
-  uni.navigateTo({
-    url: '/pages/weshares/teacher/status',
+  uni.redirectTo({
+    url: '/pages/weshares/teacher-registration/index',
   })
 }
 

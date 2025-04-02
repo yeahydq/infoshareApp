@@ -36,9 +36,9 @@
         <view class="service-text">帮我找</view>
         <view class="service-icon-arrow">></view>
       </view>
-      <view class="service-card" @click="navigateTo(NavigationRoutes.TEACHER_REGISTRATION)">
+      <view class="service-card" @click="navigateToRegister">
         <view class="service-icon">👩‍🏫</view>
-        <view class="service-text">专业人员注册</view>
+        <view class="service-text">{{ professionalButtonText }}</view>
         <view class="service-icon-arrow">></view>
       </view>
     </view>
@@ -138,6 +138,7 @@ const NavigationRoutes = {
   SETTINGS: '../system-settings/index',
   HOME: '../index/index',
   ORDERS: '../index/index', // This page doesn't exist yet, so navigate to home
+  PROFESSIONAL_HOME: null, // This page doesn't exist yet
 }
 
 function navigateTo(route) {
@@ -154,6 +155,42 @@ const userStore = useUserStore()
 const hasLogin = computed(() => userStore.userInfo?.openid)
 const nickName = computed(() => userStore.userInfo.nickName || '')
 const avatarUrl = computed(() => userStore.userInfo.avatarUrl || '')
+
+// 根据用户专业人员状态决定按钮文字
+const professionalButtonText = computed(() => {
+  const status = userStore.userInfo.professionalStatus
+  if (!status) return '专业人员注册'
+
+  switch (status) {
+    case 'pending':
+      return '审核中'
+    case 'approved':
+      return '专业人页面'
+    case 'rejected':
+      return '重新申请'
+    default:
+      return '专业人员注册'
+  }
+})
+
+// 根据专业人员状态跳转到不同页面
+const navigateToRegister = () => {
+  const status = userStore.userInfo.professionalStatus
+
+  if (!hasLogin.value) {
+    // 未登录先登录
+    handleLogin()
+    return
+  }
+
+  if (status === 'approved') {
+    // 已通过审核，跳转到专业人员主页
+    navigateTo(NavigationRoutes.PROFESSIONAL_HOME)
+  } else {
+    // 其他状态都跳转到注册/审核页面
+    navigateTo(NavigationRoutes.TEACHER_REGISTRATION)
+  }
+}
 
 const navigateToSettings = () => {
   uni.navigateTo({

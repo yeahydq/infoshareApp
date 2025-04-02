@@ -26,7 +26,7 @@
     <view class="footer">
       <view class="btn-group">
         <button v-if="showBack" class="back-btn" @tap="handleBack">上一步</button>
-        <button class="next-btn" @tap="handleNext">
+        <button v-if="!hideNextBtn" class="next-btn" @tap="handleNext">
           {{ isLastStep ? '提交申请' : '下一步' }}
         </button>
       </view>
@@ -47,6 +47,7 @@ const props = defineProps<{
   subtitle: string
   steps: Step[]
   showBack?: boolean
+  hideNextBtn?: boolean
 }>()
 
 const emit = defineEmits<{

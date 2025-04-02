@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
 
+export interface Step4Data {
+  agreement: boolean
+  status?: string
+}
+
 export const useRegisterStore = defineStore('register', {
   state: () => ({
     step1Data: {
@@ -36,7 +41,8 @@ export const useRegisterStore = defineStore('register', {
     },
     step4Data: {
       agreement: false,
-    },
+      status: '',
+    } as Step4Data,
   }),
 
   actions: {
@@ -127,6 +133,7 @@ export const useRegisterStore = defineStore('register', {
         }
         this.step4Data = {
           agreement: false,
+          status: '',
         }
       } catch (error) {
         console.error('清空注册数据失败:', error)

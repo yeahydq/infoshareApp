@@ -1,7 +1,25 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-const initState = { nickName: '', avatar: '' }
+// 扩展用户信息接口，添加专业人员状态相关字段
+interface IUserInfo {
+  nickName: string
+  avatar: string
+  openid?: string
+  avatarUrl?: string
+  phone?: string
+  address?: string
+  professionalStatus?: 'pending' | 'approved' | 'rejected' | '' // 专业人员审核状态
+  professionalId?: string // 专业人员ID
+  [key: string]: any
+}
+
+const initState: IUserInfo = {
+  nickName: '',
+  avatar: '',
+  professionalStatus: '', // 空字符串是有效的值，符合类型定义
+  professionalId: '',
+}
 
 export const useUserStore = defineStore(
   'user',
@@ -19,13 +37,23 @@ export const useUserStore = defineStore(
     const reset = () => {
       userInfo.value = { ...initState }
     }
-    const isLogined = computed(() => !!userInfo.value.token)
+
+    // 计算用户是否是专业人员（有professionalId）
+    const isProfessional = computed(() => !!userInfo.value.professionalId)
+
+    // 计算用户专业人员状态
+    const professionalStatus = computed(() => userInfo.value.professionalStatus || '')
+
+    // 判断用户是否已登录
+    const isLogined = computed(() => !!userInfo.value.openid)
 
     return {
       userInfo,
       setUserInfo,
       clearUserInfo,
       isLogined,
+      isProfessional,
+      professionalStatus,
       reset,
     }
   },
