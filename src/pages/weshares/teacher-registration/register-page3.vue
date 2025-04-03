@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
 import { useRegisterStore } from '@/store/registerStore'
 import { useUserStore } from '@/store'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
@@ -262,21 +262,28 @@ const getFileList = (value: string) => {
 const getImageSrc = (path: string): string => {
   if (!path) return ''
 
-  // 如果是云存储路径，使用临时URL
+  // 如果是云存储路径
   if (path.startsWith('cloud://')) {
-    // 检查缓存
+    // 先检查缓存
     const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
     if (tempCloudURLs[path]) {
+      console.log(`从缓存加载云文件临时链接: ${path} -> ${tempCloudURLs[path]}`)
       return tempCloudURLs[path]
+    }
+
+    // 再检查临时映射（可能是本次会话中刚下载的）
+    const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+    if (tempFileMappings[path]) {
+      console.log(`从临时映射获取云文件: ${path} -> ${tempFileMappings[path]}`)
+      return tempFileMappings[path]
     }
 
     // 异步获取临时URL（不阻塞当前函数）
     setTimeout(() => {
-      uni.showLoading({ title: '加载云端图片...' })
+      console.log(`开始异步获取云文件临时链接: ${path}`)
       wx.cloud.getTempFileURL({
         fileList: [path],
         success: (res) => {
-          uni.hideLoading()
           if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
             console.log(`云文件转换临时URL成功: ${path} -> ${res.fileList[0].tempFileURL}`)
 
@@ -285,12 +292,16 @@ const getImageSrc = (path: string): string => {
             tempCloudURLs[path] = res.fileList[0].tempFileURL
             uni.setStorageSync('tempCloudURLs', tempCloudURLs)
 
-            // 此时可能需要触发视图更新
-            // 可以通过其他方式强制刷新
+            // 保存到临时映射
+            const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+            tempFileMappings[path] = res.fileList[0].tempFileURL
+            uni.setStorageSync('tempFileMappings', tempFileMappings)
+
+            // 此时需要强制刷新
+            uni.$emit('forceRefreshImages')
           }
         },
         fail: (err) => {
-          uni.hideLoading()
           console.error(`获取云文件临时链接失败: ${path}`, err)
         },
       })
@@ -325,6 +336,69 @@ const getImageSrc = (path: string): string => {
 
   return path
 }
+
+// 预加载所有图片
+const preloadImages = () => {
+  console.log('开始预加载图片...')
+  const imagePaths = [formData.idCardFront, formData.idCardBack, formData.qualification]
+
+  // 添加可能的多图片路径
+  if (formData.education) {
+    imagePaths.push(...formData.education.split(',').filter(Boolean))
+  }
+  if (formData.professional) {
+    imagePaths.push(...formData.professional.split(',').filter(Boolean))
+  }
+  if (formData.honor) {
+    imagePaths.push(...formData.honor.split(',').filter(Boolean))
+  }
+
+  // 过滤有效路径并预加载
+  imagePaths.filter(Boolean).forEach((path) => {
+    if (path.startsWith('cloud://')) {
+      console.log(`预加载云存储图片: ${path}`)
+      wx.cloud.getTempFileURL({
+        fileList: [path],
+        success: (res) => {
+          if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+            console.log(`云文件预加载成功: ${path} -> ${res.fileList[0].tempFileURL}`)
+
+            // 保存到缓存
+            const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+            tempCloudURLs[path] = res.fileList[0].tempFileURL
+            uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+
+            // 同时更新临时映射
+            const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+            tempFileMappings[path] = res.fileList[0].tempFileURL
+            uni.setStorageSync('tempFileMappings', tempFileMappings)
+
+            // 强制刷新组件
+            uni.$emit('forceRefreshImages')
+          }
+        },
+        fail: (err) => {
+          console.error(`云文件预加载失败: ${path}`, err)
+        },
+      })
+    }
+  })
+}
+
+// 强制刷新所有图片组件
+const refreshKey = ref(0)
+const forceRefreshImages = () => {
+  refreshKey.value++
+  console.log('强制刷新图片组件，刷新键:', refreshKey.value)
+}
+
+// 监听强制刷新事件
+uni.$on('forceRefreshImages', forceRefreshImages)
+
+// 在组件卸载时移除事件监听
+onUnmounted(() => {
+  uni.$off('forceRefreshImages', forceRefreshImages)
+})
 
 // 预览图片
 const previewImage = (fileId: string) => {
@@ -433,9 +507,13 @@ const emit = defineEmits(['next', 'back'])
 
 // 在组件挂载时，从store中恢复数据
 onMounted(() => {
+  console.log('register-page3 onMounted')
+  console.log('修改模式:', registerStore.isModifyMode)
+
   // 从store中恢复数据
   const step3Data = registerStore.step3Data
   if (step3Data) {
+    console.log('从store恢复的step3数据:', step3Data)
     formData.idCardFront = step3Data.idCardFront || ''
     formData.idCardBack = step3Data.idCardBack || ''
     formData.qualification = step3Data.qualification || ''
@@ -454,6 +532,27 @@ onMounted(() => {
     setTimeout(() => {
       emit('back', 3)
     }, 1500)
+    return
+  }
+
+  // 如果是修改模式，预加载所有图片
+  if (registerStore.isModifyMode) {
+    console.log('修改模式下预加载图片')
+    // 显示加载提示
+    uni.showLoading({
+      title: '加载图片中...',
+      mask: true,
+    })
+
+    // 预加载图片并在完成后隐藏加载提示
+    setTimeout(() => {
+      preloadImages()
+      setTimeout(() => {
+        uni.hideLoading()
+        // 强制刷新图片显示
+        forceRefreshImages()
+      }, 1000)
+    }, 100)
   }
 })
 </script>

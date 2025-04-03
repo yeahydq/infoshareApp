@@ -50,7 +50,11 @@
     <template v-else>
       <view class="upload-grid">
         <!-- 已上传的文件列表 -->
-        <view v-for="(file, index) in currentFileList" :key="index" class="grid-item has-file">
+        <view
+          v-for="(file, index) in currentFileList"
+          :key="`${refreshKey}-${index}`"
+          class="grid-item has-file"
+        >
           <image
             class="file-preview"
             :src="getImageSrc(file, index)"
@@ -105,7 +109,7 @@
  * 5. 上传进度提示
  * 6. 错误处理
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import useUpload from '@/hooks/useUpload'
 import ImageCropper from '@/components/ImageCropper/ImageCropper.vue'
 
@@ -511,13 +515,19 @@ export default {
             return tempCloudURLs[path]
           }
 
+          // 检查临时映射（可能是本次会话中刚下载的）
+          const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+          if (tempFileMappings[path]) {
+            console.log(`从临时映射获取云文件: ${path} -> ${tempFileMappings[path]}`)
+            return tempFileMappings[path]
+          }
+
           // 异步获取临时URL，但不阻塞当前函数
           setTimeout(() => {
-            uni.showLoading({ title: '加载云端图片...' })
+            console.log(`开始异步获取云文件临时链接: ${path}`)
             wx.cloud.getTempFileURL({
               fileList: [path],
               success: (res) => {
-                uni.hideLoading()
                 if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
                   console.log(`云文件转换临时URL成功: ${path} -> ${res.fileList[0].tempFileURL}`)
 
@@ -526,12 +536,16 @@ export default {
                   tempCloudURLs[path] = res.fileList[0].tempFileURL
                   uni.setStorageSync('tempCloudURLs', tempCloudURLs)
 
-                  // 此时可能需要触发视图更新
-                  // 需要通过其他方式强制刷新
+                  // 同时更新临时映射
+                  const tempFileMappings = uni.getStorageSync('tempFileMappings') || {}
+                  tempFileMappings[path] = res.fileList[0].tempFileURL
+                  uni.setStorageSync('tempFileMappings', tempFileMappings)
+
+                  // 触发全局事件，以便其他组件可以刷新显示
+                  uni.$emit('forceRefreshImages')
                 }
               },
               fail: (err) => {
-                uni.hideLoading()
                 console.error(`获取云文件临时链接失败: ${path}`, err)
 
                 // 标记为加载失败状态
@@ -651,6 +665,25 @@ export default {
 
     // 图片加载状态
     const imageLoadStatus = ref({})
+
+    // 刷新键，用于强制更新组件
+    const refreshKey = ref(0)
+
+    // 强制刷新函数
+    const forceRefreshImages = () => {
+      refreshKey.value++
+      console.log('FileUploader 组件强制刷新，键值:', refreshKey.value)
+    }
+
+    // 监听强制刷新事件
+    onMounted(() => {
+      uni.$on('forceRefreshImages', forceRefreshImages)
+    })
+
+    // 在组件卸载时移除事件监听
+    onUnmounted(() => {
+      uni.$off('forceRefreshImages', forceRefreshImages)
+    })
 
     // 处理图片加载错误
     const handleImageError = (e, key) => {
@@ -784,6 +817,7 @@ export default {
       processImagePath,
       handleImageError,
       getImageSrc,
+      refreshKey,
       // 裁剪相关
       showCropper,
       cropperImage,
