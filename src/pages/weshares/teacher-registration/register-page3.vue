@@ -138,12 +138,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRegisterStore } from '@/store/registerStore'
-import FileUploader from '@/components/FileUploader/FileUploader.vue'
-import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { useUserStore } from '@/store'
-import { login } from '@/service/auth'
+import PageLayout from '@/components/PageLayout/PageLayout.vue'
+import FileUploader from '@/components/FileUploader/FileUploader.vue'
 
 const userStore = useUserStore()
 // 检查用户是否已登录
@@ -154,16 +153,8 @@ onMounted(() => {
       content: '请先登录后再进行专业人员注册',
       showCancel: false,
       success: () => {
-        login().catch((err) => {
-          console.error('登录失败:', err)
-          uni.showToast({
-            title: '登录失败，请重试',
-            icon: 'none',
-            duration: 2000,
-          })
-          // 返回上一页
-          uni.navigateBack()
-        })
+        // 返回上一页 - 不再尝试自动登录
+        uni.navigateBack()
       },
     })
   }
@@ -197,56 +188,68 @@ const formSubmitted = ref(false)
 
 // 处理身份证正面照片上传
 const handleIdCardFrontChange = (files: string[]) => {
+  console.log('身份证正面照片变更:', files)
   formData.idCardFront = files[0] || ''
-  // 更新到store
-  registerStore.updateStep3({
-    idCardFront: files[0] || '',
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ idCardFront: formData.idCardFront })
+  registerStore.saveToStorage()
+  console.log('已更新身份证正面到store:', formData.idCardFront)
 }
 
-// 处理身份证反面照片上传
+// 处理身份证背面照片上传
 const handleIdCardBackChange = (files: string[]) => {
+  console.log('身份证背面照片变更:', files)
   formData.idCardBack = files[0] || ''
-  // 更新到store
-  registerStore.updateStep3({
-    idCardBack: files[0] || '',
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ idCardBack: formData.idCardBack })
+  registerStore.saveToStorage()
+  console.log('已更新身份证背面到store:', formData.idCardBack)
 }
 
-// 处理专业资格证书上传
+// 处理资格证书上传
 const handleQualificationChange = (files: string[]) => {
+  console.log('资格证书变更:', files)
   formData.qualification = files[0] || ''
-  // 更新到store
-  registerStore.updateStep3({
-    qualification: files[0] || '',
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ qualification: formData.qualification })
+  registerStore.saveToStorage()
+  console.log('已更新资格证书到store:', formData.qualification)
 }
 
 // 处理学历证书上传
 const handleEducationChange = (files: string[]) => {
+  console.log('学历证书变更:', files)
   formData.education = files.join(',')
-  // 更新到store
-  registerStore.updateStep3({
-    education: files.join(','),
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ education: formData.education })
+  registerStore.saveToStorage()
+  console.log('已更新学历证书到store:', formData.education)
 }
 
 // 处理专业证书上传
 const handleProfessionalChange = (files: string[]) => {
+  console.log('专业证书变更:', files)
   formData.professional = files.join(',')
-  // 更新到store
-  registerStore.updateStep3({
-    professional: files.join(','),
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ professional: formData.professional })
+  registerStore.saveToStorage()
+  console.log('已更新专业证书到store:', formData.professional)
 }
 
 // 处理荣誉证书上传
 const handleHonorChange = (files: string[]) => {
+  console.log('荣誉证书变更:', files)
   formData.honor = files.join(',')
-  // 更新到store
-  registerStore.updateStep3({
-    honor: files.join(','),
-  })
+
+  // 立即更新到store
+  registerStore.updateStep3({ honor: formData.honor })
+  registerStore.saveToStorage()
+  console.log('已更新荣誉证书到store:', formData.honor)
 }
 
 // 获取文件列表
@@ -255,15 +258,53 @@ const getFileList = (value: string) => {
   return value.split(',').filter(Boolean)
 }
 
-// 获取图片预览源路径
-const getPreviewSrc = (path: string) => {
+// 获取图片源 - 优化以支持本地缓存和云存储
+const getImageSrc = (path: string): string => {
   if (!path) return ''
 
-  // 先尝试从文件路径映射中获取
+  // 如果是云存储路径，使用临时URL
+  if (path.startsWith('cloud://')) {
+    // 检查缓存
+    const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+    if (tempCloudURLs[path]) {
+      return tempCloudURLs[path]
+    }
+
+    // 异步获取临时URL（不阻塞当前函数）
+    setTimeout(() => {
+      uni.showLoading({ title: '加载云端图片...' })
+      wx.cloud.getTempFileURL({
+        fileList: [path],
+        success: (res) => {
+          uni.hideLoading()
+          if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+            console.log(`云文件转换临时URL成功: ${path} -> ${res.fileList[0].tempFileURL}`)
+
+            // 保存到缓存
+            const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+            tempCloudURLs[path] = res.fileList[0].tempFileURL
+            uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+
+            // 此时可能需要触发视图更新
+            // 可以通过其他方式强制刷新
+          }
+        },
+        fail: (err) => {
+          uni.hideLoading()
+          console.error(`获取云文件临时链接失败: ${path}`, err)
+        },
+      })
+    }, 0)
+
+    // 返回原始路径，等待异步操作更新
+    return path
+  }
+
+  // 尝试从映射中获取真实路径
   try {
     const mappings = uni.getStorageSync('filePathMappings') || {}
     if (mappings[path]) {
-      console.log('从映射获取预览路径:', path, '->', mappings[path])
+      console.log('从映射获取文件路径:', path, '->', mappings[path])
       return mappings[path]
     }
   } catch (err) {
@@ -275,7 +316,6 @@ const getPreviewSrc = (path: string) => {
     try {
       const cachedFiles = uni.getStorageSync('cachedFiles') || {}
       if (cachedFiles[path]) {
-        console.log('从缓存获取预览文件成功:', path, '->', cachedFiles[path].tempFilePath)
         return cachedFiles[path].tempFilePath
       }
     } catch (error) {
@@ -283,8 +323,34 @@ const getPreviewSrc = (path: string) => {
     }
   }
 
-  // 如果没找到，返回原路径
   return path
+}
+
+// 预览图片
+const previewImage = (fileId: string) => {
+  if (!fileId) {
+    uni.showToast({
+      title: '请先上传图片',
+      icon: 'none',
+    })
+    return
+  }
+
+  // 获取图片源
+  const imgSrc = getImageSrc(fileId)
+
+  uni.previewImage({
+    urls: [imgSrc],
+    current: imgSrc,
+    success: () => console.log('预览本地图片成功'),
+    fail: (err) => {
+      console.error('预览本地图片失败:', err)
+      uni.showToast({
+        title: '预览图片失败',
+        icon: 'none',
+      })
+    },
+  })
 }
 
 // 监听文件上传状态

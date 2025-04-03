@@ -30,3 +30,10 @@ create the uni-app Vue3/CSS
 move the css from block <sytle></style> into another file of the same folder, but using below format to import into vue
 
 <style> @import './style.css'; </style>
+
+    cloud://cloud1-1g5as078be815144.636c-cloud1-1g5as078be815144-1346899714/professional/ozzfO4lSNjby_O6UPTC7gYEa55yU/education_1743611815557.jpg
+
+"GET /cloud://cloud1-1g5as078be815144.636c-cloud1-1g5as078be815144-1346899714/professional/ozzfO4lSNjby_O6UPTC7gYEa55yU/education_1743611815557.jpg 404 (Not Found)"
+
+cloud://cloud1-1g5as078be815144.636c-cloud1-1g5as078be815144-1346899714/professional/ozzfO4lSNjby_O6UPTC7gYEa55yU/education_1743611815557.jpg
+cloud://cloud1-1g5as078be815144.636c-cloud1-1g5as078be815144-1346899714/professional/ozzfO4lSNjby_O6UPTC7gYEa55yU/education_1743611815557.jpg

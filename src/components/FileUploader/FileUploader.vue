@@ -500,6 +500,55 @@ export default {
         return path
       }
 
+      // 处理云存储路径
+      if (path.startsWith('cloud://')) {
+        console.log('检测到云存储路径:', path)
+        // 检查临时URL缓存
+        try {
+          const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+          if (tempCloudURLs[path]) {
+            console.log('使用缓存的临时URL:', tempCloudURLs[path])
+            return tempCloudURLs[path]
+          }
+
+          // 异步获取临时URL，但不阻塞当前函数
+          setTimeout(() => {
+            uni.showLoading({ title: '加载云端图片...' })
+            wx.cloud.getTempFileURL({
+              fileList: [path],
+              success: (res) => {
+                uni.hideLoading()
+                if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+                  console.log(`云文件转换临时URL成功: ${path} -> ${res.fileList[0].tempFileURL}`)
+
+                  // 保存到缓存
+                  const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+                  tempCloudURLs[path] = res.fileList[0].tempFileURL
+                  uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+
+                  // 此时可能需要触发视图更新
+                  // 需要通过其他方式强制刷新
+                }
+              },
+              fail: (err) => {
+                uni.hideLoading()
+                console.error(`获取云文件临时链接失败: ${path}`, err)
+
+                // 标记为加载失败状态
+                const key = `${path}-0` // 对应getImageSrc中的键格式
+                imageLoadStatus.value[key] = 'error'
+                imageLoadStatus.value = { ...imageLoadStatus.value }
+              },
+            })
+          }, 0)
+        } catch (err) {
+          console.error('处理云存储路径失败:', err)
+        }
+
+        // 返回原始云存储路径，同时异步加载临时URL
+        return path
+      }
+
       // 先尝试从文件路径映射中获取
       try {
         const mappings = uni.getStorageSync('filePathMappings') || {}
@@ -624,9 +673,15 @@ export default {
         return placeholderImage.value
       }
 
-      const processedPath = processImagePath(path)
-      console.log(`处理路径 ${path} -> ${processedPath}`)
-      return processedPath
+      try {
+        const processedPath = processImagePath(path)
+        console.log(`处理路径 ${path} -> ${processedPath}`)
+        return processedPath
+      } catch (error) {
+        console.error('处理图片路径出错:', error)
+        imageLoadStatus.value[key] = 'error'
+        return placeholderImage.value
+      }
     }
 
     // 处理裁剪确认

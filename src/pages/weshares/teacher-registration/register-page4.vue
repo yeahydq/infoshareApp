@@ -128,9 +128,7 @@
       </view>
 
       <view class="preview-section">
-        <view class="section-header">
-          <view class="section-title">证件资料</view>
-        </view>
+        <view class="section-title">证件资料</view>
         <view class="upload-status">
           <view class="status-item" v-if="step3Data.education">
             <text class="label">学历证书</text>
@@ -310,6 +308,68 @@
         </view>
       </view>
     </view>
+
+    <!-- 资格证书 -->
+    <PreviewFile
+      :key="`qualification-${refreshKey}`"
+      v-if="step3Data.qualification"
+      title="资格证书"
+      :file="step3Data.qualification"
+    />
+
+    <!-- 学历证书 -->
+    <PreviewFile
+      :key="`education-${refreshKey}`"
+      v-if="step3Data.education"
+      title="学历证书"
+      :file="step3Data.education"
+      :multiple="true"
+    />
+
+    <!-- 专业证书 -->
+    <PreviewFile
+      :key="`professional-${refreshKey}`"
+      v-if="step3Data.professional"
+      title="专业证书"
+      :file="step3Data.professional"
+      :multiple="true"
+    />
+
+    <!-- 荣誉证书 -->
+    <PreviewFile
+      :key="`honor-${refreshKey}`"
+      v-if="step3Data.honor"
+      title="荣誉证书"
+      :file="step3Data.honor"
+      :multiple="true"
+    />
+
+    <!-- 身份证 -->
+    <view class="preview-section">
+      <view class="section-title">身份证</view>
+      <view class="id-cards-preview">
+        <view class="id-card-item" v-if="step3Data.idCardFront">
+          <image
+            class="id-card-image"
+            :key="`idCardFront-${refreshKey}`"
+            :src="step3Data.idCardFront"
+            mode="aspectFit"
+            @tap="previewImage(step3Data.idCardFront)"
+          />
+          <view class="id-card-label">人像面</view>
+        </view>
+        <view class="id-card-item" v-if="step3Data.idCardBack">
+          <image
+            class="id-card-image"
+            :key="`idCardBack-${refreshKey}`"
+            :src="step3Data.idCardBack"
+            mode="aspectFit"
+            @tap="previewImage(step3Data.idCardBack)"
+          />
+          <view class="id-card-label">国徽面</view>
+        </view>
+      </view>
+    </view>
   </PageLayout>
 </template>
 
@@ -319,6 +379,7 @@ import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { useUserStore } from '@/store'
 import { login } from '@/service/auth/index'
+import PreviewFile from '@/components/PreviewFile/PreviewFile.vue'
 
 interface Step {
   number: number
@@ -436,6 +497,9 @@ const isModifyMode = computed(() => registerStore.isModifyMode)
 
 // 定义是否可以提交的标志
 const canSubmit = ref(false)
+
+// 刷新图片组件的key
+const refreshKey = ref(0)
 
 // 修改handleBack函数
 const handleBack = () => {
@@ -800,6 +864,12 @@ const uploadFile = (filePath: string, fileType: string): Promise<string> => {
 // 定义emit
 const emit = defineEmits(['back', 'editFromReview'])
 
+// 强制刷新PreviewFile组件
+const forceRefreshImages = () => {
+  refreshKey.value += 1
+  console.log('强制刷新图片组件，刷新键:', refreshKey.value)
+}
+
 // 页面加载时恢复数据
 onMounted(async () => {
   console.log('register-page4 onMounted')
@@ -835,8 +905,13 @@ onMounted(async () => {
     formData.value.agreement = storeStep4Data.agreement
   }
 
-  // 如果是审核中状态，从云端获取最新数据
-  if (userStore.userInfo?.professionalStatus === 'pending') {
+  // 强制刷新图片
+  nextTick(() => {
+    forceRefreshImages()
+  })
+
+  // 如果是审核中状态且不是修改模式，从云端获取最新数据
+  if (userStore.userInfo?.professionalStatus === 'pending' && !registerStore.isModifyMode) {
     try {
       console.log('获取云端最新数据')
       const { result } = await uni.cloud.callFunction({
@@ -891,6 +966,9 @@ onMounted(async () => {
           if (result.application.honor) {
             step3Data.value.honor = result.application.honor
           }
+
+          // 强制刷新图片
+          forceRefreshImages()
         })
       } else {
         console.error('获取云端数据失败:', result)
@@ -906,12 +984,14 @@ onMounted(async () => {
         icon: 'none',
       })
     }
+  } else if (registerStore.isModifyMode) {
+    // 如果是修改模式，显示消息
+    console.log('当前为修改模式，使用store最新数据')
   }
 
-  // 如果是修改模式，显示确认对话框
+  // 如果是修改模式，不显示修改确认对话框
   if (registerStore.isModifyMode) {
-    console.log('显示修改确认对话框')
-    showModifyConfirm.value = true
+    console.log('当前为修改模式，不显示修改确认对话框')
   }
 
   // 延迟检查数据是否正确加载
@@ -1102,36 +1182,18 @@ const getFileStatusClass = (path: string): string => {
 }
 
 // 预览图片
-const previewImage = (imageList: string[], index = 0) => {
-  if (!imageList || imageList.length === 0) {
+const previewImage = (image) => {
+  if (!image) {
     uni.showToast({
-      title: '没有可预览的图片',
-      icon: 'none',
-    })
-    return
-  }
-
-  // 处理图片路径
-  const urls = imageList.map((path) => getImageSrc(path)).filter(Boolean)
-
-  if (urls.length === 0) {
-    uni.showToast({
-      title: '图片加载失败',
+      title: '图片无效',
       icon: 'none',
     })
     return
   }
 
   uni.previewImage({
-    urls,
-    current: urls[index] || urls[0],
-    fail: (err) => {
-      console.error('预览图片失败:', err)
-      uni.showToast({
-        title: '预览图片失败',
-        icon: 'none',
-      })
-    },
+    urls: [image],
+    current: image,
   })
 }
 
