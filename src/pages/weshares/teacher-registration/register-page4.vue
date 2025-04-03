@@ -6,11 +6,16 @@
     :showBack="true"
     @back="handleBack"
     @next="handleSubmit"
-    :hideNextBtn="isApplicationPending"
-    :backBtnText="isApplicationPending ? '修改资料' : '上一步'"
+    :hideNextBtn="isApplicationPending && !isModifyMode"
+    :nextBtnText="isModifyMode ? '提交修改' : '提交'"
+    :backBtnText="isApplicationPending && !isModifyMode ? '修改资料' : '上一步'"
   >
     <!-- 添加备用修改按钮，确保用户可以点击 -->
-    <view v-if="isApplicationPending" class="edit-button-floating" @tap="handleBackFromFloating">
+    <view
+      v-if="isApplicationPending && !isModifyMode"
+      class="edit-button-floating"
+      @tap="handleBackFromFloating"
+    >
       <text>点击修改资料</text>
     </view>
 
@@ -22,7 +27,9 @@
           <view class="status-title">您的申请正在审核中</view>
           <view class="status-desc">我们的工作人员正在审核您的资料，请耐心等待</view>
           <!-- 添加内联修改按钮 -->
-          <view class="modify-link" @tap="handleBackFromInline">点击此处修改资料</view>
+          <view v-if="!isModifyMode" class="modify-link" @tap="handleBackFromInline">
+            点击此处修改资料
+          </view>
         </view>
       </view>
 
@@ -142,7 +149,7 @@
                     class="preview-item"
                     v-for="(path, index) in getImageList(step3Data.education)"
                     :key="index"
-                    @click="previewImage(getImageList(step3Data.education), index)"
+                    @click="previewImage(path)"
                   >
                     <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
                   </view>
@@ -162,7 +169,7 @@
                     class="preview-item"
                     v-for="(path, index) in getImageList(step3Data.professional)"
                     :key="index"
-                    @click="previewImage(getImageList(step3Data.professional), index)"
+                    @click="previewImage(path)"
                   >
                     <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
                   </view>
@@ -223,7 +230,7 @@
                     class="preview-item"
                     v-for="(path, index) in getImageList(step3Data.honor)"
                     :key="index"
-                    @click="previewImage(getImageList(step3Data.honor), index)"
+                    @click="previewImage(path)"
                   >
                     <image class="preview-image" :src="getImageSrc(path)" mode="aspectFill"></image>
                   </view>
@@ -235,7 +242,7 @@
       </view>
 
       <!-- 服务协议 -->
-      <view class="agreement-section" v-if="!isApplicationPending">
+      <view class="agreement-section" v-if="!isApplicationPending || isModifyMode">
         <view class="agreement-title">服务协议</view>
         <scroll-view scroll-y class="agreement-content">
           <text class="agreement-text">
@@ -255,7 +262,7 @@
       </view>
 
       <!-- 审核中提示（替代协议部分） -->
-      <view class="agreement-section" v-if="isApplicationPending">
+      <view class="agreement-section" v-if="isApplicationPending && !isModifyMode">
         <view class="agreement-title">审核进度</view>
         <view class="review-progress">
           <view class="progress-step active">
@@ -287,8 +294,11 @@
       </view>
 
       <!-- 提交说明 -->
-      <view class="submit-notice" v-if="!isApplicationPending">
-        <text class="notice-text">
+      <view class="submit-notice" v-if="!isApplicationPending || isModifyMode">
+        <text class="notice-text" v-if="isModifyMode">
+          修改提交后，我们将在1-3个工作日内重新审核，审核结果将通过短信通知您。
+        </text>
+        <text class="notice-text" v-else>
           提交后，我们将在1-3个工作日内完成审核，审核结果将通过短信通知您。
         </text>
       </view>
@@ -308,68 +318,6 @@
         </view>
       </view>
     </view>
-
-    <!-- 资格证书 -->
-    <PreviewFile
-      :key="`qualification-${refreshKey}`"
-      v-if="step3Data.qualification"
-      title="资格证书"
-      :file="step3Data.qualification"
-    />
-
-    <!-- 学历证书 -->
-    <PreviewFile
-      :key="`education-${refreshKey}`"
-      v-if="step3Data.education"
-      title="学历证书"
-      :file="step3Data.education"
-      :multiple="true"
-    />
-
-    <!-- 专业证书 -->
-    <PreviewFile
-      :key="`professional-${refreshKey}`"
-      v-if="step3Data.professional"
-      title="专业证书"
-      :file="step3Data.professional"
-      :multiple="true"
-    />
-
-    <!-- 荣誉证书 -->
-    <PreviewFile
-      :key="`honor-${refreshKey}`"
-      v-if="step3Data.honor"
-      title="荣誉证书"
-      :file="step3Data.honor"
-      :multiple="true"
-    />
-
-    <!-- 身份证 -->
-    <view class="preview-section">
-      <view class="section-title">身份证</view>
-      <view class="id-cards-preview">
-        <view class="id-card-item" v-if="step3Data.idCardFront">
-          <image
-            class="id-card-image"
-            :key="`idCardFront-${refreshKey}`"
-            :src="step3Data.idCardFront"
-            mode="aspectFit"
-            @tap="previewImage(step3Data.idCardFront)"
-          />
-          <view class="id-card-label">人像面</view>
-        </view>
-        <view class="id-card-item" v-if="step3Data.idCardBack">
-          <image
-            class="id-card-image"
-            :key="`idCardBack-${refreshKey}`"
-            :src="step3Data.idCardBack"
-            mode="aspectFit"
-            @tap="previewImage(step3Data.idCardBack)"
-          />
-          <view class="id-card-label">国徽面</view>
-        </view>
-      </view>
-    </view>
   </PageLayout>
 </template>
 
@@ -379,7 +327,6 @@ import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { useUserStore } from '@/store'
 import { login } from '@/service/auth/index'
-import PreviewFile from '@/components/PreviewFile/PreviewFile.vue'
 
 interface Step {
   number: number
@@ -489,7 +436,10 @@ const formData = ref<FormData>({
   agreement: false,
 })
 
-const isApplicationPending = computed(() => false)
+// 是否申请中状态
+const isApplicationPending = computed(() => {
+  return userStore.userInfo?.professionalStatus === 'pending'
+})
 
 // 新增的状态和属性
 const showModifyConfirm = ref(false)
@@ -540,6 +490,7 @@ const confirmModify = async () => {
 
     // 复制一份数据用于处理
     const formDataToSubmit = {
+      action: 'submitApplication',
       ...step1Data,
       ...step2Data,
       ...step3Data,
@@ -685,7 +636,7 @@ const confirmModify = async () => {
     const { result } = await uni.cloud.callFunction({
       name: 'profRegister',
       data: {
-        action: 'submit',
+        action: 'submitApplication',
         ...formDataToSubmit,
       },
     })
@@ -715,8 +666,8 @@ const confirmModify = async () => {
         status: 'pending',
       })
 
-      // 清空其他注册数据，但保留提交状态
-      // 注意：不要完全清空，否则预览页将无法显示
+      // 重置修改模式
+      registerStore.setModifyMode(false)
 
       // 显示成功提示
       uni.showToast({
@@ -871,7 +822,7 @@ const forceRefreshImages = () => {
 }
 
 // 页面加载时恢复数据
-onMounted(async () => {
+onMounted(() => {
   console.log('register-page4 onMounted')
   console.log('当前用户状态:', userStore.userInfo)
   console.log('当前store状态:', registerStore.$state)
@@ -912,78 +863,7 @@ onMounted(async () => {
 
   // 如果是审核中状态且不是修改模式，从云端获取最新数据
   if (userStore.userInfo?.professionalStatus === 'pending' && !registerStore.isModifyMode) {
-    try {
-      console.log('获取云端最新数据')
-      const { result } = await uni.cloud.callFunction({
-        name: 'profRegister',
-        data: {
-          action: 'getApplication',
-        },
-      })
-
-      if (result.success && result.application) {
-        console.log('获取到云端数据:', result.application)
-
-        // 更新store中的数据
-        registerStore.updateStep1(result.application)
-        registerStore.updateStep2(result.application)
-        registerStore.updateStep3(result.application)
-        registerStore.updateStep4(result.application)
-
-        // 保存到本地
-        registerStore.saveToStorage()
-
-        // 更新本地数据
-        // 使用直接赋值而不是Object.assign
-        step1Data.value = { ...result.application }
-        step2Data.value = { ...result.application }
-        step3Data.value = { ...result.application }
-
-        console.log('更新后的本地数据:', {
-          step1DataAfterUpdate: step1Data.value,
-          step2DataAfterUpdate: step2Data.value,
-          step3DataAfterUpdate: step3Data.value,
-        })
-
-        // 强制更新图片显示
-        nextTick(() => {
-          // 更新图片预览
-          if (result.application.idCardFront) {
-            step3Data.value.idCardFront = result.application.idCardFront
-          }
-          if (result.application.idCardBack) {
-            step3Data.value.idCardBack = result.application.idCardBack
-          }
-          if (result.application.qualification) {
-            step3Data.value.qualification = result.application.qualification
-          }
-          if (result.application.education) {
-            step3Data.value.education = result.application.education
-          }
-          if (result.application.professional) {
-            step3Data.value.professional = result.application.professional
-          }
-          if (result.application.honor) {
-            step3Data.value.honor = result.application.honor
-          }
-
-          // 强制刷新图片
-          forceRefreshImages()
-        })
-      } else {
-        console.error('获取云端数据失败:', result)
-        uni.showToast({
-          title: '获取申请数据失败',
-          icon: 'none',
-        })
-      }
-    } catch (error) {
-      console.error('获取云端数据出错:', error)
-      uni.showToast({
-        title: '获取申请数据失败',
-        icon: 'none',
-      })
-    }
+    fetchCloudData()
   } else if (registerStore.isModifyMode) {
     // 如果是修改模式，显示消息
     console.log('当前为修改模式，使用store最新数据')
@@ -999,6 +879,82 @@ onMounted(async () => {
     checkDataLoaded()
   }, 500)
 })
+
+// 从云端获取数据
+const fetchCloudData = async () => {
+  try {
+    console.log('获取云端最新数据')
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'getApplication',
+      },
+    })
+
+    if (result.success && result.application) {
+      console.log('获取到云端数据:', result.application)
+
+      // 更新store中的数据
+      registerStore.updateStep1(result.application)
+      registerStore.updateStep2(result.application)
+      registerStore.updateStep3(result.application)
+      registerStore.updateStep4(result.application)
+
+      // 保存到本地
+      registerStore.saveToStorage()
+
+      // 更新本地数据
+      // 使用直接赋值而不是Object.assign
+      step1Data.value = { ...result.application }
+      step2Data.value = { ...result.application }
+      step3Data.value = { ...result.application }
+
+      console.log('更新后的本地数据:', {
+        step1DataAfterUpdate: step1Data.value,
+        step2DataAfterUpdate: step2Data.value,
+        step3DataAfterUpdate: step3Data.value,
+      })
+
+      // 强制更新图片显示
+      nextTick(() => {
+        // 更新图片预览
+        if (result.application.idCardFront) {
+          step3Data.value.idCardFront = result.application.idCardFront
+        }
+        if (result.application.idCardBack) {
+          step3Data.value.idCardBack = result.application.idCardBack
+        }
+        if (result.application.qualification) {
+          step3Data.value.qualification = result.application.qualification
+        }
+        if (result.application.education) {
+          step3Data.value.education = result.application.education
+        }
+        if (result.application.professional) {
+          step3Data.value.professional = result.application.professional
+        }
+        if (result.application.honor) {
+          step3Data.value.honor = result.application.honor
+        }
+
+        // 强制刷新图片
+        forceRefreshImages()
+      })
+    } else {
+      console.error('获取云端数据失败:', result)
+      uni.showToast({
+        title: '获取申请数据失败',
+        icon: 'none',
+      })
+    }
+  } catch (error) {
+    console.error('获取云端数据出错:', error)
+    uni.showToast({
+      title: '获取申请数据失败',
+      icon: 'none',
+    })
+  }
+}
 
 // 获取计费单位显示文本
 const getBillingUnitLabel = (billingType: string) => {
@@ -1182,7 +1138,7 @@ const getFileStatusClass = (path: string): string => {
 }
 
 // 预览图片
-const previewImage = (image) => {
+const previewImage = (image: string | string[]) => {
   if (!image) {
     uni.showToast({
       title: '图片无效',
@@ -1191,10 +1147,45 @@ const previewImage = (image) => {
     return
   }
 
-  uni.previewImage({
-    urls: [image],
-    current: image,
-  })
+  // 处理数组情况
+  if (Array.isArray(image)) {
+    // 确保所有元素都是字符串
+    const imageUrls = image.filter((i) => typeof i === 'string')
+    if (imageUrls.length === 0) {
+      uni.showToast({
+        title: '图片无效',
+        icon: 'none',
+      })
+      return
+    }
+
+    uni.previewImage({
+      urls: imageUrls,
+      current: imageUrls[0],
+      success: () => console.log('预览图片成功'),
+      fail: (err) => {
+        console.error('预览图片失败:', err)
+        uni.showToast({
+          title: '预览图片失败',
+          icon: 'none',
+        })
+      },
+    })
+  } else {
+    // 单张图片的情况
+    uni.previewImage({
+      urls: [image],
+      current: image,
+      success: () => console.log('预览图片成功'),
+      fail: (err) => {
+        console.error('预览图片失败:', err)
+        uni.showToast({
+          title: '预览图片失败',
+          icon: 'none',
+        })
+      },
+    })
+  }
 }
 
 // 修改浮动按钮处理函数
@@ -1309,6 +1300,12 @@ const handleSubmit = async () => {
   }
 
   try {
+    // 如果是修改模式，直接提交修改
+    if (isModifyMode.value) {
+      confirmModify()
+      return
+    }
+
     // 显示加载提示
     uni.showLoading({
       title: '提交中...',
@@ -1471,7 +1468,7 @@ const handleSubmit = async () => {
     const { result } = await uni.cloud.callFunction({
       name: 'profRegister',
       data: {
-        action: 'submit',
+        action: 'submitApplication',
         ...formDataToSubmit,
       },
     })
@@ -1501,8 +1498,8 @@ const handleSubmit = async () => {
         status: 'pending',
       })
 
-      // 清空其他注册数据，但保留提交状态
-      // 注意：不要完全清空，否则预览页将无法显示
+      // 重置修改模式
+      registerStore.setModifyMode(false)
 
       // 显示成功提示
       uni.showToast({

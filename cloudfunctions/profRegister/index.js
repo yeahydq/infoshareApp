@@ -606,6 +606,7 @@ exports.main = async (event, context) => {
 
   switch (action) {
     case 'submit':
+    case 'submitApplication':
       return await submitApplication(event, context)
     case 'checkApplication':
       return await checkApplication(event, context)
