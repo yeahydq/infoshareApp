@@ -195,6 +195,177 @@ async function createBooking(event, context) {
   }
 }
 
+// 获取我的预约记录
+async function getMyBookings(event, context) {
+  const wxContext = cloud.getWXContext()
+  const userOpenId = wxContext.OPENID
+  
+  try {
+    // 查询用户的预约记录
+    const ordersRes = await db.collection('orders')
+      .where({
+        _openid: userOpenId
+      })
+      .orderBy('createTime', 'desc')
+      .get()
+    
+    const orders = ordersRes.data || []
+    
+    // 如果没有预约记录，直接返回
+    if (orders.length === 0) {
+      return {
+        code: 0,
+        data: []
+      }
+    }
+    
+    // 获取相关专业人士的信息
+    const professionalIds = [...new Set(orders.map(order => order.professionalOpenId))]
+    
+    // 批量查询专业人士信息
+    const professionals = {}
+    if (professionalIds.length > 0) {
+      // 由于where in有限制，可能需要分批查询
+      const batchSize = 50
+      for (let i = 0; i < professionalIds.length; i += batchSize) {
+        const batch = professionalIds.slice(i, i + batchSize)
+        const profRes = await db.collection('professionals')
+          .where({
+            _openid: db.command.in(batch)
+          })
+          .get()
+        
+        // 构建ID到专业人士信息的映射
+        profRes.data.forEach(prof => {
+          professionals[prof._openid] = prof
+        })
+      }
+    }
+    
+    // 整合预约和专业人士信息
+    const bookings = orders.map(order => {
+      const professional = professionals[order.professionalOpenId] || {}
+      return {
+        ...order,
+        professionalName: professional.name || '未知专家',
+        professionalAvatar: professional.avatarUrl || '',
+        professionalPhone: professional.phone || '',
+        serviceName: professional.serviceName || '专业服务'
+      }
+    })
+    
+    return {
+      code: 0,
+      data: bookings
+    }
+    
+  } catch (error) {
+    console.error('获取预约记录失败:', error)
+    return {
+      code: 500,
+      message: '获取预约记录失败',
+      error: error.message
+    }
+  }
+}
+
+// 取消预约
+async function cancelBooking(event, context) {
+  const wxContext = cloud.getWXContext()
+  const userOpenId = wxContext.OPENID
+  const { orderId } = event
+  
+  if (!orderId) {
+    return {
+      code: 400,
+      message: '未提供订单ID'
+    }
+  }
+  
+  try {
+    // 1. 查询订单信息
+    const orderRes = await db.collection('orders').doc(orderId).get()
+    
+    if (!orderRes.data) {
+      return {
+        code: 404,
+        message: '未找到该订单'
+      }
+    }
+    
+    const order = orderRes.data
+    
+    // 2. 验证权限（只能取消自己的订单）
+    if (order._openid !== userOpenId) {
+      return {
+        code: 403,
+        message: '无权操作该订单'
+      }
+    }
+    
+    // 3. 验证订单状态
+    if (!['pending', 'confirmed'].includes(order.status)) {
+      return {
+        code: 400,
+        message: '该订单状态无法取消'
+      }
+    }
+    
+    // 4. 查询时间安排，释放时间段
+    const timeScheduleRes = await db.collection('timeSchedules')
+      .where({
+        professionalId: order.professionalOpenId
+      })
+      .get()
+    
+    if (timeScheduleRes.data.length > 0) {
+      const timeSchedule = timeScheduleRes.data[0]
+      
+      // 查找对应的时间段
+      const slotIndex = timeSchedule.slots.findIndex(slot => 
+        slot.date === order.date && 
+        slot.startTime === order.startTime && 
+        slot.orderId === orderId
+      )
+      
+      if (slotIndex !== -1) {
+        // 更新时间段状态
+        const updateSlotCmd = {}
+        updateSlotCmd[`slots.${slotIndex}.isBooked`] = false
+        updateSlotCmd[`slots.${slotIndex}.bookedBy`] = null
+        updateSlotCmd[`slots.${slotIndex}.orderId`] = null
+        updateSlotCmd[`slots.${slotIndex}.bookTime`] = null
+        
+        await db.collection('timeSchedules').doc(timeSchedule._id).update({
+          data: updateSlotCmd
+        })
+      }
+    }
+    
+    // 5. 更新订单状态
+    await db.collection('orders').doc(orderId).update({
+      data: {
+        status: 'cancelled',
+        cancelTime: db.serverDate(),
+        updateTime: db.serverDate()
+      }
+    })
+    
+    return {
+      code: 0,
+      message: '取消成功'
+    }
+    
+  } catch (error) {
+    console.error('取消预约失败:', error)
+    return {
+      code: 500,
+      message: '取消预约失败',
+      error: error.message
+    }
+  }
+}
+
 // 云函数入口
 exports.main = async (event, context) => {
   const { action } = event
@@ -214,6 +385,14 @@ exports.main = async (event, context) => {
           paySign: 'mock_pay_sign'
         }
       }
+    
+    case 'getMyBookings':
+      // 获取我的预约记录
+      return await getMyBookings(event, context)
+      
+    case 'cancelBooking':
+      // 取消预约
+      return await cancelBooking(event, context)
     
     default:
       // 默认创建预约订单
