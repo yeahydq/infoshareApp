@@ -64,12 +64,19 @@ exports.main = async (event, context) => {
         }
       }
       
+      // 获取专业人士的openid - 前端传入的就是openid
+      const professionalOpenId = professionalId
+      console.log(`专业人士OpenID: ${professionalOpenId}`)
+      
       // 查询专业人士的时间安排
       const result = await db.collection('timeSchedules')
         .where({
-          professionalId
+          professionalId: professionalOpenId
         })
         .get()
+      
+      console.log(`查询时间安排: professionalOpenId=${professionalOpenId}`)
+      console.log(`查询结果数量: ${result.data.length}`)
       
       if (result.data.length === 0) {
         return {
@@ -98,7 +105,7 @@ exports.main = async (event, context) => {
           .map(slot => slot.startTime)
           .sort() // 按时间排序
         
-        console.log(`专业人士${professionalId}在${date}的可用时间段数量:`, dateSlots.length)
+        console.log(`专业人士${professionalOpenId}在${date}的可用时间段数量:`, dateSlots.length)
         
         return {
           code: 0,
@@ -112,7 +119,7 @@ exports.main = async (event, context) => {
         .map(slot => slot.date))]
         .sort() // 按日期排序
       
-      console.log(`专业人士${professionalId}的可用日期数量:`, availableDates.length)
+      console.log(`专业人士${professionalOpenId}的可用日期数量:`, availableDates.length)
       
       return {
         code: 0,

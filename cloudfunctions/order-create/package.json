@@ -1,10 +1,11 @@
 {
   "name": "order-create",
   "version": "1.0.0",
-  "description": "创建预约订单的云函数",
+  "description": "创建预约订单",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "wx-server-sdk deploy"
   },
   "author": "",
   "license": "ISC",

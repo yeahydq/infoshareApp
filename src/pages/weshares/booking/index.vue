@@ -131,14 +131,13 @@ const defaultAvatar =
 // 页面数据
 const loading = ref(true)
 const professional = ref<any>({})
-const professionalId = ref('')
-
-// 预约表单数据
+const professionalOpenId = ref('')
 const availableDates = ref<any[]>([])
 const availableTimeSlots = ref<string[]>([])
 const selectedDate = ref('')
 const selectedTimeSlot = ref('')
 const bookingRemark = ref('')
+const submitting = ref(false)
 
 // 计算属性
 const totalPrice = computed((): string => {
@@ -160,7 +159,7 @@ onMounted(async () => {
   const options = currentPage.options || {}
 
   if (options.id) {
-    professionalId.value = options.id
+    professionalOpenId.value = options.id
 
     // 接收列表页传递的日期参数
     if (options.date) {
@@ -183,18 +182,24 @@ onMounted(async () => {
 // 获取专业人士信息
 const fetchProfessionalInfo = async () => {
   try {
+    console.log('获取专业人士信息，ID:', professionalOpenId.value)
+
     // 调用云函数获取专业人士信息
     const { result } = await uni.cloud.callFunction({
       name: 'profRegister',
       data: {
         action: 'getProfessionalDetail',
-        id: professionalId.value,
+        id: professionalOpenId.value,
       },
     })
 
+    console.log('获取专业人士信息返回结果:', result)
+
     if (result.success) {
       professional.value = result.data || {}
+      console.log('成功获取专业人士信息:', professional.value)
     } else {
+      console.error('获取专业人士信息失败:', result.message)
       uni.showToast({
         title: result.message || '获取专业人士信息失败',
         icon: 'none',
@@ -237,18 +242,23 @@ const fetchAvailableDates = async () => {
       })
     }
 
+    console.log('正在获取专业人士可用时间，ID:', professionalOpenId.value)
+
     // 调用云函数获取专业人士所有可用日期
     const { result } = await uni.cloud.callFunction({
       name: 'TimeSchedule',
       data: {
         type: 'getProfessionalSlots',
-        professionalId: professionalId.value,
+        professionalId: professionalOpenId.value,
       },
     })
+
+    console.log('获取可用时间段结果:', result)
 
     if (result.code === 0 && Array.isArray(result.data)) {
       // 标记哪些日期有可用时间段
       const availableDatesSet = new Set(result.data)
+      console.log('可用日期集合:', Array.from(availableDatesSet))
 
       // 更新日期数组，标记有可用时间段的日期
       dates.forEach((date) => {
@@ -377,7 +387,7 @@ const fetchAvailableTimeSlots = async (date: string) => {
       name: 'TimeSchedule',
       data: {
         type: 'getProfessionalSlots',
-        professionalId: professionalId.value,
+        professionalId: professionalOpenId.value,
         date,
       },
     })
@@ -415,28 +425,24 @@ const selectTimeSlot = (slot: string) => {
 const submitBooking = async () => {
   if (!canSubmit.value) {
     uni.showToast({
-      title: '请选择预约时间',
+      title: '请选择预约日期和时间',
       icon: 'none',
     })
     return
   }
 
-  try {
-    uni.showLoading({
-      title: '提交中...',
-    })
+  submitting.value = true
 
+  try {
     // 构建预约数据
     const bookingData = {
-      professionalId: professionalId.value,
-      serviceName: professional.value.serviceName,
+      professionalId: professionalOpenId.value,
       date: selectedDate.value,
       timeSlot: selectedTimeSlot.value,
       remark: bookingRemark.value,
-      price: parseFloat(totalPrice.value),
-      professionalName: professional.value.name,
-      professionalAvatar: professional.value.avatarUrl,
     }
+
+    console.log('提交预约数据:', bookingData)
 
     // 调用云函数创建预约
     const { result } = await uni.cloud.callFunction({
@@ -446,34 +452,37 @@ const submitBooking = async () => {
       },
     })
 
-    uni.hideLoading()
+    console.log('预约结果:', result)
 
-    if (result.success) {
+    if (result.code === 0) {
       // 预约成功
       uni.showToast({
         title: '预约成功',
         icon: 'success',
+        duration: 2000,
       })
 
-      // 跳转到订单详情页
+      // 跳转到用户页面或首页
       setTimeout(() => {
-        uni.redirectTo({
-          url: `/pages/weshares/orders/detail?id=${result.orderId}`,
+        uni.switchTab({
+          url: '/pages/weshares/index/index',
         })
-      }, 1500)
+      }, 2000)
     } else {
+      // 预约失败
       uni.showToast({
-        title: result.message || '预约失败',
+        title: result.message || '预约失败，请稍后重试',
         icon: 'none',
       })
     }
   } catch (error) {
-    uni.hideLoading()
     console.error('提交预约出错:', error)
     uni.showToast({
       title: '网络错误，请稍后重试',
       icon: 'none',
     })
+  } finally {
+    submitting.value = false
   }
 }
 

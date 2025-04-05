@@ -141,7 +141,7 @@ const handleModify = async () => {
 // 处理返回首页
 const handleBack = () => {
   uni.switchTab({
-    url: '/pages/weshares/index',
+    url: '/pages/weshares/index/index',
   })
 }
 

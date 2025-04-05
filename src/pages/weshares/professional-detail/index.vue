@@ -299,7 +299,7 @@ const contactProfessional = () => {
 // 跳转到预约页面
 const navigateToBooking = () => {
   uni.navigateTo({
-    url: `/pages/weshares/booking/index?id=${professionalId.value}`,
+    url: `/pages/weshares/booking/index?id=${professional.value._id}`,
   })
 }
 

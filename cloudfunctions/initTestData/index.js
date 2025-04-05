@@ -439,15 +439,25 @@ async function initTimeSchedules() {
 
     // 创建时间安排数据
     const now = new Date()
+    now.setHours(0, 0, 0, 0) // 重置时间为当天0点，确保日期比较准确
     const timeSchedules = []
+
+    // 获取当前日期（只保留年月日）
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    console.log('当前日期:', nowStr)
+
+    // 计算未来7天的最后一天日期
+    const maxDate = new Date(now)
+    maxDate.setDate(now.getDate() + 6) // 设置为今天+6天
+    const maxDateStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`
+    console.log('最大日期:', maxDateStr)
 
     // 为每个专业人士生成时间段
     for (const professional of professionals) {
       const slots = []
 
-      // 随机决定这个专业人士是否有近期可用时间
-      // 增加有近期可用时间的专业人士比例到70%
-      const hasRecentAvailability = Math.random() > 0.3 // 约70%的专业人士有近期可用时间
+      // 随机决定这个专业人士是否有近期可用时间，提高比例到85%
+      const hasRecentAvailability = Math.random() > 0.15 // 约85%的专业人士有近期可用时间
 
       // 为未来7天的每一天生成时间段
       for (let i = 0; i < 7; i++) {
@@ -456,107 +466,175 @@ async function initTimeSchedules() {
 
         const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-        // 生成上午和下午的时间段
-        const timeSlots = []
+        // 定义上午和下午的时间段数组
+        const morningSlots = []
+        const afternoonSlots = []
 
         // 上午9:00-12:00，每30分钟一个时间段
         for (let hour = 9; hour < 12; hour++) {
-          timeSlots.push(`${String(hour).padStart(2, '0')}:00`)
-          timeSlots.push(`${String(hour).padStart(2, '0')}:30`)
+          morningSlots.push(`${String(hour).padStart(2, '0')}:00`)
+          morningSlots.push(`${String(hour).padStart(2, '0')}:30`)
         }
 
         // 下午14:00-18:00，每30分钟一个时间段
         for (let hour = 14; hour < 18; hour++) {
-          timeSlots.push(`${String(hour).padStart(2, '0')}:00`)
-          timeSlots.push(`${String(hour).padStart(2, '0')}:30`)
+          afternoonSlots.push(`${String(hour).padStart(2, '0')}:00`)
+          afternoonSlots.push(`${String(hour).padStart(2, '0')}:30`)
         }
 
+        // 所有可能的时间段
+        const allTimeSlots = [...morningSlots, ...afternoonSlots]
+
         // 确定当天的可用时间逻辑
-        let availableSlots = []
-
         if (hasRecentAvailability) {
-          // 这类专业人士在5天内一定会有可用时间
-          if (i < 5) {
-            // 前5天每天至少保证2个可用时间段
-            const minAvailableSlots = 2
-            const randomAvailableSlots = timeSlots.filter(() => Math.random() > 0.3)
+          // 这类专业人士在7天内一定会有可用时间
 
-            if (randomAvailableSlots.length < minAvailableSlots) {
-              // 如果随机选择的可用时间段不足最低要求，则从所有时间段中随机选择补足
-              const remainingSlots = timeSlots.filter(
-                (slot) => !randomAvailableSlots.includes(slot),
-              )
-              const additionalSlots = remainingSlots
-                .sort(() => 0.5 - Math.random())
-                .slice(0, minAvailableSlots - randomAvailableSlots.length)
+          // 随机决定当天有多少个可用时间段 (3-8个)
+          const availableSlotsCount = Math.floor(Math.random() * 6) + 3
 
-              availableSlots = [...randomAvailableSlots, ...additionalSlots]
-            } else {
-              availableSlots = randomAvailableSlots
-            }
-          } else {
-            // 第6、7天的时间段
-            availableSlots = timeSlots.filter(() => Math.random() > 0.3)
+          // 确保上午和下午都有时间段
+          let morningCount = Math.min(Math.ceil(availableSlotsCount / 2), morningSlots.length)
+          let afternoonCount = Math.min(availableSlotsCount - morningCount, afternoonSlots.length)
+
+          // 如果数字不对，调整一下
+          if (morningCount + afternoonCount < availableSlotsCount) {
+            morningCount = Math.min(morningCount + 1, morningSlots.length)
           }
+
+          // 随机选择上午时间段
+          const selectedMorningSlots = []
+          const tempMorningSlots = [...morningSlots]
+          for (let j = 0; j < morningCount; j++) {
+            if (tempMorningSlots.length === 0) break
+            const randomIndex = Math.floor(Math.random() * tempMorningSlots.length)
+            selectedMorningSlots.push(tempMorningSlots.splice(randomIndex, 1)[0])
+          }
+
+          // 随机选择下午时间段
+          const selectedAfternoonSlots = []
+          const tempAfternoonSlots = [...afternoonSlots]
+          for (let j = 0; j < afternoonCount; j++) {
+            if (tempAfternoonSlots.length === 0) break
+            const randomIndex = Math.floor(Math.random() * tempAfternoonSlots.length)
+            selectedAfternoonSlots.push(tempAfternoonSlots.splice(randomIndex, 1)[0])
+          }
+
+          // 合并所有选择的时间段
+          const selectedTimeSlots = [...selectedMorningSlots, ...selectedAfternoonSlots]
+
+          // 添加到slots数组
+          for (const startTime of selectedTimeSlots) {
+            const [hours, minutes] = startTime.split(':').map(Number)
+            const endDate = new Date(2000, 0, 1, hours, minutes)
+            endDate.setMinutes(endDate.getMinutes() + 30)
+            const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+
+            slots.push({
+              date: dateStr,
+              startTime,
+              endTime,
+              isBooked: false, // 明确标记为未预约
+            })
+          }
+
+          console.log(
+            `专业人士 ${professional._openid} 在 ${dateStr} 创建了 ${selectedTimeSlots.length} 个可用时间段`,
+          )
         } else {
-          // 这类专业人士在前5天内不可预约
+          // 这类专业人士在前5天内不可预约，但6-7天可能有预约
           if (i < 5) {
             // 前5天内，要么没有时间段，要么全部已被预约
             if (Math.random() > 0.5) {
               // 没有时间段
-              availableSlots = []
+              console.log(`专业人士 ${professional._openid} 在 ${dateStr} 没有设置时间段`)
             } else {
               // 有时间段但全部已被预约
-              availableSlots = timeSlots
-                .filter(() => Math.random() > 0.7)
-                .map((slot) => ({
-                  startTime: slot,
-                  isBooked: true,
-                }))
+              const bookedSlotsCount = Math.floor(Math.random() * 4) + 2 // 2-5个已预约时间段
+              const randomSlots = []
+
+              // 随机选择时间段
+              const tempAllSlots = [...allTimeSlots]
+              for (let j = 0; j < bookedSlotsCount; j++) {
+                if (tempAllSlots.length === 0) break
+                const randomIndex = Math.floor(Math.random() * tempAllSlots.length)
+                randomSlots.push(tempAllSlots.splice(randomIndex, 1)[0])
+              }
+
+              // 添加已预约的时间段
+              for (const startTime of randomSlots) {
+                const [hours, minutes] = startTime.split(':').map(Number)
+                const endDate = new Date(2000, 0, 1, hours, minutes)
+                endDate.setMinutes(endDate.getMinutes() + 30)
+                const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+
+                slots.push({
+                  date: dateStr,
+                  startTime,
+                  endTime,
+                  isBooked: true, // 标记为已预约
+                })
+              }
+
+              console.log(
+                `专业人士 ${professional._openid} 在 ${dateStr} 有 ${randomSlots.length} 个已预约时间段`,
+              )
             }
           } else {
             // 第6、7天可能有可预约时间
-            availableSlots = timeSlots.filter(() => Math.random() > 0.3)
+            if (Math.random() > 0.3) {
+              // 70%概率有空闲时间
+              // 随机决定当天有多少个可用时间段 (2-5个)
+              const availableSlotsCount = Math.floor(Math.random() * 4) + 2
+              const randomSlots = []
+
+              // 随机选择时间段
+              const tempAllSlots = [...allTimeSlots]
+              for (let j = 0; j < availableSlotsCount; j++) {
+                if (tempAllSlots.length === 0) break
+                const randomIndex = Math.floor(Math.random() * tempAllSlots.length)
+                randomSlots.push(tempAllSlots.splice(randomIndex, 1)[0])
+              }
+
+              // 添加未预约的时间段
+              for (const startTime of randomSlots) {
+                const [hours, minutes] = startTime.split(':').map(Number)
+                const endDate = new Date(2000, 0, 1, hours, minutes)
+                endDate.setMinutes(endDate.getMinutes() + 30)
+                const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+
+                slots.push({
+                  date: dateStr,
+                  startTime,
+                  endTime,
+                  isBooked: false, // 标记为未预约
+                })
+              }
+
+              console.log(
+                `专业人士 ${professional._openid} 在 ${dateStr} 有 ${randomSlots.length} 个可用时间段`,
+              )
+            } else {
+              console.log(`专业人士 ${professional._openid} 在 ${dateStr} 没有设置时间段`)
+            }
           }
-        }
-
-        // 添加到slots数组
-        for (const slotInfo of availableSlots) {
-          let startTime, isAlreadyBooked
-
-          // 处理两种可能的格式：字符串或对象
-          if (typeof slotInfo === 'string') {
-            startTime = slotInfo
-            isAlreadyBooked = false
-          } else {
-            startTime = slotInfo.startTime
-            isAlreadyBooked = slotInfo.isBooked
-          }
-
-          const [hours, minutes] = startTime.split(':').map(Number)
-          const endDate = new Date(2000, 0, 1, hours, minutes)
-          endDate.setMinutes(endDate.getMinutes() + 30)
-          const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-
-          slots.push({
-            date: dateStr,
-            startTime,
-            endTime,
-            isBooked: isAlreadyBooked,
-          })
         }
       }
 
       // 输出统计信息，便于调试
       const availableCount = slots.filter((slot) => !slot.isBooked).length
       const next5DaysAvailableCount = slots.filter((slot) => {
-        const slotDate = new Date(slot.date)
-        const diffDays = Math.floor((slotDate - now) / (1000 * 60 * 60 * 24))
-        return diffDays < 5 && !slot.isBooked
+        const slotDate = slot.date
+        // 使用字符串比较，与getProfessionalList查询保持一致
+        const isAfterToday = slotDate >= nowStr
+        const isBeforeMax = slotDate <= maxDateStr
+        const isNotBooked = slot.isBooked !== true
+
+        // 使用与getProfessionalList相同的逻辑
+        return isAfterToday && isBeforeMax && isNotBooked
       }).length
 
       console.log(
-        `专业人士 ${professional._openid} 共有 ${slots.length} 个时间段，其中可预约 ${availableCount} 个，5天内可预约 ${next5DaysAvailableCount} 个`,
+        `专业人士 ${professional._openid} 共有 ${slots.length} 个时间段，其中可预约 ${availableCount} 个，7天内可预约 ${next5DaysAvailableCount} 个`,
       )
 
       // 创建时间安排记录
@@ -565,6 +643,7 @@ async function initTimeSchedules() {
         slots,
         updateTime: db.serverDate(),
         hasRecentAvailability, // 添加标记，便于后续查询
+        isTestData: true, // 标记为测试数据，便于后续清理
       })
     }
 
@@ -597,12 +676,12 @@ async function initTimeSchedules() {
     // 统计有近期可用时间的专业人士比例
     const availableCount = timeSchedules.filter((ts) => ts.hasRecentAvailability).length
     console.log(
-      `共生成 ${timeSchedules.length} 条时间安排数据，其中 ${availableCount} 条(${Math.round((availableCount / timeSchedules.length) * 100)}%)有5天内可预约时间段`,
+      `共生成 ${timeSchedules.length} 条时间安排数据，其中 ${availableCount} 条(${Math.round((availableCount / timeSchedules.length) * 100)}%)有7天内可预约时间段`,
     )
 
     return {
       success: true,
-      message: `成功导入${importedCount}条时间安排测试数据，其中${availableCount}条有5天内可预约时间段`,
+      message: `成功导入${importedCount}条时间安排测试数据，其中${availableCount}条有7天内可预约时间段`,
       count: importedCount,
       availableCount,
     }
@@ -619,18 +698,37 @@ async function initTimeSchedules() {
 // 清理时间安排测试数据
 async function clearTimeSchedules() {
   try {
-    // 删除所有测试专业人士的时间安排
+    // 删除所有标记为测试数据的时间安排
     const result = await db
       .collection('timeSchedules')
       .where({
-        professionalId: db.RegExp({
-          regexp: '^test_openid_',
-          options: 'i',
-        }),
+        isTestData: true,
       })
       .remove()
 
     const removedCount = result.stats.removed || 0
+
+    // 如果没有删除记录，尝试使用professionalId匹配
+    if (removedCount === 0) {
+      console.log('没有找到标记为isTestData的记录，尝试使用professionalId匹配')
+      const resultByProfId = await db
+        .collection('timeSchedules')
+        .where({
+          professionalId: db.RegExp({
+            regexp: '^test_openid_',
+            options: 'i',
+          }),
+        })
+        .remove()
+
+      const removedByProfId = resultByProfId.stats.removed || 0
+
+      return {
+        success: true,
+        message: `成功清理${removedByProfId}条时间安排测试数据（通过professionalId匹配）`,
+        count: removedByProfId,
+      }
+    }
 
     return {
       success: true,

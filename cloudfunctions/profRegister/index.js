@@ -159,7 +159,7 @@ async function checkApplication(event, context) {
       application: application,
       userInfo: userInfo,
     }
-  } catch (error) {
+    } catch (error) {
     console.error('查询申请记录失败:', error)
     return {
       success: false,
@@ -455,7 +455,7 @@ async function updateFiles(event, context) {
 // 提交申请
 async function submitApplication(event, context) {
   const { OPENID } = cloud.getWXContext()
-
+  
   try {
     // 提取表单数据
     const {
@@ -469,7 +469,7 @@ async function submitApplication(event, context) {
       educationRanges,
       skillPrices,
       skillBillingTypes,
-
+      
       // 第二步数据
       skillTags,
       serviceArea,
@@ -478,7 +478,7 @@ async function submitApplication(event, context) {
       selectedCity,
       selectedDistrict,
       selectedStreet,
-
+      
       // 第三步数据 - 已在小程序端转换为云文件ID
       idCardFront,
       idCardBack,
@@ -486,11 +486,11 @@ async function submitApplication(event, context) {
       education,
       professional,
       honor,
-
+      
       // 第四步数据
       agreement,
     } = event
-
+    
     // 验证基本数据
     if (!name || !phone || !professionalTypes || professionalTypes.length === 0) {
       return {
@@ -549,7 +549,7 @@ async function submitApplication(event, context) {
         }
       }
     }
-
+    
     // 构建专业人员数据对象
     const professionalData = {
       _openid: OPENID,
@@ -562,7 +562,7 @@ async function submitApplication(event, context) {
       educationRanges: educationRanges || [],
       skillPrices: skillPrices || {},
       skillBillingTypes: skillBillingTypes || {},
-
+      
       skillTags: skillTags || [],
       serviceArea: serviceArea || '',
       serviceDescription: serviceDescription || '',
@@ -570,7 +570,7 @@ async function submitApplication(event, context) {
       selectedCity: selectedCity || '',
       selectedDistrict: selectedDistrict || '',
       selectedStreet: selectedStreet || '',
-
+      
       // 文件已在小程序端上传，这里接收的是云存储ID
       idCardFront: idCardFront || '',
       idCardBack: idCardBack || '',
@@ -581,18 +581,18 @@ async function submitApplication(event, context) {
 
       // 文件元数据，包含详细的文件信息
       fileInfo: fileInfo,
-
+      
       status: 'pending', // 状态：待审核
       createTime: db.serverDate(),
       updateTime: db.serverDate(),
       agreement: agreement || false,
     }
-
+    
     // 保存到数据库
     const result = await db.collection('professionals').add({
       data: professionalData,
     })
-
+    
     // 保存成功后，创建用户的角色记录
     if (result._id) {
       // 创建角色记录
@@ -637,7 +637,7 @@ async function submitApplication(event, context) {
         console.error('更新用户专业人员状态失败:', userError)
         // 不中断主流程，即使更新用户表失败
       }
-
+      
       return {
         success: true,
         message: '专业人员注册信息提交成功，等待审核',
@@ -975,6 +975,93 @@ async function getProfessionalList(event, context) {
   }
 }
 
+// 获取专业人士详情
+async function getProfessionalDetail(event, context) {
+  const { id } = event
+  
+  if (!id) {
+    return {
+      success: false,
+      message: '未提供专业人士ID',
+    }
+  }
+  
+  try {
+    let professional;
+    
+    // 调整判断逻辑：
+    // 1. 如果ID包含"openid"字样，则视为open_id
+    // 2. 否则按照之前的判断（长度小于28或包含"-"为文档ID）
+    if ((id.length < 28 || id.includes('-')) && !id.includes('openid')) {
+      console.log(`使用文档ID查询: ${id}`);
+      // 使用文档ID查询
+      const professionalRes = await db.collection('professionals').doc(id).get();
+      professional = professionalRes.data;
+    } else {
+      console.log(`使用默认方式查询，尝试文档ID: ${id}`);
+      // 先尝试文档ID查询
+      try {
+        const professionalRes = await db.collection('professionals').doc(id).get();
+        professional = professionalRes.data;
+      } catch (err) {
+        console.log(`文档ID查询失败，尝试使用open_id查询: ${id}`);
+        // 如果文档ID查询失败，尝试open_id查询
+        const professionalRes = await db
+          .collection('professionals')
+          .where({
+            _openid: id,
+            status: 'approved'
+          })
+          .get();
+        
+        if (professionalRes.data && professionalRes.data.length > 0) {
+          professional = professionalRes.data[0];
+        }
+      }
+    }
+    
+    if (!professional) {
+      return {
+        success: false,
+        message: '未找到专业人士信息',
+      }
+    }
+    
+    // 查询用户信息获取头像等
+    const userRes = await db.collection('UserList')
+      .where({
+        _openid: professional._openid
+      })
+      .field({
+        avatarUrl: true,
+        name: true,
+        nickname: true
+      })
+      .get()
+    
+    const userInfo = userRes.data && userRes.data[0] ? userRes.data[0] : {}
+    
+    // 合并用户信息和专业人士信息
+    const result = {
+      ...professional,
+      avatarUrl: professional.avatarUrl || userInfo.avatarUrl || '',
+      name: professional.name || userInfo.name || userInfo.nickname || '未知专家',
+    }
+    
+    return {
+      success: true,
+      data: result
+    }
+  } catch (error) {
+    console.error('获取专业人士详情失败:', error)
+    return {
+      success: false,
+      message: '获取专业人士详情失败',
+      error: error.message
+    }
+  }
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action } = event
@@ -991,6 +1078,8 @@ exports.main = async (event, context) => {
       return await submitApplication(event, context)
     case 'getProfessionalList':
       return await getProfessionalList(event, context)
+    case 'getProfessionalDetail':
+      return await getProfessionalDetail(event, context)
     default:
       return {
         success: false,

@@ -213,7 +213,7 @@
           ¥{{ professional.hourlyRate }}/小时
         </view>
         <view class="teacher-price-hidden" v-else></view>
-        <view class="book-button" @click.stop="gotoBooking(professional._id)">
+        <view class="book-button" @click.stop="gotoBooking(professional._openid)">
           <text>去预约</text>
         </view>
       </view>
@@ -507,11 +507,11 @@ async function loadTestData() {
       title: '加载测试数据中...',
     })
 
-    const result = await wx.cloud.callFunction({
+    const result = await uni.cloud.callFunction({
       name: 'initTestData',
       data: {
         action: 'init',
-        collection: 'professionals',
+        collection: 'all',
       },
     })
 
@@ -554,11 +554,11 @@ async function clearTestData() {
       title: '清理测试数据中...',
     })
 
-    const result = await wx.cloud.callFunction({
+    const result = await uni.cloud.callFunction({
       name: 'initTestData',
       data: {
         action: 'clear',
-        collection: 'professionals',
+        collection: 'all',
       },
     })
 

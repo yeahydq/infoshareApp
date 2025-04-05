@@ -48,9 +48,9 @@ async function checkTimeSlotAvailability(professionalId, date, timeSlot) {
     // 检查该时间段是否已被预约
     const existingBooking = await db.collection('orders')
       .where({
-        professionalId,
+        professionalOpenId: professionalId,
         date,
-        timeSlot,
+        startTime: timeSlot,
         status: _.neq('cancelled')
       })
       .count()
@@ -75,144 +75,137 @@ async function checkTimeSlotAvailability(professionalId, date, timeSlot) {
 }
 
 // 创建预约订单
-async function createBookingOrder(event, context) {
+async function createBooking(event, context) {
   const wxContext = cloud.getWXContext()
+  const userOpenId = wxContext.OPENID
   const { bookingData } = event
-  const userId = wxContext.OPENID
   
-  if (!userId) {
-    return {
-      success: false,
-      message: '用户未登录'
-    }
-  }
-  
-  // 验证必要参数
-  if (!bookingData || !bookingData.professionalId || !bookingData.date || !bookingData.timeSlot) {
-    return {
-      success: false,
-      message: '缺少必要参数'
-    }
-  }
+  // 记录请求数据，便于调试
+  console.log('预约请求数据:', bookingData)
   
   try {
-    // 检查时间段是否可用
-    const availability = await checkTimeSlotAvailability(
-      bookingData.professionalId,
-      bookingData.date,
-      bookingData.timeSlot
-    )
-    
-    if (!availability.available) {
+    // 验证必要参数
+    if (!bookingData || !bookingData.professionalId || !bookingData.date || !bookingData.timeSlot) {
       return {
-        success: false,
-        message: availability.message
+        code: 400,
+        message: '预约信息不完整'
       }
     }
     
-    // 获取专业人士信息
-    const professional = await db.collection('professionals')
-      .doc(bookingData.professionalId)
-      .get()
-      .then(res => res.data)
-      .catch(() => null)
+    const { professionalId, date, timeSlot, remark } = bookingData
     
-    if (!professional) {
-      return {
-        success: false,
-        message: '未找到专业人士信息'
-      }
-    }
+    // 1. 确认professionalId是否为openid
+    // 注意：从前端传过来的professionalId始终视为openid
+    const professionalOpenId = professionalId
+    console.log(`专业人士OpenID: ${professionalOpenId}`)
     
-    // 获取用户信息
-    const user = await db.collection('users')
-      .where({
-        _openid: userId
-      })
-      .get()
-      .then(res => res.data[0])
-      .catch(() => null)
-    
-    if (!user) {
-      return {
-        success: false,
-        message: '未找到用户信息'
-      }
-    }
-    
-    // 计算价格（假设服务为30分钟，即0.5小时）
-    const price = professional.hourlyRate ? professional.hourlyRate * 0.5 : 0
-    
-    // 创建订单
-    const orderNo = generateOrderNo()
-    const now = db.serverDate()
-    
-    const orderData = {
-      _openid: userId,
-      orderNo,
-      userId,
-      professionalId: bookingData.professionalId,
-      professionalName: professional.name,
-      professionalAvatar: professional.avatarUrl,
-      serviceName: professional.serviceName || bookingData.serviceName,
-      date: bookingData.date,
-      timeSlot: bookingData.timeSlot,
-      remark: bookingData.remark || '',
-      price,
-      status: 'pending', // pending, paid, completed, cancelled
-      createdTime: now,
-      updatedTime: now
-    }
-    
-    const result = await db.collection('orders').add({
-      data: orderData
-    })
-    
-    // 返回订单信息
-    return {
-      success: true,
-      message: '预约订单创建成功',
-      orderId: result._id,
-      orderNo
-    }
-  } catch (error) {
-    console.error('创建预约订单出错:', error)
-    return {
-      success: false,
-      message: '创建预约订单出错: ' + error.message
-    }
-  }
-}
-
-// 更新时间段已被预约状态
-async function updateTimeSlotStatus(professionalId, date, timeSlot, isBooked = true) {
-  try {
-    await db.collection('timeSchedules')
-      .where({
-        professionalId,
-        'slots.date': date,
-        'slots.startTime': timeSlot
-      })
-      .update({
-        data: {
-          'slots.$.isBooked': isBooked
+    // 2. 验证时间段是否可预约
+    try {
+      const timeScheduleRes = await db.collection('timeSchedules')
+        .where({
+          professionalId: professionalOpenId // 使用openid查询
+        })
+        .get()
+      
+      if (timeScheduleRes.data.length === 0) {
+        return {
+          code: 404,
+          message: '未找到该专业人士的时间安排'
         }
+      }
+      
+      const timeSchedule = timeScheduleRes.data[0]
+      
+      // 查找对应的时间段
+      const targetSlot = timeSchedule.slots.find(slot => 
+        slot.date === date && slot.startTime === timeSlot && !slot.isBooked
+      )
+      
+      if (!targetSlot) {
+        return {
+          code: 400,
+          message: '该时间段不可预约或已被预约'
+        }
+      }
+      
+      // 计算时间段索引
+      const slotIndex = timeSchedule.slots.findIndex(slot => 
+        slot.date === date && slot.startTime === timeSlot
+      )
+      
+      // 3. 创建订单记录
+      const orderNo = generateOrderNo()
+      const orderData = {
+        _openid: userOpenId, // 预约用户的openid
+        orderNo, // 订单编号
+        userOpenId: userOpenId, // 用户openid
+        professionalOpenId: professionalOpenId, // 专业人士openid，这是主要的关联字段
+        date,
+        startTime: timeSlot,
+        endTime: targetSlot.endTime,
+        remark: remark || '',
+        status: 'pending', // 订单状态：待确认
+        createTime: db.serverDate(),
+        updateTime: db.serverDate()
+      }
+      
+      const orderRes = await db.collection('orders').add({
+        data: orderData
       })
-    return true
+      
+      if (!orderRes._id) {
+        throw new Error('创建订单失败')
+      }
+      
+      // 4. 更新时间段为已预约
+      const updateSlotCmd = {}
+      updateSlotCmd[`slots.${slotIndex}.isBooked`] = true
+      updateSlotCmd[`slots.${slotIndex}.bookedBy`] = userOpenId
+      updateSlotCmd[`slots.${slotIndex}.orderId`] = orderRes._id
+      updateSlotCmd[`slots.${slotIndex}.bookTime`] = db.serverDate()
+      
+      await db.collection('timeSchedules').doc(timeSchedule._id).update({
+        data: updateSlotCmd
+      })
+      
+      // 5. 返回成功信息
+      return {
+        code: 0,
+        message: '预约成功',
+        data: {
+          orderId: orderRes._id,
+          orderNo: orderNo
+        }
+      }
+    } catch (error) {
+      console.error('预约失败:', error)
+      return {
+        code: 500,
+        message: '预约失败，请稍后重试',
+        error: error.message
+      }
+    }
   } catch (error) {
-    console.error('更新时间段状态出错:', error)
-    return false
+    console.error('预约处理出错:', error)
+    return {
+      code: 500,
+      message: '服务器错误，请稍后重试',
+      error: error.message
+    }
   }
 }
 
 // 云函数入口
 exports.main = async (event, context) => {
-  switch (event.action) {
+  const { action } = event
+  
+  switch (action) {
     case 'getPayParams':
       // 获取支付参数（实际项目中需要接入微信支付）
       return {
-        success: true,
-        payParams: {
+        code: 0,
+        message: '获取支付参数成功',
+        data: {
           // 模拟支付参数
           timeStamp: Date.now().toString(),
           nonceStr: Math.random().toString(36).substring(2),
@@ -224,6 +217,6 @@ exports.main = async (event, context) => {
     
     default:
       // 默认创建预约订单
-      return await createBookingOrder(event, context)
+      return await createBooking(event, context)
   }
 } 
