@@ -161,6 +161,13 @@ onMounted(async () => {
 
   if (options.id) {
     professionalId.value = options.id
+
+    // 接收列表页传递的日期参数
+    if (options.date) {
+      console.log('从列表页接收到的预约日期:', options.date)
+      selectedDate.value = options.date
+    }
+
     await Promise.all([fetchProfessionalInfo(), fetchAvailableDates()])
   } else {
     // 没有传入ID，显示错误
@@ -249,20 +256,42 @@ const fetchAvailableDates = async () => {
       })
     }
 
-    // 过滤掉没有可用时间段的日期
-    const filteredDates = dates.filter((date) => date.hasSlots)
+    // 更新可用日期列表（保留所有日期，但标记哪些有可用时间段）
+    availableDates.value = dates
 
-    // 更新可用日期列表
-    availableDates.value = filteredDates
-
-    // 默认选中第一个有可用时间段的日期
-    if (filteredDates.length > 0) {
-      selectDate(filteredDates[0].value)
+    // 检查是否有从列表页传递的日期
+    if (selectedDate.value) {
+      // 验证该日期是否有可用时间段
+      const selectedDateObj = dates.find((d) => d.value === selectedDate.value)
+      if (selectedDateObj && selectedDateObj.hasSlots) {
+        // 有可用时间段，获取该日期的时间段
+        await fetchAvailableTimeSlots(selectedDate.value)
+      } else {
+        // 没有可用时间段，显示提示
+        uni.showToast({
+          title: `该专业人士在${formatDateForDisplay(selectedDate.value)}没有可用时间段`,
+          icon: 'none',
+          duration: 2000,
+        })
+        // 清除选择的日期
+        selectedDate.value = ''
+        availableTimeSlots.value = []
+      }
     } else {
-      // 没有可用日期，显示空数据
-      availableDates.value = dates // 显示所有日期但标记为无可用时间
-      selectedDate.value = ''
-      availableTimeSlots.value = []
+      // 默认选中第一个有可用时间段的日期
+      const firstAvailableDate = dates.find((date) => date.hasSlots)
+      if (firstAvailableDate) {
+        selectDate(firstAvailableDate.value)
+      } else {
+        // 没有可用日期，显示空数据提示
+        selectedDate.value = ''
+        availableTimeSlots.value = []
+        uni.showToast({
+          title: '该专业人士近期没有可预约时间段',
+          icon: 'none',
+          duration: 2000,
+        })
+      }
     }
   } catch (error) {
     console.error('获取可用日期出错:', error)
@@ -302,8 +331,36 @@ const generateDateRangeArray = () => {
   return dates
 }
 
+// 格式化日期，用于显示
+const formatDateForDisplay = (dateStr) => {
+  if (!dateStr) return ''
+
+  const date = new Date(dateStr)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+
+  const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const weekday = weekdayNames[date.getDay()]
+
+  // 判断是否是今天或明天
+  if (date.getTime() === today.getTime()) {
+    return `今天(${month}月${day}日)`
+  } else if (date.getTime() === tomorrow.getTime()) {
+    return `明天(${month}月${day}日)`
+  } else {
+    return `${month}月${day}日(${weekday})`
+  }
+}
+
 // 选择日期
-const selectDate = async (date: string) => {
+const selectDate = async (date) => {
+  if (selectedDate.value === date) return // 避免重复选择
+
   selectedDate.value = date
   selectedTimeSlot.value = ''
   await fetchAvailableTimeSlots(date)
@@ -444,10 +501,11 @@ const renderProfessionalStats = () => {
 }
 
 // 显示无可用时间段提示
-const showNoSlotsToast = (date: string) => {
+const showNoSlotsToast = (date) => {
   uni.showToast({
-    title: '该日期无可用时间段',
+    title: `该专业人士在${formatDateForDisplay(date)}没有可用时间段`,
     icon: 'none',
+    duration: 2000,
   })
 }
 </script>

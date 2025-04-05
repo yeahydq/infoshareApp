@@ -94,9 +94,11 @@ exports.main = async (event, context) => {
       if (date) {
         const dateSlots = timeSchedule.slots
           .filter(slot => slot.date === date)
-          .filter(slot => !slot.isBooked) // 过滤掉已预约的时间段
+          .filter(slot => slot.isBooked !== true) // 过滤掉已预约的时间段
           .map(slot => slot.startTime)
           .sort() // 按时间排序
+        
+        console.log(`专业人士${professionalId}在${date}的可用时间段数量:`, dateSlots.length)
         
         return {
           code: 0,
@@ -104,11 +106,13 @@ exports.main = async (event, context) => {
         }
       }
       
-      // 如果没有指定日期，返回所有可用日期
+      // 如果没有指定日期，返回所有有可用时间段的日期
       const availableDates = [...new Set(timeSchedule.slots
-        .filter(slot => !slot.isBooked)
+        .filter(slot => slot.isBooked !== true) // 使用更安全的比较方式
         .map(slot => slot.date))]
         .sort() // 按日期排序
+      
+      console.log(`专业人士${professionalId}的可用日期数量:`, availableDates.length)
       
       return {
         code: 0,

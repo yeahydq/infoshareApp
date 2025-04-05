@@ -60,6 +60,63 @@
       </scroll-view>
     </view>
 
+    <view class="date-filter">
+      <view class="date-filter-title">按日期筛选</view>
+      <scroll-view scroll-x class="date-scroll">
+        <view
+          v-for="(date, index) in availableDates"
+          :key="index"
+          :class="['date-item', selectedDate === date.value ? 'active' : '']"
+          @click="selectDate(date.value)"
+        >
+          <text class="weekday">{{ date.weekday }}</text>
+          <text class="date">{{ date.day }}</text>
+          <text class="month">{{ date.month }}月</text>
+          <text v-if="date.isToday" class="today-mark">今天</text>
+        </view>
+      </scroll-view>
+
+      <!-- 时间段选择 -->
+      <view class="time-filter" v-if="selectedDate">
+        <view class="time-filter-title">时间段</view>
+        <view class="time-buttons">
+          <view
+            :class="['time-button', selectedTimeSlot === 'morning' ? 'active' : '']"
+            @click="selectTimeSlot('morning')"
+          >
+            上午 (9:00-12:00)
+          </view>
+          <view
+            :class="['time-button', selectedTimeSlot === 'afternoon' ? 'active' : '']"
+            @click="selectTimeSlot('afternoon')"
+          >
+            下午 (14:00-18:00)
+          </view>
+          <view
+            :class="['time-button', selectedTimeSlot === 'all' ? 'active' : '']"
+            @click="selectTimeSlot('all')"
+          >
+            全天
+          </view>
+        </view>
+      </view>
+
+      <!-- 已选条件标签，当有选择时显示 -->
+      <view class="selected-filters" v-if="selectedDate || selectedTimeSlot">
+        <view class="filter-tags">
+          <view class="filter-tag" v-if="selectedDate">
+            日期: {{ formatSelectedDate(selectedDate) }}
+            <text class="clear-tag" @click="clearDateFilter">×</text>
+          </view>
+          <view class="filter-tag" v-if="selectedTimeSlot">
+            时间段: {{ timeSlotLabels[selectedTimeSlot] }}
+            <text class="clear-tag" @click="clearTimeSlotFilter">×</text>
+          </view>
+        </view>
+        <view class="clear-all" @click="clearAllDateFilters">清除日期筛选</view>
+      </view>
+    </view>
+
     <view class="filter-bar">
       <view class="filter-item" @click="toggleSortOrder('default')">
         <text :class="{ active: sortType === 'default' }">默认</text>
@@ -76,9 +133,24 @@
           {{ sortType === 'price' ? (sortOrder === 'asc' ? '↑' : '↓') : '' }}
         </text>
       </view>
-      <view class="filter-item" @click="toggleAvailability()">
+      <view
+        class="filter-item availability-filter"
+        :class="{ 'active-filter': onlyAvailable }"
+        @click="toggleAvailability()"
+      >
         <text :class="{ active: onlyAvailable }">仅可预约</text>
+        <text class="filter-icon" v-if="onlyAvailable">✓</text>
       </view>
+    </view>
+
+    <view class="filter-tip" v-if="onlyAvailable">
+      <text class="tip-text">当前仅显示近期有可预约时间段的专业人士</text>
+      <text class="tip-text-sub">符合条件的专业人士: {{ professionals.length }}</text>
+    </view>
+
+    <view class="filter-tip" v-else-if="professionals.length > 0">
+      <text class="tip-text">当前显示所有专业人士，包括暂无可用时间段的专业人士</text>
+      <text class="tip-text-sub">符合条件的专业人士: {{ professionals.length }}</text>
     </view>
 
     <!-- 加载指示器 -->
@@ -107,7 +179,7 @@
         v-for="professional in professionals"
         :key="professional._id"
         class="teacher-card"
-        @click="navigateToProfessionalDetails(professional._id)"
+        @click="gotoTeacherDetail(professional._id)"
       >
         <view class="teacher-level-tag" v-if="professional.level">{{ professional.level }}</view>
         <image
@@ -141,7 +213,7 @@
           ¥{{ professional.hourlyRate }}/小时
         </view>
         <view class="teacher-price-hidden" v-else></view>
-        <view class="book-button" @click.stop="navigateToBooking(professional._id)">
+        <view class="book-button" @click.stop="gotoBooking(professional._id)">
           <text>去预约</text>
         </view>
       </view>
@@ -219,6 +291,44 @@ const categories = ref([
 // 定义是否显示开发工具，始终显示测试按钮以方便开发
 const showDevTools = ref(true)
 
+// 日期相关
+const selectedDate = ref('')
+const selectedTimeSlot = ref('')
+const availableDates = ref(generateDateRangeArray())
+const timeSlotLabels = {
+  morning: '上午 (9:00-12:00)',
+  afternoon: '下午 (14:00-18:00)',
+  all: '全天',
+}
+
+// 生成未来7天的日期数组
+function generateDateRangeArray() {
+  const dates = []
+  const today = new Date()
+
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(today)
+    currentDate.setDate(today.getDate() + i)
+
+    const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth() + 1
+    const day = currentDate.getDate()
+    const weekday = weekdayNames[currentDate.getDay()]
+
+    dates.push({
+      value: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      year,
+      month,
+      day,
+      weekday,
+      isToday: i === 0,
+    })
+  }
+
+  return dates
+}
+
 // 页面加载时获取专业人士列表
 onMounted(() => {
   fetchProfessionals()
@@ -234,7 +344,7 @@ const fetchProfessionals = async (refresh = true) => {
       professionals.value = []
     }
 
-    // 构建查询条件
+    // 构建查询条件，添加日期和时间段
     const queryParams = {
       page: page.value,
       pageSize: pageSize.value,
@@ -245,6 +355,8 @@ const fetchProfessionals = async (refresh = true) => {
       sortType: sortType.value,
       sortOrder: sortOrder.value,
       onlyAvailable: onlyAvailable.value,
+      date: selectedDate.value,
+      timeSlot: selectedTimeSlot.value,
     }
 
     console.log('查询参数:', queryParams)
@@ -276,7 +388,7 @@ const fetchProfessionals = async (refresh = true) => {
       // 如果没有数据，显示提示
       if (professionals.value.length === 0) {
         uni.showToast({
-          title: onlyAvailable.value ? '暂无可预约的专业人士' : '暂无符合条件的专业人士',
+          title: getEmptyMessage(),
           icon: 'none',
         })
       }
@@ -366,16 +478,25 @@ const renderProfessionalStats = (professional: any) => {
 }
 
 // 跳转到专业人士详情页
-const navigateToProfessionalDetails = (professionalId: string) => {
+const gotoTeacherDetail = (id) => {
+  console.log('跳转到专业人士详情', id)
   uni.navigateTo({
-    url: `/pages/weshares/professional-detail/index?id=${professionalId}`,
+    url: '/pages/weshares/teacher-detail/index?id=' + id,
   })
 }
 
 // 跳转到预约页面
-const navigateToBooking = (professionalId: string) => {
+const gotoBooking = (id) => {
+  let url = '/pages/weshares/booking/index?id=' + id
+
+  // 如果有选择日期，将日期参数传递到预约页面
+  if (selectedDate.value) {
+    url += '&date=' + selectedDate.value
+  }
+
+  console.log('跳转到预约页面', url)
   uni.navigateTo({
-    url: `/pages/weshares/booking/index?id=${professionalId}`,
+    url,
   })
 }
 
@@ -477,6 +598,58 @@ async function clearTestData() {
 const toggleAvailability = () => {
   onlyAvailable.value = !onlyAvailable.value
   fetchProfessionals()
+}
+
+// 选择日期
+const selectDate = (date) => {
+  selectedDate.value = date
+  fetchProfessionals()
+}
+
+// 选择时间段
+const selectTimeSlot = (slot) => {
+  selectedTimeSlot.value = slot
+  fetchProfessionals()
+}
+
+// 清除日期筛选
+const clearDateFilter = () => {
+  selectedDate.value = ''
+  fetchProfessionals()
+}
+
+// 清除时间段筛选
+const clearTimeSlotFilter = () => {
+  selectedTimeSlot.value = ''
+  fetchProfessionals()
+}
+
+// 清除所有日期相关筛选
+const clearAllDateFilters = () => {
+  selectedDate.value = ''
+  selectedTimeSlot.value = ''
+  fetchProfessionals()
+}
+
+// 格式化选中的日期，便于展示
+const formatSelectedDate = (dateStr) => {
+  const date = availableDates.value.find((d) => d.value === dateStr)
+  if (date) {
+    return `${date.month}月${date.day}日${date.isToday ? '(今天)' : date.weekday}`
+  }
+  return dateStr
+}
+
+// 根据当前筛选条件生成空数据提示信息
+const getEmptyMessage = () => {
+  if (selectedDate.value) {
+    if (selectedTimeSlot.value) {
+      return `没有符合条件的专业人士在${formatSelectedDate(selectedDate.value)}的${timeSlotLabels[selectedTimeSlot.value]}有空`
+    }
+    return `没有符合条件的专业人士在${formatSelectedDate(selectedDate.value)}有空`
+  }
+
+  return onlyAvailable.value ? '暂无可预约的专业人士' : '暂无符合条件的专业人士'
 }
 </script>
 
@@ -655,15 +828,208 @@ const toggleAvailability = () => {
   font-weight: 500;
   color: #2b5cff;
 }
+/* 可用性筛选样式 */
+.availability-filter {
+  padding: 0 20rpx !important;
+  margin-left: auto !important;
+  background-color: #f5f7fa !important;
+  border-radius: 8rpx !important;
+  transition: all 0.3s !important;
+}
+
+.availability-filter .active {
+  font-weight: bold;
+  color: #2b5cff;
+}
 /* 仅可预约按钮样式 */
 .filter-item:last-child {
-  padding: 0 20rpx;
-  margin-left: auto;
-  background-color: #f5f7fa;
-  border-radius: 8rpx;
+  /* 重置样式 */
+  padding: 0 16rpx;
+  margin-left: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .filter-item:last-child .active {
+  /* 保持默认样式 */
+  color: inherit;
+}
+
+.availability-filter:active {
+  transform: scale(0.95);
+}
+/* 当选中时的样式 */
+.active-filter {
+  background-color: #e5f1ff;
+}
+
+.filter-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12rpx;
+  margin: 8rpx 0;
+  background-color: #f9f9f9;
+  border-radius: 8rpx;
+}
+
+.tip-text {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.tip-text-sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.filter-icon {
+  margin-left: 5px;
+  font-size: 14px;
+  color: #4caf50;
+}
+/* 日期选择器样式 */
+.date-filter {
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+}
+
+.date-filter-title {
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.date-scroll {
+  display: flex;
+  width: 100%;
+  margin-bottom: 20rpx;
+  white-space: nowrap;
+}
+
+.date-item {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120rpx;
+  height: 150rpx;
+  margin-right: 20rpx;
+  background-color: #f9f9f9;
+  border: 2rpx solid #eee;
+  border-radius: 12rpx;
+}
+
+.weekday {
+  margin-bottom: 6rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.date {
+  margin-bottom: 6rpx;
+  font-size: 36rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.month {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.today-mark {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  padding: 2rpx 6rpx;
+  font-size: 20rpx;
+  color: #fff;
+  background-color: #ff5151;
+  border-radius: 20rpx;
+}
+
+.date-item.active {
+  background-color: #2b5cff;
+  border-color: #2b5cff;
+}
+
+.date-item.active .weekday,
+.date-item.active .date,
+.date-item.active .month,
+.date-item.active .today-mark {
+  color: #fff;
+}
+/* 时间段选择样式 */
+.time-filter {
+  margin-bottom: 20rpx;
+}
+
+.time-filter-title {
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.time-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.time-button {
+  padding: 12rpx 24rpx;
+  font-size: 26rpx;
+  color: #333;
+  background-color: #f5f7fa;
+  border-radius: 30rpx;
+}
+
+.time-button.active {
+  color: #fff;
+  background-color: #2b5cff;
+}
+/* 已选筛选条件样式 */
+.selected-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20rpx;
+  margin-top: 20rpx;
+  border-top: 2rpx solid #f5f5f5;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.filter-tag {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
   color: #2b5cff;
+  background-color: #e5f1ff;
+  border-radius: 6rpx;
+}
+
+.clear-tag {
+  margin-left: 8rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+.clear-all {
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 </style>
