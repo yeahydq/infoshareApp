@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
 
@@ -600,20 +602,274 @@ async function submitApplication(event, context) {
   }
 }
 
+// 获取专业人士列表
+async function getProfessionalList(event, context) {
+  const wxContext = cloud.getWXContext()
+  const db = cloud.database()
+  const _ = db.command
+  const $ = db.command.aggregate
+  
+  try {
+    // 获取参数
+    const { 
+      page = 1, 
+      pageSize = 10, 
+      keyword = '', 
+      category = '', 
+      province = '', 
+      city = '', 
+      sortType = 'default',
+      sortOrder = 'desc',
+      onlyAvailable = true  // 默认只返回有可用时间的专业人士
+    } = event
+    
+    console.log('接收的筛选参数:', event)
+    console.log('onlyAvailable参数:', onlyAvailable)
+    
+    // 验证排序方向，只允许asc或desc
+    const validSortOrder = sortOrder === 'asc' ? 'asc' : 'desc'
+    console.log('排序方向:', validSortOrder)
+    
+    // 构建查询条件
+    let query = {
+      status: 'approved' // 只获取已审核通过的专业人士
+    }
+    
+    // 添加分类筛选
+    if (category) {
+      query.category = category
+    }
+    
+    // 添加地区筛选
+    if (province) {
+      query.province = province
+      
+      if (city) {
+        query.city = city
+      }
+    }
+    
+    // 添加关键词搜索
+    if (keyword) {
+      // 在名称、介绍等字段中搜索关键词
+      query = {
+        ...query,
+        $or: [
+          { name: db.RegExp({ regexp: keyword, options: 'i' }) },
+          { introduction: db.RegExp({ regexp: keyword, options: 'i' }) },
+          { tags: db.RegExp({ regexp: keyword, options: 'i' }) }
+        ]
+      }
+    }
+    
+    // 获取总数
+    const countResult = await db.collection('professionals')
+      .where(query)
+      .count()
+    
+    const total = countResult.total
+    
+    // 查询构建器
+    let queryBuilder = db.collection('professionals').where(query)
+    
+    // 确定排序方式并执行查询
+    let professionals
+    if (sortType === 'rating') {
+      // 按评分排序
+      professionals = await db.collection('professionals')
+        .where(query)
+        .orderBy('rating', validSortOrder)
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    } else if (sortType === 'price') {
+      // 按价格排序
+      professionals = await db.collection('professionals')
+        .where(query)
+        .orderBy('hourlyRate', validSortOrder)
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    } else {
+      // 默认排序：按更新时间
+      professionals = await db.collection('professionals')
+        .where(query)
+        .orderBy('updateTime', 'desc')
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    }
+    
+    // 补充用户信息
+    const professionalList = professionals.data || []
+    
+    // 获取所有专业人士的openid
+    const openids = professionalList.map(item => item._openid).filter(Boolean)
+    
+    // 查询对应的用户信息
+    let userInfoMap = {}
+    if (openids.length > 0) {
+      // 由于where in查询最多支持50个值，这里做批量查询
+      const batchSize = 50
+      const batches = []
+      
+      for (let i = 0; i < openids.length; i += batchSize) {
+        const batchOpenids = openids.slice(i, i + batchSize)
+        batches.push(
+          db.collection('UserList')
+            .where({
+              _openid: _.in(batchOpenids)
+            })
+            .field({
+              _openid: true,
+              name: true,
+              avatarUrl: true,
+              nickname: true
+            })
+            .get()
+        )
+      }
+      
+      const userInfoResults = await Promise.all(batches)
+      
+      // 合并所有批次的结果
+      const userInfoList = userInfoResults.reduce((acc, res) => {
+        return acc.concat(res.data)
+      }, [])
+      
+      // 构建openid到用户信息的映射
+      userInfoMap = userInfoList.reduce((map, user) => {
+        map[user._openid] = user
+        return map
+      }, {})
+    }
+    
+    // 如果需要检查专业人士的可用时间
+    let professionalsWithAvailability = professionalList
+    
+    // 确保onlyAvailable是布尔值
+    const shouldFilterAvailability = onlyAvailable === true || onlyAvailable === 'true'
+    
+    if (shouldFilterAvailability) {
+      console.log('正在过滤只有可用时间段的专业人士')
+      
+      // 查询每个专业人士是否有可用时间段
+      const now = new Date()
+      const professionalIds = professionalList.map(p => p._openid)
+      
+      if (professionalIds.length === 0) {
+        console.log('没有符合条件的专业人士')
+        return {
+          success: true,
+          data: [],
+          total: 0,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          totalPages: 0,
+          hasMore: false
+        }
+      }
+      
+      // 批量查询每个专业人士的时间安排
+      const timeScheduleResults = await db.collection('timeSchedules')
+        .where({
+          professionalId: _.in(professionalIds)
+        })
+        .get()
+      
+      console.log('查询到的时间安排数量:', timeScheduleResults.data.length)
+      
+      // 构建专业人士ID到时间安排的映射
+      const timeScheduleMap = timeScheduleResults.data.reduce((map, schedule) => {
+        map[schedule.professionalId] = schedule
+        return map
+      }, {})
+      
+      // 检查每个专业人士未来7天是否有可用时间段
+      professionalsWithAvailability = []
+      
+      for (const professional of professionalList) {
+        const proId = professional._openid
+        const timeSchedule = timeScheduleMap[proId]
+        
+        // 如果没有时间安排记录，则跳过该专业人士
+        if (!timeSchedule || !timeSchedule.slots || timeSchedule.slots.length === 0) {
+          console.log(`专业人士 ${proId} 没有时间安排记录`)
+          continue
+        }
+        
+        // 检查未来7天是否有可用时间段
+        const hasAvailableSlots = timeSchedule.slots.some(slot => {
+          // 检查日期是否在未来7天内
+          const slotDate = new Date(slot.date)
+          const daysFromNow = Math.floor((slotDate - now) / (1000 * 60 * 60 * 24))
+          
+          // 只检查未来7天的记录，且未被预约的时间段
+          return daysFromNow >= 0 && daysFromNow <= 7 && !slot.isBooked
+        })
+        
+        // 如果有可用时间段，添加到结果列表
+        if (hasAvailableSlots) {
+          console.log(`专业人士 ${proId} 有可用时间段`)
+          professionalsWithAvailability.push(professional)
+        } else {
+          console.log(`专业人士 ${proId} 没有可用时间段`)
+        }
+      }
+      
+      console.log('过滤后的专业人士数量:', professionalsWithAvailability.length)
+    }
+    
+    // 合并用户信息到专业人士信息
+    const enrichedProfessionals = professionalsWithAvailability.map(professional => {
+      const userInfo = userInfoMap[professional._openid] || {}
+      
+      return {
+        ...professional,
+        name: professional.name || userInfo.name || userInfo.nickname || '未知专家',
+        avatarUrl: professional.avatarUrl || userInfo.avatarUrl || '',
+        // 其他可能需要合并的字段
+      }
+    })
+    
+    const filteredTotal = shouldFilterAvailability ? enrichedProfessionals.length : total
+    const filteredTotalPages = Math.ceil(filteredTotal / pageSize)
+    
+    return {
+      success: true,
+      data: enrichedProfessionals,
+      total: filteredTotal,
+      page: Number(page),
+      pageSize: Number(pageSize),
+      totalPages: filteredTotalPages,
+      hasMore: (page * pageSize) < filteredTotal
+    }
+  } catch (error) {
+    console.error('获取专业人士列表失败:', error)
+    return {
+      success: false,
+      message: '获取专业人士列表失败',
+      error: error.message
+    }
+  }
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action } = event
-
+  
+  // 根据action调用不同的处理方法
   switch (action) {
-    case 'submit':
-    case 'submitApplication':
-      return await submitApplication(event, context)
     case 'checkApplication':
       return await checkApplication(event, context)
-    case 'updateFiles':
-      return await updateFiles(event, context)
     case 'getApplication':
       return await getApplication(event, context)
+    case 'updateFiles':
+      return await updateFiles(event, context)
+    case 'submitApplication':
+      return await submitApplication(event, context)
+    case 'getProfessionalList':
+      return await getProfessionalList(event, context)
     default:
       return {
         success: false,

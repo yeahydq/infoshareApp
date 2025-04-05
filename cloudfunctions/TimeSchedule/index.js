@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const cloud = require('wx-server-sdk')
 
 cloud.init({
@@ -50,6 +52,78 @@ exports.main = async (event, context) => {
     }
   }
 
+  // 获取专业人士的时间安排（用于预约页面）
+  if (type === 'getProfessionalSlots') {
+    try {
+      const { professionalId, date } = event
+      
+      if (!professionalId) {
+        return {
+          code: 400,
+          message: '缺少专业人士ID'
+        }
+      }
+      
+      // 查询专业人士的时间安排
+      const result = await db.collection('timeSchedules')
+        .where({
+          professionalId
+        })
+        .get()
+      
+      if (result.data.length === 0) {
+        return {
+          code: 0,
+          data: [],
+          message: '未找到该专业人士的时间安排'
+        }
+      }
+      
+      const timeSchedule = result.data[0]
+      
+      // 确保slots字段存在
+      if (!timeSchedule.slots || !Array.isArray(timeSchedule.slots)) {
+        return {
+          code: 0,
+          data: [],
+          message: '专业人士未设置可用时间段'
+        }
+      }
+      
+      // 如果指定了日期，过滤出该日期的时间段
+      if (date) {
+        const dateSlots = timeSchedule.slots
+          .filter(slot => slot.date === date)
+          .filter(slot => !slot.isBooked) // 过滤掉已预约的时间段
+          .map(slot => slot.startTime)
+          .sort() // 按时间排序
+        
+        return {
+          code: 0,
+          data: dateSlots
+        }
+      }
+      
+      // 如果没有指定日期，返回所有可用日期
+      const availableDates = [...new Set(timeSchedule.slots
+        .filter(slot => !slot.isBooked)
+        .map(slot => slot.date))]
+        .sort() // 按日期排序
+      
+      return {
+        code: 0,
+        data: availableDates
+      }
+    } catch (error) {
+      console.error('获取专业人士时间安排失败:', error)
+      return {
+        code: 500,
+        message: '获取专业人士时间安排失败',
+        error: error.message
+      }
+    }
+  }
+
   // 更新时间安排
   if (type === 'update') {
     try {
@@ -71,7 +145,8 @@ exports.main = async (event, context) => {
             processedSlots.push({
               date,
               startTime: time,
-              endTime: getEndTime(time)
+              endTime: getEndTime(time),
+              isBooked: false // 添加预约状态字段
             })
           })
         })

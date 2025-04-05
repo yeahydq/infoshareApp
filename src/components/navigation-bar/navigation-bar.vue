@@ -161,7 +161,7 @@ export default {
             safeAreaTop:
               isDevtools || isAndroid
                 ? `height: calc(var(--height) + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px`
-                : ``,
+                : '',
           })
         },
       })

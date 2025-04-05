@@ -87,10 +87,17 @@
       "type": "page"
     },
     {
+      "path": "pages/weshares/booking/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "预约专业人士"
+      }
+    },
+    {
       "path": "pages/weshares/find-teachers/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "找老师"
+        "navigationBarTitleText": "专业人士列表"
       }
     },
     {
@@ -141,6 +148,13 @@
       "type": "page",
       "style": {
         "navigationBarTitleText": "修改信息"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-detail/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人士详情"
       }
     },
     {

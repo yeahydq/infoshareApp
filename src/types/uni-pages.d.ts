@@ -11,6 +11,7 @@ interface NavigateToOptions {
        "/pages/weshares/index" |
        "/pages/weshares/time-schedule" |
        "/pages/weshares/address-management/index" |
+       "/pages/weshares/booking/index" |
        "/pages/weshares/find-teachers/index" |
        "/pages/weshares/help-center/index" |
        "/pages/weshares/my/index" |
@@ -19,6 +20,7 @@ interface NavigateToOptions {
        "/pages/weshares/orders/review" |
        "/pages/weshares/personal-center/index" |
        "/pages/weshares/personal-info/index" |
+       "/pages/weshares/professional-detail/index" |
        "/pages/weshares/professional-registration/register-page1" |
        "/pages/weshares/qr-code/index" |
        "/pages/weshares/recommended-teacher/index" |
