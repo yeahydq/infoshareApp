@@ -1,0 +1,9 @@
+{
+  "globals": {
+    "ComponentPublicInstance": true,
+    "ComponentCustomProperties": true,
+    "ComputedRef": true,
+    "Ref": true,
+    "PropType": true
+  }
+}

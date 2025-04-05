@@ -176,3 +176,86 @@ export const getEnvBaseUploadUrl = () => {
 
   return baseUploadUrl
 }
+
+/**
+ * 将数据持久化缓存
+ * @param key 键值
+ * @param value 数值
+ */
+export function saveDataToDB<T>(key: string, value: T): void {
+  if (typeof value === 'object') {
+    uni.setStorageSync(key, JSON.stringify(value))
+  } else {
+    uni.setStorageSync(key, value)
+  }
+}
+
+/**
+ * 从持久化缓存读取数据
+ * @param key
+ */
+export function getDataFromDB<T>(key: string): T | null {
+  const data = uni.getStorageSync(key)
+  if (data) {
+    try {
+      return typeof data === 'string' ? JSON.parse(data) : data
+    } catch (e) {
+      return data as unknown as T
+    }
+  }
+  return null
+}
+
+/**
+ * 移除持久化缓存数据
+ * @param key
+ */
+export function removeDataFromDB(key: string) {
+  uni.removeStorageSync(key)
+}
+
+/**
+ * 生成一个随机的唯一 ID
+ */
+export function generateUid(): string {
+  return Math.random().toString(36).substring(2, 10)
+}
+
+/**
+ * 获取上一页的路径
+ * @returns 上一页的路径
+ */
+export function getPrevPageRoute(): string {
+  const pages = getCurrentPages()
+  if (pages.length >= 2) {
+    const prevPage = pages[pages.length - 2]
+    return prevPage.route || ''
+  }
+  return ''
+}
+
+// 用于缓存临时头像URL映射的键
+export const AVATAR_TEMP_URL_MAP_KEY = 'avatar_temp_url_map'
+
+// 获取临时头像URL映射
+export function getAvatarTempUrlMap(): Record<string, string> {
+  return getDataFromDB<Record<string, string>>(AVATAR_TEMP_URL_MAP_KEY) || {}
+}
+
+// 保存临时头像URL映射
+export function saveAvatarTempUrlMap(map: Record<string, string>): void {
+  saveDataToDB(AVATAR_TEMP_URL_MAP_KEY, map)
+}
+
+// 获取临时头像URL
+export function getAvatarTempUrl(cloudPath: string): string | null {
+  const map = getAvatarTempUrlMap()
+  return map[cloudPath] || null
+}
+
+// 保存临时头像URL
+export function saveAvatarTempUrl(cloudPath: string, tempUrl: string): void {
+  const map = getAvatarTempUrlMap()
+  map[cloudPath] = tempUrl
+  saveAvatarTempUrlMap(map)
+}

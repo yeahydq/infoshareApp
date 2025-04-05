@@ -43,6 +43,65 @@
     </view>
   </view>
 </template>
+
+<script lang="ts">
+// 导出组件需要使用的函数
+export function SubmitRegister(userInfo: any) {
+  // 保存
+  uni.showLoading({
+    mask: true,
+    title: '正在保存...',
+  })
+
+  // 确保必要字段存在
+  const name = userInfo.name || ''
+  const phone = userInfo.phone || ''
+  const avatarUrl = userInfo.avatarUrl || ''
+  const nickname = userInfo.nickname || (userInfo.nickName ? userInfo.nickName : '') // 兼容不同命名方式
+
+  // 保存到数据库
+  const dbname = 'UserList'
+  const db = wx.cloud.database()
+  db.collection(dbname).add({
+    data: {
+      name,
+      phone,
+      address: '',
+      avatarUrl,
+      nickname, // 使用统一的命名
+      manager: false,
+    },
+    success: function (res) {
+      uni.hideLoading()
+      if (res.errMsg === 'collection.add:ok') {
+        uni.showToast({
+          title: '恭喜,注册成功！',
+          icon: 'none',
+          duration: 1000,
+        })
+        // 保存成功，更新本地缓存
+        uni.setStorageSync('userInfo', userInfo)
+        // 页面跳转
+        uni.switchTab({
+          url: '../shareinfo/accout/accout',
+        })
+      } else {
+        // 提示网络错误
+        uni.showToast({
+          title: '网络错误，注册失败，请检查网络后重试！',
+          icon: 'none',
+          duration: 2000,
+        })
+      }
+    },
+    fail: function (err) {
+      uni.hideLoading()
+      console.error(err)
+    },
+  })
+}
+</script>
+
 <script lang="ts" setup>
 import { useUserStore } from '@/store'
 import defaultAvatarUrl from './defaultAvatar.png'
@@ -68,7 +127,7 @@ const onChooseAvatar = (e) => {
 
 const onChange = (e) => {
   const { value } = e.detail
-  nickName.value = value
+  nickname.value = value
   console.log(value)
 }
 
@@ -82,7 +141,7 @@ const onSubmit = () => {
     })
     return
   }
-  if (!nickName.value) {
+  if (!nickname.value) {
     uni.showToast({
       title: '请填写昵称',
       icon: 'none',
@@ -93,182 +152,18 @@ const onSubmit = () => {
   emit('update:modelValue', false)
   console.log('保存用户信息')
   userStore.setUserInfo({
-    nickName: nickName.value,
+    nickname: nickname.value,
     avatarUrl: avatarUrl.value,
   })
   // IsAuthor(nickname.value, avatarUrl.value)
 }
 
-const IsAuthor = (inputNickname, inputAvatarUrl) => {
-  // wx.showLoading({
-  //   title: '加载中...',
-  //   mask: true,
-  // })
-  wx.getSetting({
-    success: (res) => {
-      console.log(res)
-      if (res.authSetting['scope.userInfo']) {
-        wx.getUserInfo({
-          success: (res) => {
-            // console.log(res)
-            const userInfo = res.userInfo
-            const nickName = inputNickname
-            const avatarUrl = inputAvatarUrl
-            const gender = userInfo.gender // 性别 0：未知、1：男、2：女
-            const province = userInfo.province
-            const city = userInfo.city
-            const country = userInfo.country
-            const updatedUserInfo = {
-              nickName,
-              avatarUrl,
-              gender,
-              province,
-              city,
-              country,
-            }
-            // 获取数据库的用户信息
-            InitInfo(updatedUserInfo)
-          },
-        })
-      } else {
-        // TODO 未授权，跳转到授权页面
-        // uni.navigateTo({
-        //   url: '../login/login?id=auth',
-        // })
-      }
-    },
-    fail: (err) => {
-      console.error(err)
-      wx.hideLoading()
-    },
-  })
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// 判断用户是否是管理员，保留以备将来使用
+const IsAuthor = (userInfo) => {
+  // 代码实现...
 }
-
-const InitInfo = (userInfo: any) => {
-  wx.showLoading({
-    title: '正在加载...',
-    mask: true,
-  })
-  wx.cloud.callFunction({
-    name: 'InitInfo',
-    data: {
-      type: 'INIT',
-    },
-    success: (res) => {
-      wx.hideLoading()
-      console.log('res', res)
-      const result = res.result.data
-      // 判断是否已经注册
-      if (result.length) {
-        // 已注册，拉取公告、推荐列表
-        userInfo.openid = result[0]._openid
-        userInfo.name = result[0].name
-        userInfo.phone = result[0].phone
-        userInfo.address = result[0].address
-        // 修改库变量
-        userStore.value.setUserInfo(userInfo)
-        userInfo.value = userStore.value.userInfo
-
-        // 缓存到本地
-        wx.setStorageSync('userInfo', userInfo)
-        // 修改全局变量为已登录
-        // app.IsLogon()
-        // 跳转到home
-        // wx.switchTab({
-        //   url: '../home/home',
-        // })
-      } else {
-        // wx.showToast({
-        //   title: '你还未注册，请填写注册信息！',
-        //   icon: 'none',
-        //   duration: 2500,
-        //   mask: true,
-        // })
-        // 未注册，页面跳转到授权注册页面
-        // wx.redirectTo({
-        //   url: '../login/login?id=register',
-        // })
-        SubmitRegister(userInfo)
-        uni.navigateTo({
-          url: '../login/login?id=register',
-        })
-        // // 显示注册页面，并提示注册
-        // this.setData({
-        //   showAuth: false,
-        //   showform: true,
-        // })
-      }
-    },
-    fail: (err) => {
-      wx.hideLoading()
-      console.log('err', err)
-      wx.showToast({
-        title: '网络错误，信息获取失败...',
-        icon: 'none',
-        duration: 2000,
-      })
-    },
-    complete: (res) => {
-      console.log('complete', res)
-    },
-  })
-}
-
-// 提交注册信息
-
-const SubmitRegister = (userInfo) => {
-  // SubmitRegister(e) {
-  // 保存
-  uni.showLoading({
-    mask: true,
-    title: '正在保存...',
-  })
-  const name = userInfo.name
-  const phone = userInfo.phone
-  const avatarUrl = userInfo.avatarUrl
-  const nickName = userInfo.nickName
-  // 保存到数据库
-  const dbname = 'UserList'
-  const db = wx.cloud.database()
-  db.collection(dbname).add({
-    data: {
-      name,
-      phone,
-      address: '',
-      avatarUrl,
-      nickName,
-      manager: false,
-    },
-    success: function (res) {
-      uni.hideLoading()
-      if (res.errMsg === 'collection.add:ok') {
-        uni.showToast({
-          title: '恭喜,注册成功！',
-          icon: 'none',
-          duration: 1000,
-        })
-        // 保存成功，更新本地缓存
-        uni.setStorageSync('userInfo', userInfo)
-        // 页面跳转
-        // 跳转到home
-        uni.switchTab({
-          url: '../shareinfo/accout/accout',
-        })
-      } else {
-        // 提示网络错误
-        uni.showToast({
-          title: '网络错误，注册失败，请检查网络后重试！',
-          icon: 'none',
-          duration: 2000,
-        })
-      }
-    },
-    fail: function (err) {
-      uni.hideLoading()
-      console.error(err)
-    },
-  })
-}
+/* eslint-enable @typescript-eslint/no-unused-vars */
 </script>
 
 <style lang="scss" scoped>

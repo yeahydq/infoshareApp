@@ -200,25 +200,87 @@ const SubmitRegister = (userInfo: any) => {
   })
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const downloadFile = (url: string, userInfo: any) => {
-  if (!url) return
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  if (!url || !url.startsWith('cloud://')) return
 
   return new Promise((resolve, reject) => {
-    wx.cloud.downloadFile({
-      fileID: url,
-      success: (res) => {
-        console.log(res.tempFilePath)
+    console.log('开始下载头像文件:', url)
+
+    // 使用cacheFile云函数获取临时URL，而不是直接下载
+    wx.cloud.callFunction({
+      name: 'cacheFile',
+      data: {
+        fileID: url,
+        type: 'avatar',
+      },
+      success: (res: any) => {
+        console.log('cacheFile云函数返回结果:', res.result)
+
+        // 检查cacheFile云函数是否返回了有效结果
+        if (!res.result) {
+          console.error('云函数返回结果为空')
+          return reject(new Error('云函数返回结果为空'))
+        }
+
+        // 检查返回的success字段
+        if (!res.result.success) {
+          console.error('获取文件临时链接失败:', res.result.error || '未知错误')
+          uni.showToast({
+            title: '获取头像失败',
+            icon: 'none',
+            duration: 2000,
+          })
+          return reject(new Error(res.result.error || '获取临时链接失败'))
+        }
+
+        // 检查是否是本地文件
+        if (res.result.isLocalFile) {
+          console.log('文件已是本地路径，无需下载:', res.result.tempFileURL)
+
+          // 发送下载完成事件
+          uni.$emit('cloudFileDownloaded', {
+            fileID: url,
+            tempFilePath: res.result.tempFileURL,
+          })
+
+          return resolve(res.result.tempFileURL)
+        }
+
+        const tempFileURL = res.result.tempFileURL
+        console.log('获取临时文件链接成功:', url, '->', tempFileURL)
+
+        // 保存临时URL映射
+        try {
+          const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+          tempCloudURLs[url] = tempFileURL
+          uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+        } catch (err) {
+          console.error('保存临时URL映射失败:', err)
+        }
+
+        // 确保用户头像可见 - 用户信息中保持使用云存储路径
         const userStore = useUserStore()
         userStore.setUserInfo({
-          avatarUrl: res.tempFilePath,
+          avatarUrl: url, // 保持使用云存储路径，由前端计算属性处理显示
         })
+
+        // 更新本地存储
         wx.setStorageSync('userInfo', userStore.userInfo)
-        resolve(res.tempFilePath)
+
+        // 发送下载完成事件
+        uni.$emit('cloudFileDownloaded', {
+          fileID: url,
+          tempFilePath: tempFileURL,
+        })
+
+        resolve(tempFileURL)
       },
       fail: (err) => {
-        console.error('Upload failed', err)
+        console.error('调用cacheFile云函数失败:', err)
         uni.showToast({
-          title: '图片保存失败',
+          title: '头像加载失败',
           icon: 'none',
           duration: 2000,
         })
@@ -229,7 +291,9 @@ const downloadFile = (url: string, userInfo: any) => {
 }
 
 // 辅助函数：检查专业人员状态
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const checkProfessionalStatus = (openid: string) => {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   return new Promise<{
     hasApplication: boolean
     professionalId: string | null
