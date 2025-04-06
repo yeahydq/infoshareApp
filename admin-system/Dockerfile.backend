@@ -1,0 +1,22 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 安装pnpm
+RUN npm install -g pnpm
+
+# 复制package.json和pnpm-lock.yaml
+COPY backend/package.json backend/pnpm-lock.yaml* ./
+
+# 安装依赖
+RUN pnpm install
+
+# 复制源代码
+COPY backend/ ./
+
+# 构建TypeScript
+RUN pnpm build
+
+EXPOSE 3000
+
+CMD ["pnpm", "start"] 

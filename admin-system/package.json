@@ -1,0 +1,19 @@
+{
+  "name": "admin-system",
+  "version": "1.0.0",
+  "description": "信息分享App管理员系统",
+  "scripts": {
+    "dev": "pnpm --filter \"./frontend\" dev & pnpm --filter \"./backend\" dev",
+    "build": "pnpm --filter \"./frontend\" build && pnpm --filter \"./backend\" build",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "keywords": [
+    "admin",
+    "management",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "ISC"
+}
