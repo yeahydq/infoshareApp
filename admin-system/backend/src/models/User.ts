@@ -1,4 +1,5 @@
 import db, { collections } from './database'
+import { generateMockData } from '../utils/mockDataGenerator'
 
 export interface UserDocument {
   _id: string
@@ -26,105 +27,119 @@ export interface UserQuery {
   createTimeEnd?: Date
 }
 
+// 用户状态类型
+type UserStatus = 'active' | 'disabled'
+
+// 用户列表查询参数
+interface UserListParams {
+  page?: number
+  pageSize?: number
+  query?: string
+  status?: string
+}
+
 export class User {
-  // 获取用户列表
-  static async getList(query: UserQuery = {}) {
-    const {
-      page = 1,
-      pageSize = 10,
-      nickname,
-      phone,
-      isProfessional,
-      createTimeStart,
-      createTimeEnd,
-    } = query
-
-    const collection = db.collection(collections.USERS)
-    const _ = db.command
-
-    // 构建查询条件
-    const where: any = {}
-
-    if (nickname) {
-      where.nickname = db.RegExp({
-        regexp: nickname,
-        options: 'i',
-      })
-    }
-
-    if (phone) {
-      where.phone = db.RegExp({
-        regexp: phone,
-        options: 'i',
-      })
-    }
-
-    if (isProfessional !== undefined) {
-      if (isProfessional) {
-        where.professionalId = _.exists(true)
-      } else {
-        where.professionalId = _.exists(false)
-      }
-    }
-
-    if (createTimeStart && createTimeEnd) {
-      where.createTime = _.and([_.gte(createTimeStart), _.lte(createTimeEnd)])
-    } else if (createTimeStart) {
-      where.createTime = _.gte(createTimeStart)
-    } else if (createTimeEnd) {
-      where.createTime = _.lte(createTimeEnd)
-    }
-
-    // 获取总数
-    const countResult = await collection.where(where).count()
-    const total = countResult.total
-
-    // 获取数据
-    const result = await collection
-      .where(where)
-      .orderBy('createTime', 'desc')
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .get()
-
-    return {
-      list: result.data,
-      pagination: {
-        current: page,
-        pageSize,
-        total,
-      },
-    }
-  }
-
-  // 获取用户详情
-  static async getDetail(id: string) {
-    const collection = db.collection(collections.USERS)
-
+  /**
+   * 获取用户列表
+   * @param params 查询参数
+   * @returns 用户列表和分页信息
+   */
+  static async getList(params: UserListParams) {
     try {
-      const result = await collection.doc(id).get()
-      return result.data
+      const page = params.page || 1
+      const pageSize = params.pageSize || 10
+
+      // 模拟数据
+      const mockUsers = Array.from({ length: 30 }, (_, i) => ({
+        id: `user_${i + 1}`,
+        username: `user${i + 1}`,
+        nickname: `用户${i + 1}`,
+        avatar: '',
+        phone: `1381234${i.toString().padStart(4, '0')}`,
+        email: `user${i + 1}@example.com`,
+        status: i % 10 === 0 ? 'disabled' : 'active',
+        createTime: new Date(Date.now() - i * 86400000).toISOString(),
+      }))
+
+      // 过滤
+      let filteredUsers = [...mockUsers]
+      if (params.query) {
+        const query = params.query.toLowerCase()
+        filteredUsers = filteredUsers.filter(
+          (user) =>
+            user.username.toLowerCase().includes(query) ||
+            user.nickname.toLowerCase().includes(query) ||
+            user.phone.includes(query) ||
+            user.email.toLowerCase().includes(query),
+        )
+      }
+
+      if (params.status) {
+        filteredUsers = filteredUsers.filter((user) => user.status === params.status)
+      }
+
+      // 分页
+      const total = filteredUsers.length
+      const list = filteredUsers.slice((page - 1) * pageSize, page * pageSize)
+
+      return {
+        list,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      }
     } catch (error) {
-      console.error('获取用户详情错误:', error)
+      console.error('获取用户列表失败:', error)
       throw error
     }
   }
 
-  // 禁用/启用用户
-  static async toggleStatus(id: string, enabled: boolean) {
-    const collection = db.collection(collections.USERS)
-
+  /**
+   * 获取用户详情
+   * @param id 用户ID
+   * @returns 用户详情
+   */
+  static async getDetail(id: string) {
     try {
-      await collection.doc(id).update({
-        data: {
-          status: enabled ? 'active' : 'disabled',
-          updateTime: db.serverDate(),
-        },
-      })
+      // 模拟数据
+      const idNumber = parseInt(id.replace('user_', '')) || 1
 
-      return { success: true, message: enabled ? '用户已启用' : '用户已禁用' }
+      return {
+        id,
+        username: `user${idNumber}`,
+        nickname: `用户${idNumber}`,
+        avatar: '',
+        phone: `1381234${idNumber.toString().padStart(4, '0')}`,
+        email: `user${idNumber}@example.com`,
+        status: idNumber % 10 === 0 ? 'disabled' : 'active',
+        registerTime: new Date(Date.now() - idNumber * 86400000).toISOString(),
+        lastLoginTime: new Date(Date.now() - idNumber * 3600000).toISOString(),
+      }
     } catch (error) {
-      console.error('更新用户状态错误:', error)
+      console.error('获取用户详情失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 更新用户状态
+   * @param id 用户ID
+   * @param status 新状态
+   * @returns 更新结果
+   */
+  static async updateStatus(id: string, status: UserStatus) {
+    try {
+      // 模拟更新
+      return {
+        id,
+        status,
+        updateTime: new Date().toISOString(),
+      }
+    } catch (error) {
+      console.error('更新用户状态失败:', error)
       throw error
     }
   }

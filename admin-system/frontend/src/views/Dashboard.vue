@@ -150,9 +150,39 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import {
+  User as UserIcon,
+  PriceTag as PriceTagIcon,
+  Calendar as CalendarIcon,
+  Star as StarIcon,
+} from '@element-plus/icons-vue'
+import axios from 'axios'
 
-// 仪表盘数据
-const dashboardData = ref({
+interface DashboardData {
+  professionalCount: number
+  professionalApprovalRate: number
+  userCount: number
+  activeUserCount: number
+  bookingCount: number
+  weeklyBookings: number
+  pendingReviewCount: number
+  bookingTrend: Array<{ date: string; count: number }>
+  recentReviews: Array<{ _id: string; name: string; avatarUrl: string; createTime: string }>
+  totalRevenue?: number
+  serviceTypeStats?: Array<{ type: string; count: number; percentage: number }>
+  topProfessionals?: Array<{
+    id: string
+    name: string
+    avatar: string
+    profession: string
+    serviceCount: number
+    rating: number
+  }>
+}
+
+const loading = ref(true)
+const dashboardData = ref<DashboardData>({
   professionalCount: 0,
   professionalApprovalRate: 0,
   userCount: 0,
@@ -164,85 +194,104 @@ const dashboardData = ref({
   recentReviews: [],
 })
 
-const loading = ref(true)
-
 // 获取仪表盘数据
 const fetchDashboardData = async () => {
   loading.value = true
   try {
-    // 在实际环境中从API获取数据
-    // const response = await axios.get('/api/dashboard/summary');
-    // dashboardData.value = response.data.data;
-
-    // 开发阶段使用模拟数据
-    setTimeout(() => {
-      dashboardData.value = {
-        professionalCount: 123,
-        professionalApprovalRate: 85,
-        userCount: 1543,
-        activeUserCount: 956,
-        bookingCount: 325,
-        weeklyBookings: 42,
-        pendingReviewCount: 5,
-        bookingTrend: [
-          { date: '2023-12-01', count: 5 },
-          { date: '2023-12-02', count: 8 },
-          { date: '2023-12-03', count: 3 },
-          { date: '2023-12-04', count: 6 },
-          { date: '2023-12-05', count: 12 },
-          { date: '2023-12-06', count: 7 },
-          { date: '2023-12-07', count: 10 },
-        ],
-        recentReviews: [
-          { _id: '1', name: '张三', avatarUrl: '', createTime: new Date().toISOString() },
-          {
-            _id: '2',
-            name: '李四',
-            avatarUrl: '',
-            createTime: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-          },
-          {
-            _id: '3',
-            name: '王五',
-            avatarUrl: '',
-            createTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-          },
-          {
-            _id: '4',
-            name: '赵六',
-            avatarUrl: '',
-            createTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-          },
-        ],
-      }
-      loading.value = false
-    }, 500)
+    // 调用后端API获取数据
+    const response = await axios.get('/api/dashboard/summary')
+    dashboardData.value = response.data.data
+    loading.value = false
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
+    loading.value = false
+    ElMessage.error('获取数据失败，请重试')
+
+    // 开发阶段使用模拟数据（后期可移除）
+    dashboardData.value = {
+      professionalCount: 123,
+      professionalApprovalRate: 85,
+      userCount: 1543,
+      activeUserCount: 956,
+      bookingCount: 325,
+      weeklyBookings: 42,
+      pendingReviewCount: 5,
+      totalRevenue: 284500,
+      bookingTrend: [
+        { date: '2023-12-01', count: 5 },
+        { date: '2023-12-02', count: 8 },
+        { date: '2023-12-03', count: 3 },
+        { date: '2023-12-04', count: 6 },
+        { date: '2023-12-05', count: 12 },
+        { date: '2023-12-06', count: 7 },
+        { date: '2023-12-07', count: 10 },
+      ],
+      recentReviews: [
+        { _id: '1', name: '张三', avatarUrl: '', createTime: new Date().toISOString() },
+        { _id: '2', name: '李四', avatarUrl: '', createTime: new Date().toISOString() },
+        { _id: '3', name: '王五', avatarUrl: '', createTime: new Date().toISOString() },
+      ],
+      serviceTypeStats: [
+        { type: '医疗咨询', count: 580, percentage: 31 },
+        { type: '法律咨询', count: 465, percentage: 25 },
+        { type: '教育辅导', count: 387, percentage: 21 },
+        { type: '心理咨询', count: 255, percentage: 14 },
+        { type: '技术咨询', count: 189, percentage: 9 },
+      ],
+      topProfessionals: [
+        {
+          id: 'prof_001',
+          name: '张医生',
+          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Doctor1',
+          profession: '心理咨询',
+          serviceCount: 120,
+          rating: 4.8,
+        },
+        {
+          id: 'prof_002',
+          name: '李律师',
+          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Lawyer1',
+          profession: '法律咨询',
+          serviceCount: 95,
+          rating: 4.7,
+        },
+        {
+          id: 'prof_003',
+          name: '王老师',
+          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Teacher1',
+          profession: '教育辅导',
+          serviceCount: 87,
+          rating: 4.9,
+        },
+      ],
+    }
   }
 }
 
 // 格式化日期
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
 // 格式化时间
-const formatTime = (dateStr: string) => {
-  const date = new Date(dateStr)
+const formatTime = (timeString: string) => {
+  const date = new Date(timeString)
   const now = new Date()
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const diff = now.getTime() - date.getTime()
 
-  if (diff < 60) {
-    return '刚刚'
-  } else if (diff < 3600) {
-    return `${Math.floor(diff / 60)}分钟前`
-  } else if (diff < 86400) {
-    return `${Math.floor(diff / 3600)}小时前`
-  } else {
-    return `${Math.floor(diff / 86400)}天前`
+  // 小于24小时显示"x小时前"
+  if (diff < 24 * 60 * 60 * 1000) {
+    const hours = Math.floor(diff / (60 * 60 * 1000))
+    if (hours === 0) {
+      const minutes = Math.floor(diff / (60 * 1000))
+      return `${minutes}分钟前`
+    }
+    return `${hours}小时前`
   }
+
+  // 否则显示日期
+  return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
 onMounted(() => {

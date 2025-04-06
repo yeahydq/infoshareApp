@@ -1,7 +1,8 @@
-import express from 'express'
-import { body } from 'express-validator'
+import express, { Request, Response } from 'express'
+import { body, param, query } from 'express-validator'
 import { validateRequest } from '../middlewares/validation'
 import { requireAuth, requireAdmin } from '../middlewares/auth'
+import { User } from '../models/User'
 
 const router = express.Router()
 
@@ -10,83 +11,98 @@ const router = express.Router()
  * @desc 获取用户列表
  * @access Private (Admin)
  */
-router.get('/', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    // 临时返回空数据，后续实现
-    res.json({
-      code: 0,
-      data: {
-        total: 0,
-        list: [],
-      },
-    })
-  } catch (error) {
-    console.error('获取用户列表失败:', error)
-    res.status(500).json({
-      code: 500,
-      message: '获取用户列表失败，服务器错误',
-    })
-  }
-})
+router.get(
+  '/',
+  requireAuth,
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('query').optional().isString(),
+    query('status').optional().isString(),
+  ],
+  validateRequest,
+  async (req: Request, res: Response) => {
+    try {
+      const result = await User.getList(req.query)
+      res.json({
+        code: 200,
+        message: '获取用户列表成功',
+        data: result.list,
+        pagination: result.pagination,
+      })
+    } catch (error: any) {
+      console.error('获取用户列表失败:', error)
+      res.status(500).json({
+        code: 500,
+        message: '获取用户列表失败',
+        error: error.message,
+      })
+    }
+  },
+)
 
 /**
  * @route GET /api/users/:id
  * @desc 获取用户详情
  * @access Private (Admin)
  */
-router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params
-    // 临时返回空数据，后续实现
-    res.json({
-      code: 0,
-      data: {
-        id,
-        username: 'user_' + id,
-        nickname: '用户' + id,
-        avatar: '',
-        status: 'active',
-      },
-    })
-  } catch (error) {
-    console.error('获取用户详情失败:', error)
-    res.status(500).json({
-      code: 500,
-      message: '获取用户详情失败，服务器错误',
-    })
-  }
-})
+router.get(
+  '/:id',
+  requireAuth,
+  [param('id').isString()],
+  validateRequest,
+  async (req: Request, res: Response) => {
+    try {
+      const user = await User.getDetail(req.params.id)
+
+      if (!user) {
+        return res.status(404).json({
+          code: 404,
+          message: '用户不存在',
+        })
+      }
+
+      res.json({
+        code: 200,
+        message: '获取用户详情成功',
+        data: user,
+      })
+    } catch (error: any) {
+      console.error('获取用户详情失败:', error)
+      res.status(500).json({
+        code: 500,
+        message: '获取用户详情失败',
+        error: error.message,
+      })
+    }
+  },
+)
 
 /**
  * @route PUT /api/users/:id/status
  * @desc 更新用户状态
  * @access Private (Admin)
  */
-router.put(
+router.post(
   '/:id/status',
   requireAuth,
-  requireAdmin,
-  [body('status').isIn(['active', 'disabled']).withMessage('状态值无效')],
+  [param('id').isString()],
   validateRequest,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
-      const { id } = req.params
-      const { status } = req.body
+      const result = await User.updateStatus(req.params.id, req.body.status)
 
-      // 临时返回成功，后续实现
       res.json({
-        code: 0,
-        message: '用户状态已更新',
-        data: {
-          id,
-          status,
-        },
+        code: 200,
+        message: '更新用户状态成功',
+        data: result,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('更新用户状态失败:', error)
       res.status(500).json({
         code: 500,
-        message: '更新用户状态失败，服务器错误',
+        message: '更新用户状态失败',
+        error: error.message,
       })
     }
   },

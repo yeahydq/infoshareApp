@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes'
 import professionalRoutes from './routes/professionalRoutes'
 import userRoutes from './routes/userRoutes'
 import bookingRoutes from './routes/bookingRoutes'
+import dashboardRoutes from './routes/dashboardRoutes'
 
 // 加载环境变量
 config()
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/professionals', professionalRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/bookings', bookingRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 // 根路由
 app.get('/', (req: Request, res: Response) => {

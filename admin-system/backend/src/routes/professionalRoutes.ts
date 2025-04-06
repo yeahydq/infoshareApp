@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import { body, param, query } from 'express-validator'
 import { Professional } from '../models/Professional'
 import { validateRequest } from '../middlewares/validation'
@@ -21,15 +21,16 @@ router.get(
     query('createTimeEnd').optional().isISO8601(),
   ],
   validateRequest,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
       const result = await Professional.getList(req.query)
       res.json({
-        code: 0,
+        code: 200,
+        message: '获取专业人士列表成功',
         data: result.list,
         pagination: result.pagination,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取专业人士列表失败:', error)
       res.status(500).json({
         code: 500,
@@ -41,29 +42,35 @@ router.get(
 )
 
 // 获取专业人士详情
-router.get('/:id', requireAuth, [param('id').isString()], validateRequest, async (req, res) => {
-  try {
-    const professional = await Professional.getDetail(req.params.id)
-    if (!professional) {
-      return res.status(404).json({
-        code: 404,
-        message: '专业人士不存在',
+router.get(
+  '/:id',
+  requireAuth,
+  [param('id').isString()],
+  validateRequest,
+  async (req: Request, res: Response) => {
+    try {
+      const professional = await Professional.getDetail(req.params.id)
+      if (!professional) {
+        return res.status(404).json({
+          code: 404,
+          message: '专业人士不存在',
+        })
+      }
+
+      res.json({
+        code: 0,
+        data: professional,
+      })
+    } catch (error: any) {
+      console.error('获取专业人士详情失败:', error)
+      res.status(500).json({
+        code: 500,
+        message: '获取专业人士详情失败',
+        error: error.message,
       })
     }
-
-    res.json({
-      code: 0,
-      data: professional,
-    })
-  } catch (error) {
-    console.error('获取专业人士详情失败:', error)
-    res.status(500).json({
-      code: 500,
-      message: '获取专业人士详情失败',
-      error: error.message,
-    })
-  }
-})
+  },
+)
 
 // 审核专业人士申请
 router.post(
@@ -75,7 +82,7 @@ router.post(
     body('rejectReason').optional().isString(),
   ],
   validateRequest,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
       const { status, rejectReason } = req.body
 
@@ -85,7 +92,7 @@ router.post(
         code: 0,
         ...result,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('审核专业人士申请失败:', error)
       res.status(500).json({
         code: 500,

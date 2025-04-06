@@ -1,4 +1,19 @@
 import db, { collections } from './database'
+import { generateMockData } from '../utils/mockDataGenerator'
+
+// 预约状态类型
+type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+
+// 预约列表查询参数
+interface BookingListParams {
+  page?: number
+  pageSize?: number
+  status?: string
+  professionalId?: string
+  userId?: string
+  startDate?: string
+  endDate?: string
+}
 
 export interface BookingDocument {
   _id: string
@@ -29,220 +44,171 @@ export interface BookingQuery {
 }
 
 export class Booking {
-  // 获取预约列表
-  static async getList(query: BookingQuery = {}) {
-    const {
-      page = 1,
-      pageSize = 10,
-      status,
-      orderNo,
-      userOpenId,
-      professionalOpenId,
-      dateStart,
-      dateEnd,
-      createTimeStart,
-      createTimeEnd,
-    } = query
-
-    const collection = db.collection(collections.ORDERS)
-    const _ = db.command
-
-    // 构建查询条件
-    const where: any = {}
-
-    if (status) {
-      where.status = status
-    }
-
-    if (orderNo) {
-      where.orderNo = orderNo
-    }
-
-    if (userOpenId) {
-      where.userOpenId = userOpenId
-    }
-
-    if (professionalOpenId) {
-      where.professionalOpenId = professionalOpenId
-    }
-
-    if (dateStart && dateEnd) {
-      where.date = _.and([_.gte(dateStart), _.lte(dateEnd)])
-    } else if (dateStart) {
-      where.date = _.gte(dateStart)
-    } else if (dateEnd) {
-      where.date = _.lte(dateEnd)
-    }
-
-    if (createTimeStart && createTimeEnd) {
-      where.createTime = _.and([_.gte(createTimeStart), _.lte(createTimeEnd)])
-    } else if (createTimeStart) {
-      where.createTime = _.gte(createTimeStart)
-    } else if (createTimeEnd) {
-      where.createTime = _.lte(createTimeEnd)
-    }
-
-    // 获取总数
-    const countResult = await collection.where(where).count()
-    const total = countResult.total
-
-    // 获取数据
-    const result = await collection
-      .where(where)
-      .orderBy('createTime', 'desc')
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .get()
-
-    // 获取关联的用户和专业人士信息
-    const bookingList = result.data || []
-    if (bookingList.length === 0) {
-      return {
-        list: [],
-        pagination: {
-          current: page,
-          pageSize,
-          total,
-        },
-      }
-    }
-
-    // 收集需要查询的用户和专业人士ID
-    const userIds = [...new Set(bookingList.map((booking) => booking.userOpenId))]
-    const professionalIds = [...new Set(bookingList.map((booking) => booking.professionalOpenId))]
-
-    // 查询用户信息
-    const usersResult = await db
-      .collection(collections.USERS)
-      .where({
-        _openid: _.in(userIds),
-      })
-      .get()
-
-    const usersMap = (usersResult.data || []).reduce(
-      (map, user) => {
-        map[user._openid] = user
-        return map
-      },
-      {} as Record<string, any>,
-    )
-
-    // 查询专业人士信息
-    const professionalsResult = await db
-      .collection(collections.PROFESSIONALS)
-      .where({
-        _openid: _.in(professionalIds),
-      })
-      .get()
-
-    const professionalsMap = (professionalsResult.data || []).reduce(
-      (map, professional) => {
-        map[professional._openid] = professional
-        return map
-      },
-      {} as Record<string, any>,
-    )
-
-    // 合并信息
-    const enrichedList = bookingList.map((booking) => {
-      const user = usersMap[booking.userOpenId] || {}
-      const professional = professionalsMap[booking.professionalOpenId] || {}
-
-      return {
-        ...booking,
-        userInfo: {
-          name: user.name || user.nickname || '未知用户',
-          avatarUrl: user.avatarUrl || '',
-          phone: user.phone || '',
-        },
-        professionalInfo: {
-          name: professional.name || '未知专业人士',
-          phone: professional.phone || '',
-          professionalTypes: professional.professionalTypes || [],
-        },
-      }
-    })
-
-    return {
-      list: enrichedList,
-      pagination: {
-        current: page,
-        pageSize,
-        total,
-      },
-    }
-  }
-
-  // 获取预约详情
-  static async getDetail(id: string) {
-    const collection = db.collection(collections.ORDERS)
-
+  /**
+   * 获取预约列表
+   * @param params 查询参数
+   * @returns 预约列表和分页信息
+   */
+  static async getList(params: BookingListParams) {
     try {
-      const result = await collection.doc(id).get()
-      if (!result.data) {
-        throw new Error('预约记录不存在')
+      const page = params.page || 1
+      const pageSize = params.pageSize || 10
+
+      // 模拟数据
+      const statuses: BookingStatus[] = ['pending', 'confirmed', 'cancelled', 'completed']
+      const mockBookings = Array.from({ length: 50 }, (_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() - Math.floor(Math.random() * 30))
+
+        return {
+          id: `booking_${i + 1}`,
+          userId: `user_${Math.floor(Math.random() * 20) + 1}`,
+          userName: `用户${Math.floor(Math.random() * 20) + 1}`,
+          professionalId: `prof_${Math.floor(Math.random() * 10) + 1}`,
+          professionalName: `专业人士${Math.floor(Math.random() * 10) + 1}`,
+          serviceType: ['医疗健康', '法律咨询', '心理咨询', '教育培训', '财务规划'][
+            Math.floor(Math.random() * 5)
+          ],
+          bookingDate: d.toISOString().slice(0, 10),
+          timeSlot: `${Math.floor(Math.random() * 12) + 8}:00-${Math.floor(Math.random() * 12) + 9}:00`,
+          status: statuses[Math.floor(Math.random() * 4)],
+          createTime: new Date(Date.now() - i * 3600000).toISOString(),
+          remark: i % 5 === 0 ? '有特殊需求，请提前准备' : '',
+        }
+      })
+
+      // 过滤
+      let filteredBookings = [...mockBookings]
+
+      if (params.status) {
+        filteredBookings = filteredBookings.filter((booking) => booking.status === params.status)
       }
 
-      const booking = result.data
+      if (params.professionalId) {
+        filteredBookings = filteredBookings.filter(
+          (booking) => booking.professionalId === params.professionalId,
+        )
+      }
 
-      // 获取用户信息
-      const userResult = await db
-        .collection(collections.USERS)
-        .where({
-          _openid: booking.userOpenId,
-        })
-        .get()
+      if (params.userId) {
+        filteredBookings = filteredBookings.filter((booking) => booking.userId === params.userId)
+      }
 
-      const user = (userResult.data && userResult.data[0]) || {}
+      if (params.startDate && params.endDate) {
+        filteredBookings = filteredBookings.filter(
+          (booking) =>
+            booking.bookingDate >= params.startDate! && booking.bookingDate <= params.endDate!,
+        )
+      } else if (params.startDate) {
+        filteredBookings = filteredBookings.filter(
+          (booking) => booking.bookingDate >= params.startDate!,
+        )
+      } else if (params.endDate) {
+        filteredBookings = filteredBookings.filter(
+          (booking) => booking.bookingDate <= params.endDate!,
+        )
+      }
 
-      // 获取专业人士信息
-      const professionalResult = await db
-        .collection(collections.PROFESSIONALS)
-        .where({
-          _openid: booking.professionalOpenId,
-        })
-        .get()
+      // 分页
+      const total = filteredBookings.length
+      const list = filteredBookings.slice((page - 1) * pageSize, page * pageSize)
 
-      const professional = (professionalResult.data && professionalResult.data[0]) || {}
-
-      // 合并信息
       return {
-        ...booking,
-        userInfo: {
-          name: user.name || user.nickname || '未知用户',
-          avatarUrl: user.avatarUrl || '',
-          phone: user.phone || '',
-          email: user.email || '',
-        },
-        professionalInfo: {
-          name: professional.name || '未知专业人士',
-          phone: professional.phone || '',
-          email: professional.email || '',
-          professionalTypes: professional.professionalTypes || [],
-          serviceDescription: professional.serviceDescription || '',
+        list,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize),
         },
       }
     } catch (error) {
-      console.error('获取预约详情错误:', error)
+      console.error('获取预约列表失败:', error)
       throw error
     }
   }
 
-  // 更新预约状态
-  static async updateStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled') {
-    const collection = db.collection(collections.ORDERS)
-
+  /**
+   * 获取预约详情
+   * @param id 预约ID
+   * @returns 预约详情
+   */
+  static async getDetail(id: string) {
     try {
-      await collection.doc(id).update({
-        data: {
-          status,
-          updateTime: db.serverDate(),
-        },
-      })
+      // 模拟数据
+      const idNumber = parseInt(id.replace('booking_', '')) || 1
+      const statuses: BookingStatus[] = ['pending', 'confirmed', 'cancelled', 'completed']
+      const d = new Date()
+      d.setDate(d.getDate() - Math.floor(Math.random() * 30))
 
-      return { success: true, message: '预约状态已更新' }
+      return {
+        id,
+        userId: `user_${(idNumber % 20) + 1}`,
+        userName: `用户${(idNumber % 20) + 1}`,
+        userPhone: `1381234${((idNumber % 20) + 1).toString().padStart(4, '0')}`,
+        professionalId: `prof_${(idNumber % 10) + 1}`,
+        professionalName: `专业人士${(idNumber % 10) + 1}`,
+        professionalPhone: `1387654${((idNumber % 10) + 1).toString().padStart(4, '0')}`,
+        serviceType: ['医疗健康', '法律咨询', '心理咨询', '教育培训', '财务规划'][idNumber % 5],
+        bookingDate: d.toISOString().slice(0, 10),
+        timeSlot: `${(idNumber % 12) + 8}:00-${(idNumber % 12) + 9}:00`,
+        status: statuses[idNumber % 4],
+        price: Math.floor(Math.random() * 500) + 100,
+        createTime: new Date(Date.now() - idNumber * 3600000).toISOString(),
+        updateTime: new Date(Date.now() - idNumber * 1800000).toISOString(),
+        remark: idNumber % 5 === 0 ? '有特殊需求，请提前准备' : '',
+        statusHistory: [
+          {
+            status: 'pending',
+            time: new Date(Date.now() - idNumber * 3600000).toISOString(),
+            operator: 'system',
+          },
+          ...(idNumber % 4 > 0
+            ? [
+                {
+                  status: 'confirmed',
+                  time: new Date(Date.now() - idNumber * 2400000).toISOString(),
+                  operator: 'admin',
+                  remark: '已确认',
+                },
+              ]
+            : []),
+          ...(idNumber % 4 > 1
+            ? [
+                {
+                  status: idNumber % 4 === 2 ? 'cancelled' : 'completed',
+                  time: new Date(Date.now() - idNumber * 1200000).toISOString(),
+                  operator: 'admin',
+                  remark: idNumber % 4 === 2 ? '已取消' : '已完成',
+                },
+              ]
+            : []),
+        ],
+      }
     } catch (error) {
-      console.error('更新预约状态错误:', error)
+      console.error('获取预约详情失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 更新预约状态
+   * @param id 预约ID
+   * @param status 新状态
+   * @param remark 备注
+   * @returns 更新结果
+   */
+  static async updateStatus(id: string, status: BookingStatus, remark?: string) {
+    try {
+      // 模拟更新
+      return {
+        id,
+        status,
+        remark,
+        updateTime: new Date().toISOString(),
+      }
+    } catch (error) {
+      console.error('更新预约状态失败:', error)
       throw error
     }
   }

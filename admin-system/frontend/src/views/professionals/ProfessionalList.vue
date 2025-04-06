@@ -1,67 +1,115 @@
 <template>
-  <div class="professional-list-container">
-    <div class="header-actions">
-      <div class="search-container">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索专业人士"
-          class="search-input"
-          clearable
-          @clear="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-          <template #append>
-            <el-button @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
-        <el-select
-          v-model="statusFilter"
-          placeholder="状态筛选"
-          class="status-filter"
-          @change="handleSearch"
-        >
-          <el-option label="全部" value="" />
-          <el-option label="待审核" value="pending" />
-          <el-option label="已通过" value="approved" />
-          <el-option label="已拒绝" value="rejected" />
-        </el-select>
+  <div class="professional-list">
+    <div class="page-header">
+      <h2>专业人士管理</h2>
+      <div class="actions">
+        <el-button type="primary" @click="exportData">导出数据</el-button>
       </div>
-      <el-button type="primary" @click="exportData">导出数据</el-button>
+    </div>
+
+    <div class="search-bar">
+      <el-input
+        v-model="searchQuery"
+        placeholder="搜索专业人士姓名/手机号/专业/地区"
+        class="search-input"
+        @keyup.enter="handleSearch"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+
+      <el-select
+        v-model="statusFilter"
+        placeholder="状态"
+        class="filter-select"
+        @change="handleStatusFilterChange"
+      >
+        <el-option label="全部" value="all" />
+        <el-option label="待审核" value="pending" />
+        <el-option label="已认证" value="approved" />
+        <el-option label="已拒绝" value="rejected" />
+        <el-option label="已冻结" value="frozen" />
+      </el-select>
+
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
 
     <el-table v-loading="loading" :data="professionals" style="width: 100%" border>
-      <el-table-column label="头像" width="80">
-        <template #default="scope">
-          <el-avatar :size="40" :src="scope.row.avatar || DEFAULT_AVATAR" />
+      <el-table-column label="基本信息" min-width="250">
+        <template #default="{ row }">
+          <div class="professional-info">
+            <el-avatar :size="50" :src="row.avatar" />
+            <div class="info-text">
+              <div class="name">{{ row.name }}</div>
+              <div class="phone">{{ row.phone }}</div>
+              <div class="tags">
+                <el-tag size="small">{{ row.profession }}</el-tag>
+                <el-tag size="small" type="info">{{ row.specialization }}</el-tag>
+              </div>
+            </div>
+          </div>
         </template>
       </el-table-column>
-      <el-table-column prop="name" label="姓名" width="120" />
-      <el-table-column prop="phone" label="电话" width="120" />
-      <el-table-column prop="serviceType" label="服务类型" width="120" />
-      <el-table-column prop="registerTime" label="注册时间" width="180" sortable />
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="scope">
-          <el-tag :type="getStatusTagType(scope.row.status)" effect="plain">
-            {{ getStatusText(scope.row.status) }}
+
+      <el-table-column label="服务地区" prop="region" min-width="100" />
+
+      <el-table-column label="服务内容" min-width="150">
+        <template #default="{ row }">
+          <div class="service-types">
+            <el-tag
+              v-for="(type, index) in row.serviceTypes"
+              :key="index"
+              size="small"
+              class="service-tag"
+            >
+              {{ type }}
+            </el-tag>
+          </div>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="从业经验" min-width="100">
+        <template #default="{ row }">{{ row.experience }} 年</template>
+      </el-table-column>
+
+      <el-table-column label="评分" min-width="120">
+        <template #default="{ row }">
+          <div v-if="row.reviewCount > 0">
+            <el-rate v-model="row.rating" disabled text-color="#ff9900" />
+            <div class="review-count">{{ row.reviewCount }} 条评价</div>
+          </div>
+          <div v-else>暂无评价</div>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="注册时间" min-width="150" prop="registerTime" />
+
+      <el-table-column label="状态" min-width="100">
+        <template #default="{ row }">
+          <el-tag :type="getStatusTagType(row.status)" effect="plain">
+            {{ getStatusText(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="reviewTime" label="审核时间" width="180" sortable />
-      <el-table-column fixed="right" label="操作" width="200">
-        <template #default="scope">
-          <el-button link type="primary" @click="viewDetails(scope.row)">查看详情</el-button>
-          <template v-if="scope.row.status === 'pending'">
-            <el-button link type="success" @click="approveApplication(scope.row)">通过</el-button>
-            <el-button link type="danger" @click="openRejectDialog(scope.row)">拒绝</el-button>
-          </template>
-          <template v-else-if="scope.row.status === 'approved'">
-            <el-button link type="danger" @click="disableAccount(scope.row)">禁用</el-button>
-          </template>
-          <template v-else-if="scope.row.status === 'disabled'">
-            <el-button link type="success" @click="enableAccount(scope.row)">启用</el-button>
-          </template>
+
+      <el-table-column label="操作" min-width="180" fixed="right">
+        <template #default="{ row }">
+          <div class="action-buttons">
+            <el-button link type="primary" @click="viewDetails(row)">查看详情</el-button>
+
+            <template v-if="row.status === 'pending'">
+              <el-button link type="primary" @click="reviewApplication(row)">审核</el-button>
+            </template>
+
+            <template v-if="row.status === 'approved'">
+              <el-button link type="warning" @click="freezeAccount(row)">冻结</el-button>
+            </template>
+
+            <template v-if="row.status === 'frozen'">
+              <el-button link type="success" @click="unfreezeAccount(row)">解冻</el-button>
+            </template>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -77,317 +125,148 @@
         @current-change="handleCurrentChange"
       />
     </div>
-
-    <!-- 详情对话框 -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      title="专业人士详情"
-      width="800px"
-      class="detail-dialog"
-    >
-      <template v-if="selectedProfessional">
-        <div class="profile-header">
-          <el-avatar :size="80" :src="selectedProfessional.avatar || DEFAULT_AVATAR" />
-          <div class="profile-info">
-            <h2>{{ selectedProfessional.name }}</h2>
-            <p>{{ selectedProfessional.serviceType }}</p>
-            <p>注册时间: {{ selectedProfessional.registerTime }}</p>
-          </div>
-          <div class="profile-status">
-            <el-tag :type="getStatusTagType(selectedProfessional.status)">
-              {{ getStatusText(selectedProfessional.status) }}
-            </el-tag>
-          </div>
-        </div>
-
-        <el-divider />
-
-        <el-descriptions title="基本信息" :column="2" border>
-          <el-descriptions-item label="手机号">
-            {{ selectedProfessional.phone }}
-          </el-descriptions-item>
-          <el-descriptions-item label="电子邮箱">
-            {{ selectedProfessional.email || '未设置' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="性别">
-            {{ selectedProfessional.gender === 'male' ? '男' : '女' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="年龄">
-            {{ selectedProfessional.age || '未设置' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务价格">
-            ¥{{ selectedProfessional.price }}/小时
-          </el-descriptions-item>
-          <el-descriptions-item label="服务次数">
-            {{ selectedProfessional.serviceCount || 0 }}次
-          </el-descriptions-item>
-          <el-descriptions-item label="联系地址" :span="2">
-            {{ selectedProfessional.address || '未设置' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="简介" :span="2">
-            {{ selectedProfessional.bio || '暂无简介' }}
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <el-descriptions
-          v-if="selectedProfessional.qualifications"
-          title="资质信息"
-          :column="1"
-          border
-        >
-          <el-descriptions-item
-            v-for="(item, index) in selectedProfessional.qualifications"
-            :key="index"
-            :label="`证书 ${index + 1}`"
-          >
-            <div class="qualification-item">
-              <el-image
-                :src="item.image"
-                :preview-src-list="[item.image]"
-                fit="cover"
-                style="width: 120px; height: 80px"
-              />
-              <div class="qualification-info">
-                <p>{{ item.name }}</p>
-                <p>发证机构: {{ item.issuer }}</p>
-                <p>有效期: {{ item.validUntil }}</p>
-              </div>
-            </div>
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <template v-if="selectedProfessional.status === 'pending'">
-          <div class="action-buttons">
-            <el-button type="success" @click="approveApplication(selectedProfessional)">
-              通过申请
-            </el-button>
-            <el-button type="danger" @click="openRejectDialog(selectedProfessional)">
-              拒绝申请
-            </el-button>
-          </div>
-        </template>
-      </template>
-    </el-dialog>
-
-    <!-- 拒绝原因对话框 -->
-    <el-dialog v-model="rejectDialogVisible" title="拒绝原因" width="500px">
-      <el-form :model="rejectForm" ref="rejectFormRef">
-        <el-form-item
-          label="拒绝原因"
-          :rules="[{ required: true, message: '请输入拒绝原因', trigger: 'blur' }]"
-          prop="reason"
-        >
-          <el-input
-            v-model="rejectForm.reason"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入拒绝原因，这将会发送给申请者"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="rejectDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="rejectApplication">确认</el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { DEFAULT_AVATAR } from '@/assets/index'
+import router from '@/router'
+import axios from 'axios'
+
+interface Professional {
+  id: string
+  name: string
+  avatar: string
+  phone: string
+  gender: string
+  profession: string
+  specialization: string
+  serviceTypes: string[]
+  experience: number
+  region: string
+  city: string
+  status: string
+  rating: number
+  reviewCount: number
+  registerTime: string
+  lastActiveTime: string
+}
 
 const loading = ref(true)
-const professionals = ref([])
+const professionals = ref<Professional[]>([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const searchQuery = ref('')
-const statusFilter = ref('')
-const detailDialogVisible = ref(false)
-const rejectDialogVisible = ref(false)
-const selectedProfessional = ref(null)
-const rejectForm = reactive({
-  reason: '',
-})
-const rejectFormRef = ref(null)
+const statusFilter = ref('all')
 
 // 获取专业人士列表
 const fetchProfessionals = async () => {
   loading.value = true
   try {
-    // 模拟API调用
-    setTimeout(() => {
-      // 这里应该是实际调用API的代码
-      // axios.get('/api/professionals', {
-      //   params: {
-      //     page: currentPage.value,
-      //     pageSize: pageSize.value,
-      //     query: searchQuery.value,
-      //     status: statusFilter.value
-      //   }
-      // })
+    console.log('开始请求专业人士列表数据')
+    // 调用后端API获取数据
+    const response = await axios.get('/api/professionals', {
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        query: searchQuery.value,
+        status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+      },
+    })
 
-      // 模拟数据
-      const mockData = [
-        {
-          id: '1',
-          name: '张医生',
-          phone: '13800138000',
-          email: 'zhang@example.com',
-          serviceType: '医疗咨询',
-          gender: 'male',
-          age: 35,
-          price: 200,
-          serviceCount: 120,
-          address: '北京市朝阳区健康路123号',
-          bio: '从事医疗工作10年，擅长心理健康咨询和常见疾病诊断。',
-          registerTime: '2023-03-15 14:30:22',
-          status: 'approved',
-          reviewTime: '2023-03-16 09:45:11',
-          qualifications: [
-            {
-              name: '医师资格证',
-              issuer: '中国卫生部',
-              validUntil: '2030-12-31',
-              image: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/Certificate',
-            },
-          ],
-        },
-        {
-          id: '2',
-          name: '李律师',
-          phone: '13900139000',
-          email: 'li@example.com',
-          serviceType: '法律咨询',
-          gender: 'female',
-          age: 42,
-          price: 300,
-          serviceCount: 85,
-          address: '上海市静安区法治路456号',
-          bio: '执业律师15年，专注于婚姻家庭和合同纠纷案件。',
-          registerTime: '2023-04-20 10:15:30',
-          status: 'pending',
-          reviewTime: null,
-          qualifications: [
-            {
-              name: '律师执业证',
-              issuer: '中国司法部',
-              validUntil: '2028-10-31',
-              image: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/Certificate',
-            },
-          ],
-        },
-        {
-          id: '3',
-          name: '王老师',
-          phone: '13700137000',
-          email: 'wang@example.com',
-          serviceType: '教育辅导',
-          gender: 'male',
-          age: 38,
-          price: 150,
-          serviceCount: 210,
-          address: '广州市天河区教育路789号',
-          bio: '资深高中数学教师，有丰富的高考辅导经验。',
-          registerTime: '2023-02-10 16:20:45',
-          status: 'rejected',
-          reviewTime: '2023-02-11 11:30:18',
-          rejectReason: '提供的教师资格证书已过期，请更新后重新提交。',
-          qualifications: [
-            {
-              name: '教师资格证',
-              issuer: '中国教育部',
-              validUntil: '2022-12-31',
-              image: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/Certificate',
-            },
-          ],
-        },
-        {
-          id: '4',
-          name: '赵工程师',
-          phone: '13600136000',
-          email: 'zhao@example.com',
-          serviceType: '技术咨询',
-          gender: 'male',
-          age: 31,
-          price: 250,
-          serviceCount: 65,
-          address: '深圳市南山区科技路101号',
-          bio: '资深软件工程师，精通Web开发和移动应用开发。',
-          registerTime: '2023-05-05 09:10:55',
-          status: 'approved',
-          reviewTime: '2023-05-06 14:22:33',
-          qualifications: [
-            {
-              name: '计算机专业学位证书',
-              issuer: '清华大学',
-              validUntil: 'N/A',
-              image: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/Certificate',
-            },
-          ],
-        },
-        {
-          id: '5',
-          name: '孙会计',
-          phone: '13500135000',
-          email: 'sun@example.com',
-          serviceType: '财务咨询',
-          gender: 'female',
-          age: 40,
-          price: 180,
-          serviceCount: 150,
-          address: '成都市锦江区财富路202号',
-          bio: '注册会计师，擅长个人税务规划和小企业财务管理。',
-          registerTime: '2023-01-18 13:45:10',
-          status: 'disabled',
-          reviewTime: '2023-01-19 10:20:40',
-          qualifications: [
-            {
-              name: '注册会计师证书',
-              issuer: '中国财政部',
-              validUntil: '2025-06-30',
-              image: 'https://placeholder.pics/svg/300x200/DEDEDE/555555/Certificate',
-            },
-          ],
-        },
-      ]
+    console.log('获取到专业人士列表数据:', response.data)
 
-      professionals.value = mockData
-      total.value = mockData.length
-      loading.value = false
-    }, 1000)
+    if (response.data && response.data.data) {
+      professionals.value = response.data.data
+      if (response.data.pagination) {
+        total.value = response.data.pagination.total
+      }
+    } else {
+      console.error('返回数据格式错误:', response.data)
+      professionals.value = []
+      total.value = 0
+    }
+
+    loading.value = false
   } catch (error) {
     console.error('获取专业人士列表失败', error)
     loading.value = false
     ElMessage.error('获取数据失败，请重试')
+
+    // 开发阶段使用模拟数据（后期可移除）
+    const mockData = [
+      {
+        id: 'prof_001',
+        name: '张医生',
+        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Doctor1',
+        phone: '13800138001',
+        gender: 'male',
+        profession: '医疗',
+        specialization: '心理咨询',
+        serviceTypes: ['焦虑疏导', '压力管理', '情绪调节'],
+        experience: 8,
+        region: '广东省',
+        city: '深圳市',
+        status: 'approved',
+        rating: 4.8,
+        reviewCount: 120,
+        registerTime: '2023-01-10 14:30:22',
+        lastActiveTime: '2023-09-01 18:45:31',
+      },
+      {
+        id: 'prof_002',
+        name: '李律师',
+        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Lawyer1',
+        phone: '13900139001',
+        gender: 'female',
+        profession: '法律',
+        specialization: '合同法律',
+        serviceTypes: ['合同审核', '法律咨询', '纠纷调解'],
+        experience: 10,
+        region: '北京市',
+        city: '北京市',
+        status: 'approved',
+        rating: 4.7,
+        reviewCount: 95,
+        registerTime: '2023-02-15 09:22:15',
+        lastActiveTime: '2023-08-30 15:10:22',
+      },
+      {
+        id: 'prof_003',
+        name: '王老师',
+        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Teacher1',
+        phone: '13700137001',
+        gender: 'female',
+        profession: '教育',
+        specialization: '高中数学',
+        serviceTypes: ['一对一辅导', '考前冲刺', '学习规划'],
+        experience: 12,
+        region: '上海市',
+        city: '上海市',
+        status: 'pending',
+        rating: 0,
+        reviewCount: 0,
+        registerTime: '2023-08-25 11:18:45',
+        lastActiveTime: '2023-08-25 11:18:45',
+      },
+    ]
+
+    professionals.value = mockData
+    total.value = mockData.length
   }
 }
 
-// 获取状态标签类型
-const getStatusTagType = (status) => {
-  const statusMap = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'danger',
-    disabled: 'info',
-  }
-  return statusMap[status] || 'info'
+// 查看详情
+const viewDetails = (professional: Professional) => {
+  router.push(`/professionals/detail/${professional.id}`)
 }
 
-// 获取状态文本
-const getStatusText = (status) => {
-  const statusMap = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已拒绝',
-    disabled: '已禁用',
-  }
-  return statusMap[status] || '未知'
+// 审核申请
+const reviewApplication = (professional: Professional) => {
+  router.push(`/professionals/review/${professional.id}`)
 }
 
 // 搜索处理
@@ -396,151 +275,156 @@ const handleSearch = () => {
   fetchProfessionals()
 }
 
+// 状态过滤变更
+const handleStatusFilterChange = () => {
+  currentPage.value = 1
+  fetchProfessionals()
+}
+
 // 分页大小变更
-const handleSizeChange = (size) => {
+const handleSizeChange = (size: number) => {
   pageSize.value = size
   fetchProfessionals()
 }
 
 // 分页页码变更
-const handleCurrentChange = (page) => {
+const handleCurrentChange = (page: number) => {
   currentPage.value = page
   fetchProfessionals()
 }
 
-// 查看详情
-const viewDetails = (professional) => {
-  selectedProfessional.value = professional
-  detailDialogVisible.value = true
-}
-
-// 通过申请
-const approveApplication = (professional) => {
-  ElMessageBox.confirm(`确定通过 ${professional.name} 的申请吗？`, '审核确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'info',
-  })
-    .then(() => {
-      // 这里应该是调用API的代码
-      // axios.post(`/api/professionals/${professional.id}/approve`)
-
-      // 模拟API调用
-      loading.value = true
-      setTimeout(() => {
-        const index = professionals.value.findIndex((p) => p.id === professional.id)
-        if (index !== -1) {
-          professionals.value[index].status = 'approved'
-          professionals.value[index].reviewTime = new Date().toLocaleString()
-          if (detailDialogVisible.value) {
-            selectedProfessional.value = { ...professionals.value[index] }
-          }
-        }
-        loading.value = false
-        detailDialogVisible.value = false
-        ElMessage.success('已通过申请')
-      }, 500)
-    })
-    .catch(() => {})
-}
-
-// 打开拒绝对话框
-const openRejectDialog = (professional) => {
-  selectedProfessional.value = professional
-  rejectForm.reason = ''
-  rejectDialogVisible.value = true
-}
-
-// 拒绝申请
-const rejectApplication = async () => {
-  if (!rejectFormRef.value) return
-
+// 冻结账号
+const freezeAccount = async (professional: Professional) => {
   try {
-    await rejectFormRef.value.validate()
+    await ElMessageBox.confirm(
+      `确定要冻结 ${professional.name} 的账号吗？冻结后将暂停其接单功能。`,
+      '冻结账号',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
 
-    // 这里应该是调用API的代码
-    // axios.post(`/api/professionals/${selectedProfessional.value.id}/reject`, {
-    //   reason: rejectForm.reason
-    // })
+    // 调用后端API冻结账号
+    await axios.post(`/api/professionals/${professional.id}/freeze`)
 
-    // 模拟API调用
-    loading.value = true
-    setTimeout(() => {
-      const index = professionals.value.findIndex((p) => p.id === selectedProfessional.value.id)
-      if (index !== -1) {
-        professionals.value[index].status = 'rejected'
-        professionals.value[index].reviewTime = new Date().toLocaleString()
-        professionals.value[index].rejectReason = rejectForm.reason
-      }
-      loading.value = false
-      rejectDialogVisible.value = false
-      detailDialogVisible.value = false
-      ElMessage.success('已拒绝申请')
-    }, 500)
+    // 重新获取列表数据
+    await fetchProfessionals()
+
+    ElMessage.success('账号已冻结')
   } catch (error) {
-    console.error('表单验证失败', error)
+    if (error !== 'cancel') {
+      // 不是用户取消操作
+      console.error('冻结账号失败', error)
+      ElMessage.error('冻结账号失败，请重试')
+    }
   }
 }
 
-// 禁用账号
-const disableAccount = (professional) => {
-  ElMessageBox.confirm(`确定要禁用 ${professional.name} 的账号吗？`, '操作确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      // 这里应该是调用API的代码
-      // axios.post(`/api/professionals/${professional.id}/disable`)
+// 解冻账号
+const unfreezeAccount = async (professional: Professional) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要解冻 ${professional.name} 的账号吗？解冻后将恢复其接单功能。`,
+      '解冻账号',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success',
+      },
+    )
 
-      // 模拟API调用
-      loading.value = true
-      setTimeout(() => {
-        const index = professionals.value.findIndex((p) => p.id === professional.id)
-        if (index !== -1) {
-          professionals.value[index].status = 'disabled'
-          if (detailDialogVisible.value && selectedProfessional.value.id === professional.id) {
-            selectedProfessional.value = { ...professionals.value[index] }
-          }
-        }
-        loading.value = false
-        ElMessage.success('账号已禁用')
-      }, 500)
-    })
-    .catch(() => {})
+    // 调用后端API解冻账号
+    await axios.post(`/api/professionals/${professional.id}/unfreeze`)
+
+    // 重新获取列表数据
+    await fetchProfessionals()
+
+    ElMessage.success('账号已解冻')
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 不是用户取消操作
+      console.error('解冻账号失败', error)
+      ElMessage.error('解冻账号失败，请重试')
+    }
+  }
 }
 
-// 启用账号
-const enableAccount = (professional) => {
-  ElMessageBox.confirm(`确定要启用 ${professional.name} 的账号吗？`, '操作确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      // 这里应该是调用API的代码
-      // axios.post(`/api/professionals/${professional.id}/enable`)
-
-      // 模拟API调用
-      loading.value = true
-      setTimeout(() => {
-        const index = professionals.value.findIndex((p) => p.id === professional.id)
-        if (index !== -1) {
-          professionals.value[index].status = 'approved'
-          if (detailDialogVisible.value && selectedProfessional.value.id === professional.id) {
-            selectedProfessional.value = { ...professionals.value[index] }
-          }
-        }
-        loading.value = false
-        ElMessage.success('账号已启用')
-      }, 500)
+// 拒绝申请
+const rejectApplication = async (professional: Professional) => {
+  try {
+    // 在实际实现中，可能需要一个弹窗输入拒绝原因
+    await ElMessageBox.confirm(`确定要拒绝 ${professional.name} 的入驻申请吗？`, '拒绝申请', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
     })
-    .catch(() => {})
+
+    // 调用后端API拒绝申请
+    await axios.post(`/api/professionals/${professional.id}/reject`, {
+      reason: '资质不符合平台要求', // 在实际实现中，这应该是从用户输入获取的
+    })
+
+    // 重新获取列表数据
+    await fetchProfessionals()
+
+    ElMessage.success('已拒绝该申请')
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 不是用户取消操作
+      console.error('拒绝申请失败', error)
+      ElMessage.error('拒绝申请失败，请重试')
+    }
+  }
 }
 
 // 导出数据
-const exportData = () => {
-  ElMessage.success('数据导出功能将在后续版本中实现')
+const exportData = async () => {
+  try {
+    const response = await axios.get('/api/professionals/export', {
+      params: {
+        query: searchQuery.value,
+        status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+      },
+      responseType: 'blob',
+    })
+
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'application/vnd.ms-excel' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `专业人士数据_${new Date().toISOString().split('T')[0]}.xlsx`
+    link.click()
+    URL.revokeObjectURL(link.href)
+
+    ElMessage.success('数据导出成功')
+  } catch (error) {
+    console.error('导出数据失败', error)
+    ElMessage.error('导出数据失败，请重试')
+  }
+}
+
+// 获取状态标签类型
+const getStatusTagType = (status: string) => {
+  const statusMap: Record<string, string> = {
+    approved: 'success',
+    pending: 'warning',
+    rejected: 'info',
+    frozen: 'danger',
+  }
+  return statusMap[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    approved: '已认证',
+    pending: '待审核',
+    rejected: '已拒绝',
+    frozen: '已冻结',
+  }
+  return statusMap[status] || '未知'
 }
 
 onMounted(() => {
@@ -549,80 +433,87 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.professional-list-container {
+.professional-list {
   padding: 20px;
 }
 
-.header-actions {
+.page-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.search-container {
+.actions {
   display: flex;
   gap: 10px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
 .search-input {
   width: 300px;
 }
 
-.status-filter {
-  width: 150px;
+.filter-select {
+  width: 140px;
+}
+
+.professional-info {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.name {
+  font-weight: bold;
+}
+
+.phone {
+  font-size: 13px;
+  color: #666;
+}
+
+.tags {
+  display: flex;
+  gap: 5px;
+}
+
+.service-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.service-tag {
+  margin-bottom: 5px;
+}
+
+.review-count {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #666;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .pagination-container {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
-}
-
-.detail-dialog :deep(.el-dialog__body) {
-  padding: 20px;
-}
-
-.profile-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.profile-info {
-  flex: 1;
-  margin-left: 20px;
-}
-
-.profile-info h2 {
-  margin: 0 0 5px 0;
-}
-
-.profile-info p {
-  margin: 5px 0;
-  color: #666;
-}
-
-.profile-status {
-  margin-left: auto;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.qualification-item {
-  display: flex;
-  gap: 15px;
-}
-
-.qualification-info {
-  flex: 1;
-}
-
-.qualification-info p {
-  margin: 5px 0;
 }
 </style>
