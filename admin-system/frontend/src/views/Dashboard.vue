@@ -134,7 +134,7 @@
               </el-table-column>
               <el-table-column width="100" align="right">
                 <template #default="scope">
-                  <router-link :to="`/professionals/review/${scope.row._id}`">
+                  <router-link :to="`/professionals/review/${scope.row.id || scope.row._id}`">
                     <el-button size="small">查看</el-button>
                   </router-link>
                 </template>
@@ -151,12 +151,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  User as UserIcon,
-  PriceTag as PriceTagIcon,
-  Calendar as CalendarIcon,
-  Star as StarIcon,
-} from '@element-plus/icons-vue'
 import axios from 'axios'
 
 interface DashboardData {
@@ -199,71 +193,60 @@ const fetchDashboardData = async () => {
   loading.value = true
   try {
     // 调用后端API获取数据
-    const response = await axios.get('/api/dashboard/summary')
-    dashboardData.value = response.data.data
+    const response = await axios.get('/api/dashboard')
+
+    if (response.data && response.data.data) {
+      // 将数据格式转换为符合前端需要的格式
+      const data = response.data.data
+
+      // 确保recentProfessionals每一项都有_id字段
+      const recentPros = (data.recentProfessionals || []).map((pro) => ({
+        _id: pro.id || pro._id,
+        id: pro.id || pro._id,
+        name: pro.name || '',
+        avatarUrl: pro.avatar || pro.avatarUrl || '',
+        createTime: pro.createTime || new Date().toISOString(),
+      }))
+
+      dashboardData.value = {
+        professionalCount: data.stats?.professionals?.total || 0,
+        professionalApprovalRate:
+          data.stats?.professionals?.total > 0
+            ? Math.round(
+                (data.stats?.professionals?.approved / data.stats?.professionals?.total) * 100,
+              )
+            : 0,
+        userCount: data.stats?.users?.total || 0,
+        activeUserCount: data.stats?.users?.active || 0,
+        bookingCount: data.stats?.bookings?.total || 0,
+        weeklyBookings: data.stats?.bookings?.thisWeek || 0,
+        pendingReviewCount: data.stats?.professionals?.pending || 0,
+        bookingTrend:
+          data.revenueData?.map((item) => ({
+            date: item.date,
+            count: Math.floor(item.value / 1000),
+          })) || [],
+        recentReviews: recentPros,
+      }
+    }
+
     loading.value = false
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
     loading.value = false
     ElMessage.error('获取数据失败，请重试')
 
-    // 开发阶段使用模拟数据（后期可移除）
+    // 清空数据
     dashboardData.value = {
-      professionalCount: 123,
-      professionalApprovalRate: 85,
-      userCount: 1543,
-      activeUserCount: 956,
-      bookingCount: 325,
-      weeklyBookings: 42,
-      pendingReviewCount: 5,
-      totalRevenue: 284500,
-      bookingTrend: [
-        { date: '2023-12-01', count: 5 },
-        { date: '2023-12-02', count: 8 },
-        { date: '2023-12-03', count: 3 },
-        { date: '2023-12-04', count: 6 },
-        { date: '2023-12-05', count: 12 },
-        { date: '2023-12-06', count: 7 },
-        { date: '2023-12-07', count: 10 },
-      ],
-      recentReviews: [
-        { _id: '1', name: '张三', avatarUrl: '', createTime: new Date().toISOString() },
-        { _id: '2', name: '李四', avatarUrl: '', createTime: new Date().toISOString() },
-        { _id: '3', name: '王五', avatarUrl: '', createTime: new Date().toISOString() },
-      ],
-      serviceTypeStats: [
-        { type: '医疗咨询', count: 580, percentage: 31 },
-        { type: '法律咨询', count: 465, percentage: 25 },
-        { type: '教育辅导', count: 387, percentage: 21 },
-        { type: '心理咨询', count: 255, percentage: 14 },
-        { type: '技术咨询', count: 189, percentage: 9 },
-      ],
-      topProfessionals: [
-        {
-          id: 'prof_001',
-          name: '张医生',
-          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Doctor1',
-          profession: '心理咨询',
-          serviceCount: 120,
-          rating: 4.8,
-        },
-        {
-          id: 'prof_002',
-          name: '李律师',
-          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Lawyer1',
-          profession: '法律咨询',
-          serviceCount: 95,
-          rating: 4.7,
-        },
-        {
-          id: 'prof_003',
-          name: '王老师',
-          avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Teacher1',
-          profession: '教育辅导',
-          serviceCount: 87,
-          rating: 4.9,
-        },
-      ],
+      professionalCount: 0,
+      professionalApprovalRate: 0,
+      userCount: 0,
+      activeUserCount: 0,
+      bookingCount: 0,
+      weeklyBookings: 0,
+      pendingReviewCount: 0,
+      bookingTrend: [],
+      recentReviews: [],
     }
   }
 }

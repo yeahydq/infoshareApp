@@ -225,51 +225,9 @@ const fetchUsers = async () => {
     loading.value = false
     ElMessage.error('获取数据失败，请重试')
 
-    // 开发阶段使用模拟数据（后期可移除）
-    const mockData = [
-      {
-        userId: 'user_001',
-        openid: 'openid_001',
-        nickname: '张三',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/User1',
-        gender: 'male',
-        region: '广东省',
-        city: '深圳市',
-        registerTime: '2023-01-15 09:32:15',
-        lastLoginTime: '2023-09-01 16:45:22',
-        bookingCount: 12,
-        status: 'active',
-      },
-      {
-        userId: 'user_002',
-        openid: 'openid_002',
-        nickname: '李四',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/User2',
-        gender: 'female',
-        region: '北京市',
-        city: '北京市',
-        registerTime: '2023-02-20 14:21:33',
-        lastLoginTime: '2023-08-29 10:12:05',
-        bookingCount: 5,
-        status: 'active',
-      },
-      {
-        userId: 'user_003',
-        openid: 'openid_003',
-        nickname: '王五',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/User3',
-        gender: 'male',
-        region: '上海市',
-        city: '上海市',
-        registerTime: '2023-03-10 11:05:47',
-        lastLoginTime: '2023-08-30 20:18:36',
-        bookingCount: 8,
-        status: 'disabled',
-      },
-    ]
-
-    users.value = mockData
-    total.value = mockData.length
+    // 清空数据
+    users.value = []
+    total.value = 0
   }
 }
 
@@ -286,43 +244,8 @@ const fetchUserBookings = async (userId: string) => {
     bookingsLoading.value = false
     ElMessage.error('获取预约记录失败')
 
-    // 开发阶段使用模拟数据（后期可移除）
-    if (userId === 'user_001') {
-      userBookings.value = [
-        {
-          id: 'booking_001',
-          professionalName: '张医生',
-          serviceType: '心理咨询',
-          bookingTime: '2023-08-15 15:00:00',
-          status: 'completed',
-          amount: 200.0,
-          createdAt: '2023-08-10 09:22:15',
-        },
-        {
-          id: 'booking_002',
-          professionalName: '李律师',
-          serviceType: '法律咨询',
-          bookingTime: '2023-08-20 10:30:00',
-          status: 'completed',
-          amount: 300.0,
-          createdAt: '2023-08-15 16:40:33',
-        },
-      ]
-    } else if (userId === 'user_002') {
-      userBookings.value = [
-        {
-          id: 'booking_004',
-          professionalName: '张医生',
-          serviceType: '心理咨询',
-          bookingTime: '2023-08-18 16:30:00',
-          status: 'completed',
-          amount: 200.0,
-          createdAt: '2023-08-12 10:05:22',
-        },
-      ]
-    } else {
-      userBookings.value = []
-    }
+    // 清空数据
+    userBookings.value = []
   }
 }
 
@@ -339,34 +262,8 @@ const fetchUserLogs = async (userId: string) => {
     logsLoading.value = false
     ElMessage.error('获取操作日志失败')
 
-    // 开发阶段使用模拟数据（后期可移除）
-    if (userId === 'user_001') {
-      userLogs.value = [
-        {
-          time: '2023-09-01 16:45:22',
-          action: '登录',
-          details: '小程序登录',
-          ip: '192.168.1.100',
-        },
-        {
-          time: '2023-08-30 14:22:10',
-          action: '预约',
-          details: '预约了王老师的教育辅导服务',
-          ip: '192.168.1.100',
-        },
-      ]
-    } else if (userId === 'user_002') {
-      userLogs.value = [
-        {
-          time: '2023-08-29 10:12:05',
-          action: '登录',
-          details: '小程序登录',
-          ip: '192.168.2.100',
-        },
-      ]
-    } else {
-      userLogs.value = []
-    }
+    // 清空数据
+    userLogs.value = []
   }
 }
 

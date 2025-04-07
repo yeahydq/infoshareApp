@@ -49,24 +49,32 @@ router.get(
   validateRequest,
   async (req: Request, res: Response) => {
     try {
-      const professional = await Professional.getDetail(req.params.id)
+      const professionalId = req.params.id
+      console.log('[路由] 获取专业人士详情, ID:', professionalId)
+
+      // 获取专业人士详情
+      const professional = await Professional.getDetail(professionalId)
+
       if (!professional) {
         return res.status(404).json({
           code: 404,
-          message: '专业人士不存在',
+          message: '未找到该专业人士',
         })
       }
 
-      res.json({
+      console.log('[路由] 成功获取专业人士详情')
+      // 返回成功响应
+      return res.json({
         code: 0,
+        message: '获取专业人士详情成功',
         data: professional,
       })
-    } catch (error: any) {
-      console.error('获取专业人士详情失败:', error)
-      res.status(500).json({
+    } catch (error) {
+      console.error('[路由] 获取专业人士详情失败:', error)
+      return res.status(500).json({
         code: 500,
         message: '获取专业人士详情失败',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       })
     }
   },

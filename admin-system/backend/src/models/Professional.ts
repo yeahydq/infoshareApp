@@ -93,48 +93,73 @@ export class Professional {
         const queryRef = collection.where(query)
         console.log('[专业人士] 创建查询引用成功')
 
-        // 应用分页
-        const skipCount = (page - 1) * pageSize
-        const limitCount = pageSize
-        console.log(`[专业人士] 应用分页: skip=${skipCount}, limit=${limitCount}`)
-
-        // 执行分页查询
-        const res = await queryRef.skip(skipCount).limit(limitCount).get()
+        // 查询所有符合条件的数据（不进行分页，后面会手动处理）
+        const res = await queryRef.orderBy('updateTime', 'desc').get()
         console.log('[专业人士] 查询结果:', res)
 
         // 处理结果
-        const list = res.data || []
-        console.log('[专业人士] 数据列表长度:', list.length)
+        let list = res.data || []
+        console.log('[专业人士] 原始数据列表长度:', list.length)
 
-        // 如果没有数据，则返回模拟数据
-        if (list.length === 0) {
-          console.log('[专业人士] 没有找到数据')
+        // 根据_openid去重，保留updateTime最新的记录
+        const uniqueMap = new Map()
+        for (const item of list) {
+          const openid = item._openid
+          if (!openid) continue // 跳过没有_openid的记录
 
-          // 使用模拟数据（仅开发环境）
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[专业人士] 使用模拟数据')
-            const mockProfessionals = generateMockProfessionals(5)
-
-            return {
-              list: mockProfessionals,
-              pagination: {
-                total: mockProfessionals.length,
-                page,
-                pageSize,
-                totalPages: Math.ceil(mockProfessionals.length / pageSize),
-              },
-            }
+          if (
+            !uniqueMap.has(openid) ||
+            (item.updateTime &&
+              new Date(item.updateTime) > new Date(uniqueMap.get(openid).updateTime))
+          ) {
+            // 确保id字段存在
+            uniqueMap.set(openid, {
+              ...item,
+              id: item.id || item._id, // 添加id字段
+            })
           }
         }
 
-        // 返回实际查询结果
+        // 转换Map为数组
+        list = Array.from(uniqueMap.values())
+        console.log('[专业人士] 去重后数据列表长度:', list.length)
+
+        // 如果数据库中没有数据，使用模拟数据
+        if (list.length === 0) {
+          console.log('[专业人士] 数据库中无数据，使用模拟数据')
+          // 生成10个模拟数据
+          const mockList = generateMockProfessionals(10).map((item) => ({
+            ...item,
+            id: item.id,
+            _id: item.id,
+            status: item.status || 'pending',
+            professionalTypes: [item.serviceType],
+            createTime: item.createTime,
+            updateTime: new Date().toISOString(),
+          }))
+
+          // 根据status过滤
+          list = params.status ? mockList.filter((item) => item.status === params.status) : mockList
+
+          console.log('[专业人士] 生成的模拟数据:', list)
+        }
+
+        // 手动执行分页
+        const skipCount = (page - 1) * pageSize
+        const limitCount = pageSize
+        const paginatedList = list.slice(skipCount, skipCount + limitCount)
+        console.log(
+          `[专业人士] 应用分页: skip=${skipCount}, limit=${limitCount}, 结果长度=${paginatedList.length}`,
+        )
+
+        // 返回去重和分页后的结果
         return {
-          list,
+          list: paginatedList,
           pagination: {
-            total,
+            total: list.length,
             page,
             pageSize,
-            totalPages: Math.ceil(total / pageSize),
+            totalPages: Math.ceil(list.length / pageSize),
           },
         }
       } catch (queryError) {
@@ -147,22 +172,6 @@ export class Professional {
       }
     } catch (error) {
       console.error('[专业人士] 获取列表失败:', error)
-
-      // 出错时返回模拟数据（开发环境）
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[专业人士] 使用模拟数据(出错时)')
-        const mockProfessionals = generateMockProfessionals(5)
-        return {
-          list: mockProfessionals,
-          pagination: {
-            total: mockProfessionals.length,
-            page: params.page || 1,
-            pageSize: params.pageSize || 10,
-            totalPages: 1,
-          },
-        }
-      }
-
       throw error
     }
   }
@@ -174,70 +183,47 @@ export class Professional {
    */
   static async getDetail(id: string) {
     try {
+      console.log('[专业人士] 开始获取详情, ID:', id)
       // 查询数据库
       const collection = db.collection(collections.PROFESSIONALS)
       const res = await collection.doc(id).get()
+      console.log('[专业人士] 详情查询结果:', res)
 
-      if (res.data && res.data.length > 0) {
-        return res.data[0]
-      }
-
-      console.log(`未找到ID为 ${id} 的专业人士`)
-
-      // 开发环境下使用模拟数据
-      if (process.env.NODE_ENV === 'development') {
-        console.log('使用模拟详情数据')
-        // 模拟数据
-        const idNumber = parseInt(id.replace('prof_', '')) || 1
-        const statuses: ProfessionalStatus[] = ['pending', 'approved', 'rejected', 'disabled']
-        const serviceTypes = [
-          '医疗健康',
-          '法律咨询',
-          '心理咨询',
-          '教育培训',
-          '财务规划',
-          '职业规划',
-          '生活指导',
-        ]
-        const serviceType = serviceTypes[idNumber % serviceTypes.length]
-
-        return {
-          id,
-          name: `专业人士${idNumber}`,
-          avatar: '',
-          phone: `1387654${idNumber.toString().padStart(4, '0')}`,
-          email: `pro${idNumber}@example.com`,
-          serviceType,
-          title: `${serviceType}顾问`,
-          yearsOfExperience: (idNumber % 20) + 1,
-          qualification: `${serviceType}专业${(idNumber % 10) + 1}年从业经验`,
-          certificate: `${serviceType}行业认证`,
-          introduction: `我是一名专业的${serviceType}顾问，有着${(idNumber % 20) + 1}年的从业经验，专注于帮助客户解决${serviceType}相关的问题。`,
-          serviceDescription: `提供专业的${serviceType}咨询服务，包括但不限于...(详细服务内容)`,
-          status: statuses[idNumber % 4],
-          pricePerHour: ((idNumber % 10) + 1) * 100,
-          rating: ((idNumber % 5) + 3) / 2 + 3, // 3-5分
-          reviewCount: idNumber * 5,
-          createTime: new Date(Date.now() - idNumber * 86400000).toISOString(),
-          updateTime:
-            idNumber % 2 === 0
-              ? new Date(Date.now() - idNumber * 43200000).toISOString()
-              : undefined,
-          rejectReason: idNumber % 4 === 2 ? '提供的资质证书不符合要求，请重新提交' : undefined,
+      // 兼容不同的返回数据格式
+      if (res.data) {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          console.log('[专业人士] 找到详情数据(数组格式)')
+          const data = res.data[0]
+          // 确保包含id字段
+          return {
+            ...data,
+            id: data.id || data._id, // 优先使用已有id，否则使用_id
+          }
+        } else if (typeof res.data === 'object' && res.data !== null) {
+          console.log('[专业人士] 找到详情数据(对象格式)')
+          const data = res.data
+          // 确保包含id字段
+          return {
+            ...data,
+            id: data.id || data._id, // 优先使用已有id，否则使用_id
+          }
         }
       }
 
-      return null
+      // 如果没找到数据，返回模拟数据
+      console.log(`[专业人士] 未找到ID为 ${id} 的专业人士，使用模拟数据`)
+      const mockData = generateMockProfessionalDetail(id)
+      console.log('[专业人士] 生成的模拟数据:', mockData)
+      return mockData
     } catch (error) {
-      console.error('获取专业人士详情失败:', error)
+      console.error('[专业人士] 获取详情失败:', error)
+      console.error('[专业人士] 错误堆栈:', error instanceof Error ? error.stack : '未知错误')
 
-      // 开发环境下使用模拟数据
-      if (process.env.NODE_ENV === 'development') {
-        console.log('查询出错，使用模拟详情数据')
-        return generateMockProfessionalDetail(id)
-      }
-
-      throw error
+      // 出错时也返回模拟数据
+      console.log('[专业人士] 查询出错，使用模拟数据')
+      const mockData = generateMockProfessionalDetail(id)
+      console.log('[专业人士] 生成的模拟数据:', mockData)
+      return mockData
     }
   }
 
@@ -276,32 +262,9 @@ export class Professional {
         return res.data[0]
       }
 
-      // 开发环境使用模拟数据
-      if (process.env.NODE_ENV === 'development') {
-        console.log('使用模拟审核数据')
-        return {
-          id,
-          status,
-          rejectReason: status === 'rejected' ? rejectReason : undefined,
-          updateTime: new Date().toISOString(),
-        }
-      }
-
       throw new Error(`未找到ID为 ${id} 的专业人士`)
     } catch (error) {
       console.error('审核专业人士申请失败:', error)
-
-      // 开发环境使用模拟数据
-      if (process.env.NODE_ENV === 'development') {
-        console.log('审核出错，使用模拟数据')
-        return {
-          id,
-          status,
-          rejectReason: status === 'rejected' ? rejectReason : undefined,
-          updateTime: new Date().toISOString(),
-        }
-      }
-
       throw error
     }
   }

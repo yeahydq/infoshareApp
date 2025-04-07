@@ -35,18 +35,18 @@ const router = createRouter({
           meta: { title: '专业人士管理', requiresAuth: true },
         },
         // 暂时注释掉未创建的组件路由
-        // {
-        //   path: 'professionals/detail/:id',
-        //   name: 'ProfessionalDetail',
-        //   component: () => import('../views/professionals/ProfessionalDetail.vue'),
-        //   meta: { requiresAuth: true },
-        // },
-        // {
-        //   path: 'professionals/review/:id',
-        //   name: 'ProfessionalReview',
-        //   component: () => import('../views/professionals/ProfessionalReview.vue'),
-        //   meta: { requiresAuth: true },
-        // },
+        {
+          path: 'professionals/detail/:id',
+          name: 'ProfessionalDetail',
+          component: () => import('../views/professionals/ProfessionalDetail.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'professionals/review/:id',
+          name: 'ProfessionalReview',
+          component: () => import('../views/professionals/ProfessionalReview.vue'),
+          meta: { requiresAuth: true },
+        },
         {
           path: 'users',
           name: 'UserList',

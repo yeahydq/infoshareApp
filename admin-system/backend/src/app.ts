@@ -9,6 +9,7 @@ import professionalRoutes from './routes/professionalRoutes'
 import userRoutes from './routes/userRoutes'
 import bookingRoutes from './routes/bookingRoutes'
 import dashboardRoutes from './routes/dashboardRoutes'
+import serviceTypeRoutes from './routes/serviceTypeRoutes'
 
 // 加载环境变量
 config()
@@ -24,10 +25,11 @@ app.use(express.urlencoded({ extended: true }))
 
 // 设置路由
 app.use('/api/auth', authRoutes)
-app.use('/api/professionals', professionalRoutes)
 app.use('/api/users', userRoutes)
-app.use('/api/bookings', bookingRoutes)
+app.use('/api/professionals', professionalRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/bookings', bookingRoutes)
+app.use('/api/service-types', serviceTypeRoutes)
 
 // 根路由
 app.get('/', (req: Request, res: Response) => {

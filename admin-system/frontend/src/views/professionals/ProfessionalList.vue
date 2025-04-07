@@ -180,7 +180,12 @@ const fetchProfessionals = async () => {
     console.log('获取到专业人士列表数据:', response.data)
 
     if (response.data && response.data.data) {
-      professionals.value = response.data.data
+      // 确保每个专业人士对象都有id字段
+      professionals.value = response.data.data.map((pro: any) => ({
+        ...pro,
+        id: pro.id || pro._id, // 确保有id字段，优先使用id，如果没有则使用_id
+      }))
+
       if (response.data.pagination) {
         total.value = response.data.pagination.total
       }
@@ -196,66 +201,9 @@ const fetchProfessionals = async () => {
     loading.value = false
     ElMessage.error('获取数据失败，请重试')
 
-    // 开发阶段使用模拟数据（后期可移除）
-    const mockData = [
-      {
-        id: 'prof_001',
-        name: '张医生',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Doctor1',
-        phone: '13800138001',
-        gender: 'male',
-        profession: '医疗',
-        specialization: '心理咨询',
-        serviceTypes: ['焦虑疏导', '压力管理', '情绪调节'],
-        experience: 8,
-        region: '广东省',
-        city: '深圳市',
-        status: 'approved',
-        rating: 4.8,
-        reviewCount: 120,
-        registerTime: '2023-01-10 14:30:22',
-        lastActiveTime: '2023-09-01 18:45:31',
-      },
-      {
-        id: 'prof_002',
-        name: '李律师',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Lawyer1',
-        phone: '13900139001',
-        gender: 'female',
-        profession: '法律',
-        specialization: '合同法律',
-        serviceTypes: ['合同审核', '法律咨询', '纠纷调解'],
-        experience: 10,
-        region: '北京市',
-        city: '北京市',
-        status: 'approved',
-        rating: 4.7,
-        reviewCount: 95,
-        registerTime: '2023-02-15 09:22:15',
-        lastActiveTime: '2023-08-30 15:10:22',
-      },
-      {
-        id: 'prof_003',
-        name: '王老师',
-        avatar: 'https://placeholder.pics/svg/100/DEDEDE/555555/Teacher1',
-        phone: '13700137001',
-        gender: 'female',
-        profession: '教育',
-        specialization: '高中数学',
-        serviceTypes: ['一对一辅导', '考前冲刺', '学习规划'],
-        experience: 12,
-        region: '上海市',
-        city: '上海市',
-        status: 'pending',
-        rating: 0,
-        reviewCount: 0,
-        registerTime: '2023-08-25 11:18:45',
-        lastActiveTime: '2023-08-25 11:18:45',
-      },
-    ]
-
-    professionals.value = mockData
-    total.value = mockData.length
+    // 清空数据
+    professionals.value = []
+    total.value = 0
   }
 }
 
