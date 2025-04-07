@@ -42,27 +42,42 @@ class MockCollection {
 
   // 查询文档
   where(condition: any) {
+    // 保存查询条件
+    const filteredData = this.data.filter((item) => {
+      for (const key in condition) {
+        if (item[key] !== condition[key]) {
+          return false
+        }
+      }
+      return true
+    })
+
+    let skipCount = 0
+    let limitCount = filteredData.length
+
     return {
+      // 分页方法 - 跳过指定数量记录
+      skip: (count: number) => {
+        console.log(`[Mock DB] 跳过${count}条记录`)
+        skipCount = count
+        return this // 返回当前对象以支持链式调用
+      },
+
+      // 分页方法 - 限制返回记录数
+      limit: (count: number) => {
+        console.log(`[Mock DB] 限制返回${count}条记录`)
+        limitCount = count
+        return this // 返回当前对象以支持链式调用
+      },
+
+      // 获取查询结果
       get: async () => {
         try {
           console.log(`[Mock DB] 查询${this.name}集合:`, condition)
+          console.log(`[Mock DB] 分页参数: skip=${skipCount}, limit=${limitCount}`)
 
-          // 简单的条件匹配
-          const results = this.data.filter((item) => {
-            for (const key in condition) {
-              console.log(
-                `[Mock DB] 比较字段 ${key}:`,
-                item[key],
-                '===',
-                condition[key],
-                item[key] === condition[key],
-              )
-              if (item[key] !== condition[key]) {
-                return false
-              }
-            }
-            return true
-          })
+          // 应用分页
+          const results = filteredData.slice(skipCount, skipCount + limitCount)
 
           console.log('[Mock DB] 查询结果:', results)
           return { data: results }
@@ -71,7 +86,18 @@ class MockCollection {
           throw error
         }
       },
+
+      // 获取记录总数
+      count: async () => {
+        console.log(`[Mock DB] 计算${this.name}集合记录总数`)
+        return { total: filteredData.length }
+      },
     }
+  }
+
+  // 获取所有记录数量
+  count() {
+    return Promise.resolve({ total: this.data.length })
   }
 
   // 根据ID获取文档

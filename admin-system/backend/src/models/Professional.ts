@@ -64,94 +64,93 @@ export class Professional {
    */
   static async getList(params: ProfessionalListParams) {
     try {
+      console.log('[专业人士] 开始获取列表, 参数:', params)
+
       const page = params.page || 1
       const pageSize = params.pageSize || 10
 
       // 使用真实数据库查询
       const collection = db.collection(collections.PROFESSIONALS)
+      console.log('[专业人士] 获取到集合:', collections.PROFESSIONALS)
 
       // 构建查询条件
       const query = {}
       if (params.status) {
         query['status'] = params.status
       }
+      console.log('[专业人士] 查询条件:', query)
 
-      // 获取总数
-      const countResult = await collection.where(query).count()
-      const total = countResult.total || 0
+      try {
+        // 使用集合查询
+        console.log('[专业人士] 执行分页查询')
 
-      // 分页查询数据
-      const res = await collection
-        .where(query)
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .get()
+        // 获取总数
+        const countResult = await collection.where(query).count()
+        console.log('[专业人士] 总数查询结果:', countResult)
+        const total = countResult.total || 0
 
-      // 处理结果
-      const list = res.data || []
+        // 获取分页数据
+        const queryRef = collection.where(query)
+        console.log('[专业人士] 创建查询引用成功')
 
-      // 如果没有数据，则返回空数组
-      if (list.length === 0) {
-        console.log('没有找到专业人士数据')
+        // 应用分页
+        const skipCount = (page - 1) * pageSize
+        const limitCount = pageSize
+        console.log(`[专业人士] 应用分页: skip=${skipCount}, limit=${limitCount}`)
 
-        // 使用模拟数据（仅开发环境）
-        if (process.env.NODE_ENV === 'development') {
-          console.log('使用模拟数据')
-          const statuses: ProfessionalStatus[] = ['pending', 'approved', 'rejected', 'disabled']
-          const serviceTypes = [
-            '医疗健康',
-            '法律咨询',
-            '心理咨询',
-            '教育培训',
-            '财务规划',
-            '职业规划',
-            '生活指导',
-          ]
+        // 执行分页查询
+        const res = await queryRef.skip(skipCount).limit(limitCount).get()
+        console.log('[专业人士] 查询结果:', res)
 
-          const mockProfessionals = Array.from({ length: 5 }, (_, i) => {
-            const status = statuses[Math.floor(Math.random() * 4)]
-            const serviceType = serviceTypes[Math.floor(Math.random() * serviceTypes.length)]
+        // 处理结果
+        const list = res.data || []
+        console.log('[专业人士] 数据列表长度:', list.length)
+
+        // 如果没有数据，则返回模拟数据
+        if (list.length === 0) {
+          console.log('[专业人士] 没有找到数据')
+
+          // 使用模拟数据（仅开发环境）
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[专业人士] 使用模拟数据')
+            const mockProfessionals = generateMockProfessionals(5)
 
             return {
-              id: `prof_${i + 1}`,
-              name: `专业人士${i + 1}`,
-              avatar: '',
-              phone: `1387654${i.toString().padStart(4, '0')}`,
-              email: `pro${i + 1}@example.com`,
-              serviceType,
-              title: `${serviceType}顾问`,
-              yearsOfExperience: Math.floor(Math.random() * 20) + 1,
-              status,
-              createTime: new Date(Date.now() - i * 86400000).toISOString(),
+              list: mockProfessionals,
+              pagination: {
+                total: mockProfessionals.length,
+                page,
+                pageSize,
+                totalPages: Math.ceil(mockProfessionals.length / pageSize),
+              },
             }
-          })
-
-          return {
-            list: mockProfessionals,
-            pagination: {
-              total: mockProfessionals.length,
-              page,
-              pageSize,
-              totalPages: Math.ceil(mockProfessionals.length / pageSize),
-            },
           }
         }
-      }
 
-      return {
-        list,
-        pagination: {
-          total,
-          page,
-          pageSize,
-          totalPages: Math.ceil(total / pageSize),
-        },
+        // 返回实际查询结果
+        return {
+          list,
+          pagination: {
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize),
+          },
+        }
+      } catch (queryError) {
+        console.error('[专业人士] 查询出错:', queryError)
+        console.error(
+          '[专业人士] 错误堆栈:',
+          queryError instanceof Error ? queryError.stack : '未知错误',
+        )
+        throw queryError
       }
     } catch (error) {
-      console.error('获取专业人士列表失败:', error)
+      console.error('[专业人士] 获取列表失败:', error)
+
       // 出错时返回模拟数据（开发环境）
       if (process.env.NODE_ENV === 'development') {
-        console.log('查询出错，使用模拟数据')
+        console.log('[专业人士] 使用模拟数据(出错时)')
         const mockProfessionals = generateMockProfessionals(5)
         return {
           list: mockProfessionals,
@@ -163,6 +162,7 @@ export class Professional {
           },
         }
       }
+
       throw error
     }
   }
