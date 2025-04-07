@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import { config } from 'dotenv'
+import path from 'path'
 
 // 导入路由
 import authRoutes from './routes/authRoutes'
@@ -10,6 +11,8 @@ import userRoutes from './routes/userRoutes'
 import bookingRoutes from './routes/bookingRoutes'
 import dashboardRoutes from './routes/dashboardRoutes'
 import serviceTypeRoutes from './routes/serviceTypeRoutes'
+import { initMockData } from './utils/mockDataInitializer'
+import { handleCloudFile } from './routes/fileProxyRoutes'
 
 // 加载环境变量
 config()
@@ -22,6 +25,28 @@ app.use(cors())
 app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// 解析扩展JSON格式
+app.use((req, res, next) => {
+  express.json({
+    reviver: (key, value) => {
+      if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
+        try {
+          return JSON.parse(value)
+        } catch (e) {
+          return value
+        }
+      }
+      return value
+    },
+  })(req, res, next)
+})
+
+// 静态文件服务
+app.use('/static', express.static(path.join(__dirname, '../public')))
+
+// 添加云存储文件代理路由
+app.get('/proxy/cloud-file', handleCloudFile)
 
 // 设置路由
 app.use('/api/auth', authRoutes)

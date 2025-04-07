@@ -12,7 +12,15 @@
         <div class="section basic-info">
           <h3>基本信息</h3>
           <div class="profile-header">
-            <el-avatar :size="100" :src="professional.avatarUrl || professional.avatar" />
+            <el-avatar
+              :size="100"
+              :src="professional.avatarUrl || professional.avatar"
+              @error="handleImageError('头像加载失败')"
+            >
+              <div class="avatar-fallback">
+                {{ professional.name ? professional.name.substring(0, 1) : '?' }}
+              </div>
+            </el-avatar>
             <div class="profile-info">
               <h2 class="name">{{ professional.name || '未提供姓名' }}</h2>
               <div class="status">
@@ -96,7 +104,15 @@
                     :src="professional.idCardFront"
                     :preview-src-list="[professional.idCardFront]"
                     fit="cover"
-                  />
+                    @error="handleImageError('身份证正面加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">身份证正面加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
                 <div v-if="professional.idCardBack" class="certificate-item">
                   <h4>身份证反面</h4>
@@ -104,7 +120,15 @@
                     :src="professional.idCardBack"
                     :preview-src-list="[professional.idCardBack]"
                     fit="cover"
-                  />
+                    @error="handleImageError('身份证反面加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">身份证反面加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
               </div>
               <el-empty v-else description="未上传身份证照片"></el-empty>
@@ -116,7 +140,15 @@
                     :src="professional.qualification"
                     :preview-src-list="[professional.qualification]"
                     fit="cover"
-                  />
+                    @error="handleImageError('资格证书加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">资格证书加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
               </div>
               <el-empty v-else description="未上传资格证书"></el-empty>
@@ -128,7 +160,15 @@
                     :src="professional.education"
                     :preview-src-list="[professional.education]"
                     fit="cover"
-                  />
+                    @error="handleImageError('教育证明加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">教育证明加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
               </div>
               <el-empty v-else description="未上传教育证明"></el-empty>
@@ -140,7 +180,15 @@
                     :src="professional.professional"
                     :preview-src-list="[professional.professional]"
                     fit="cover"
-                  />
+                    @error="handleImageError('职业资格证明加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">职业资格证明加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
               </div>
               <el-empty v-else description="未上传职业资格证明"></el-empty>
@@ -152,7 +200,15 @@
                     :src="professional.honor"
                     :preview-src-list="[professional.honor]"
                     fit="cover"
-                  />
+                    @error="handleImageError('荣誉证书加载失败')"
+                  >
+                    <template #error>
+                      <div class="image-error">
+                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <div class="error-text">荣誉证书加载失败</div>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
               </div>
               <el-empty v-else description="未上传荣誉证书"></el-empty>
@@ -182,6 +238,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ElMessageBox from 'element-plus/es/components/message-box/index'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import axios from 'axios'
 
 interface Professional {
@@ -232,18 +289,54 @@ const fetchProfessionalDetail = async () => {
     console.log('专业人士详情响应:', response.data)
 
     if (response.data && response.data.code === 0 && response.data.data) {
+      // 处理云存储URL
+      const processCloudUrl = (url) => {
+        if (!url) return ''
+
+        // 将cloud://格式的URL转为代理URL
+        if (url.startsWith('cloud://')) {
+          return `/proxy/cloud-file?url=${encodeURIComponent(url)}`
+        }
+
+        return url
+      }
+
+      // 处理可能包含多个逗号分隔的URL
+      const processMultiUrls = (urlString) => {
+        if (!urlString) return ''
+
+        if (urlString.includes(',')) {
+          return urlString
+            .split(',')
+            .map((url) => processCloudUrl(url.trim()))
+            .join(',')
+        }
+
+        return processCloudUrl(urlString)
+      }
+
+      // 处理数据
+      const data = response.data.data
+
+      // 处理证书URL
+      if (data.idCardFront) data.idCardFront = processCloudUrl(data.idCardFront)
+      if (data.idCardBack) data.idCardBack = processCloudUrl(data.idCardBack)
+      if (data.qualification) data.qualification = processMultiUrls(data.qualification)
+      if (data.education) data.education = processMultiUrls(data.education)
+      if (data.professional) data.professional = processMultiUrls(data.professional)
+      if (data.honor) data.honor = processMultiUrls(data.honor)
+      if (data.avatarUrl) data.avatarUrl = processCloudUrl(data.avatarUrl)
+
       professional.value = {
-        ...response.data.data,
-        id: response.data.data.id || response.data.data._id, // 确保ID字段统一
+        ...data,
+        id: data.id || data._id, // 确保ID字段统一
         // 确保其他必要字段
-        status: response.data.data.status || 'pending',
-        professionalTypes:
-          response.data.data.professionalTypes ||
-          (response.data.data.serviceType ? [response.data.data.serviceType] : []),
-        phone: response.data.data.phone || '未提供',
-        email: response.data.data.email || '未提供',
-        name: response.data.data.name || '未命名专业人士',
-        avatarUrl: response.data.data.avatarUrl || response.data.data.avatar || '',
+        status: data.status || 'pending',
+        professionalTypes: data.professionalTypes || (data.serviceType ? [data.serviceType] : []),
+        phone: data.phone || '未提供',
+        email: data.email || '未提供',
+        name: data.name || '未命名专业人士',
+        avatar: processCloudUrl(data.avatar),
       }
       console.log('处理后的专业人士数据:', professional.value)
     } else {
@@ -361,6 +454,11 @@ const getStatusText = (status) => {
   return statusMap[status] || '未知'
 }
 
+// 图片加载失败处理
+const handleImageError = (message: string) => {
+  console.error(`图片加载失败: ${message}`)
+}
+
 onMounted(() => {
   fetchProfessionalDetail()
 })
@@ -464,5 +562,40 @@ onMounted(() => {
   margin-top: 10px;
   font-size: 0.9em;
   color: #666;
+}
+
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 200px;
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+}
+
+.image-error .el-icon {
+  margin-bottom: 10px;
+  font-size: 48px;
+  color: #909399;
+}
+
+.error-text {
+  font-size: 14px;
+  color: #909399;
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 36px;
+  font-weight: bold;
+  color: #909399;
+  background-color: #f5f7fa;
 }
 </style>
