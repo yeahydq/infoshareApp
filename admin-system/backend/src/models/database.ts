@@ -64,7 +64,7 @@ if (!USE_MOCK_DB) {
 // 集合名称枚举
 export const collections = {
   PROFESSIONALS: 'professionals',
-  USERS: 'users',
+  USERS: 'UserList',
   BOOKINGS: 'bookings',
   TIME_SCHEDULES: 'timeSchedules',
   USER_ROLES: 'userRoles',

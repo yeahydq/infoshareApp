@@ -192,21 +192,32 @@ const dashboardData = ref<DashboardData>({
 const fetchDashboardData = async () => {
   loading.value = true
   try {
+    console.log('开始获取仪表盘数据...')
     // 调用后端API获取数据
     const response = await axios.get('/api/dashboard')
+    console.log('仪表盘API响应:', response.data)
 
     if (response.data && response.data.data) {
       // 将数据格式转换为符合前端需要的格式
       const data = response.data.data
+      console.log('仪表盘原始数据:', data)
+
+      // 检查recentProfessionals是否存在
+      console.log('最新专业人士数据:', data.recentProfessionals)
 
       // 确保recentProfessionals每一项都有_id字段
-      const recentPros = (data.recentProfessionals || []).map((pro) => ({
-        _id: pro.id || pro._id,
-        id: pro.id || pro._id,
-        name: pro.name || '',
-        avatarUrl: pro.avatar || pro.avatarUrl || '',
-        createTime: pro.createTime || new Date().toISOString(),
-      }))
+      const recentPros = (data.recentProfessionals || []).map((pro) => {
+        console.log('处理专业人士数据:', pro)
+        return {
+          _id: pro.id || pro._id,
+          id: pro.id || pro._id,
+          name: pro.name || '未命名专业人士',
+          avatarUrl: pro.avatar || pro.avatarUrl || '',
+          createTime: pro.createTime || new Date().toISOString(),
+        }
+      })
+
+      console.log('处理后的最新专业人士数据:', recentPros)
 
       dashboardData.value = {
         professionalCount: data.stats?.professionals?.total || 0,
@@ -228,6 +239,11 @@ const fetchDashboardData = async () => {
           })) || [],
         recentReviews: recentPros,
       }
+
+      console.log('处理后的仪表盘数据:', dashboardData.value)
+    } else {
+      console.error('仪表盘数据格式不正确:', response.data)
+      ElMessage.warning('获取到的数据格式不正确')
     }
 
     loading.value = false

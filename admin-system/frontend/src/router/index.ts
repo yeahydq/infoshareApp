@@ -29,6 +29,12 @@ const router = createRouter({
           meta: { title: '仪表盘', requiresAuth: true },
         },
         {
+          path: 'dashboard',
+          name: 'Dashboard',
+          component: () => import('../views/Dashboard.vue'),
+          meta: { title: '仪表盘', requiresAuth: true },
+        },
+        {
           path: 'professionals',
           name: 'ProfessionalList',
           component: () => import('../views/professionals/ProfessionalList.vue'),

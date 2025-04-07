@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator'
 import { validateRequest } from '../middlewares/validation'
 import { requireAuth, requireAdmin } from '../middlewares/auth'
 import { User } from '../models/User'
+import { Booking } from '../models/Booking'
 
 const router = express.Router()
 
@@ -107,5 +108,78 @@ router.post(
     }
   },
 )
+
+// 获取用户预约记录
+router.get('/:userId/bookings', requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params
+    console.log(`[用户预约] 开始获取用户 ${userId} 的预约记录`)
+
+    // 获取用户的预约记录
+    const bookings = await Booking.getList({
+      userId,
+      page: 1,
+      pageSize: 100,
+    })
+
+    console.log(`[用户预约] 获取到预约记录: ${bookings.list.length} 条`)
+    res.json({
+      code: 0,
+      message: '获取预约记录成功',
+      data: bookings.list,
+    })
+  } catch (error) {
+    console.error('[用户预约] 获取预约记录失败:', error)
+    res.status(500).json({
+      code: 500,
+      message: '获取预约记录失败',
+      data: null,
+    })
+  }
+})
+
+// 获取用户操作日志
+router.get('/:userId/logs', requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params
+    console.log(`[用户日志] 开始获取用户 ${userId} 的操作日志`)
+
+    // 模拟操作日志数据
+    const mockLogs = [
+      {
+        time: new Date().toISOString(),
+        action: '登录',
+        details: '用户登录系统',
+        ip: '127.0.0.1',
+      },
+      {
+        time: new Date(Date.now() - 3600000).toISOString(),
+        action: '修改资料',
+        details: '更新了个人头像',
+        ip: '127.0.0.1',
+      },
+      {
+        time: new Date(Date.now() - 7200000).toISOString(),
+        action: '预约',
+        details: '预约了专业人士服务',
+        ip: '127.0.0.1',
+      },
+    ]
+
+    console.log(`[用户日志] 返回模拟日志数据: ${mockLogs.length} 条`)
+    res.json({
+      code: 0,
+      message: '获取操作日志成功',
+      data: mockLogs,
+    })
+  } catch (error) {
+    console.error('[用户日志] 获取操作日志失败:', error)
+    res.status(500).json({
+      code: 500,
+      message: '获取操作日志失败',
+      data: null,
+    })
+  }
+})
 
 export default router

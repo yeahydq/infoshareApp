@@ -10,7 +10,7 @@
           @clear="handleSearch"
         >
           <template #prefix>
-            <el-icon><Search /></el-icon>
+            <el-icon><ElementPlusIconsVue.Search /></el-icon>
           </template>
           <template #append>
             <el-button @click="handleSearch">搜索</el-button>
@@ -154,8 +154,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import ElMessageBox from 'element-plus/es/components/message-box/index'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { DEFAULT_AVATAR } from '@/assets/index'
 import axios from 'axios'
 
@@ -208,6 +209,9 @@ const logsLoading = ref(false)
 const fetchUsers = async () => {
   loading.value = true
   try {
+    console.log(
+      `开始获取用户列表，页码: ${currentPage.value}, 每页数量: ${pageSize.value}, 查询: ${searchQuery.value}`,
+    )
     // 调用后端API获取数据
     const response = await axios.get('/api/users', {
       params: {
@@ -217,8 +221,97 @@ const fetchUsers = async () => {
       },
     })
 
-    users.value = response.data.data.list
-    total.value = response.data.data.total
+    console.log('API响应数据:', response.data)
+
+    // 检查数据格式并处理
+    if (response.data && response.data.data && response.data.data.list) {
+      // 将API返回的数据映射到组件所需的格式
+      users.value = response.data.data.list.map((item: any) => {
+        console.log('原始用户数据项:', item)
+
+        // 将后端返回的字段映射到前端需要的字段
+        return {
+          userId: item._id || item.id,
+          openid: item._openid || item.openid,
+          nickname: item.nickName || item.nickname || '未知用户',
+          avatar: item.avatarUrl || item.avatarUrlCloud || item.avatar || DEFAULT_AVATAR,
+          gender:
+            typeof item.gender === 'number'
+              ? item.gender === 1
+                ? 'male'
+                : item.gender === 2
+                  ? 'female'
+                  : 'unknown'
+              : item.gender || 'unknown',
+          region: item.province || item.region || '',
+          city: item.city || '',
+          registerTime: item.createTime
+            ? new Date(item.createTime).toLocaleString()
+            : item.updateTime
+              ? new Date(
+                  typeof item.updateTime === 'number' ? item.updateTime : item.updateTime,
+                ).toLocaleString()
+              : '未知',
+          lastLoginTime: item.lastLoginTime
+            ? new Date(item.lastLoginTime).toLocaleString()
+            : item.updateTime
+              ? new Date(
+                  typeof item.updateTime === 'number' ? item.updateTime : item.updateTime,
+                ).toLocaleString()
+              : '未知',
+          bookingCount: item.bookingCount || 0,
+          status: item.status || 'active',
+        }
+      })
+      console.log('处理后的用户数据:', users.value)
+      total.value =
+        response.data.data.pagination?.total || response.data.data.total || users.value.length
+    } else {
+      console.warn('API返回数据格式异常:', response.data)
+      // 尝试处理异常格式
+      if (response.data && Array.isArray(response.data.data)) {
+        users.value = response.data.data.map((item: any) => {
+          return {
+            userId: item._id || item.id,
+            openid: item._openid || item.openid,
+            nickname: item.nickName || item.nickname || '未知用户',
+            avatar: item.avatarUrl || item.avatarUrlCloud || item.avatar || DEFAULT_AVATAR,
+            gender:
+              typeof item.gender === 'number'
+                ? item.gender === 1
+                  ? 'male'
+                  : item.gender === 2
+                    ? 'female'
+                    : 'unknown'
+                : item.gender || 'unknown',
+            region: item.province || item.region || '',
+            city: item.city || '',
+            registerTime: item.createTime
+              ? new Date(item.createTime).toLocaleString()
+              : item.updateTime
+                ? new Date(
+                    typeof item.updateTime === 'number' ? item.updateTime : item.updateTime,
+                  ).toLocaleString()
+                : '未知',
+            lastLoginTime: item.lastLoginTime
+              ? new Date(item.lastLoginTime).toLocaleString()
+              : item.updateTime
+                ? new Date(
+                    typeof item.updateTime === 'number' ? item.updateTime : item.updateTime,
+                  ).toLocaleString()
+                : '未知',
+            bookingCount: item.bookingCount || 0,
+            status: item.status || 'active',
+          }
+        })
+        total.value = users.value.length
+      } else {
+        users.value = []
+        total.value = 0
+        ElMessage.warning('返回数据格式异常，请检查API')
+      }
+    }
+
     loading.value = false
   } catch (error) {
     console.error('获取用户列表失败', error)
