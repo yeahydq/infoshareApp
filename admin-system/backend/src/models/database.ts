@@ -32,6 +32,9 @@ console.log('[数据库] 环境变量:', {
   USE_MOCK_DB,
 })
 
+// 尝试检查是否有USE_MOCK_DB环境变量，并打印其值
+console.log('[数据库] 环境变量USE_MOCK_DB:', process.env.USE_MOCK_DB)
+
 // 初始化数据库
 let db: any
 

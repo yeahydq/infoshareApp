@@ -1,5 +1,26 @@
 import db, { collections } from './database'
 import { generateMockData } from '../utils/mockDataGenerator'
+import * as tcb from '@cloudbase/node-sdk'
+
+// 初始化云环境配置
+const CLOUD_ENV_ID = process.env.TCB_ENV_ID || ''
+const SECRET_ID = process.env.TCB_SECRET_ID || ''
+const SECRET_KEY = process.env.TCB_SECRET_KEY || ''
+
+// 使用和cloudController相同的方式初始化tcb应用实例
+const getTcbApp = () => {
+  // 根据是否有环境参数决定初始化方式
+  if (CLOUD_ENV_ID && SECRET_ID && SECRET_KEY) {
+    return tcb.init({
+      secretId: SECRET_ID,
+      secretKey: SECRET_KEY,
+      env: CLOUD_ENV_ID,
+    })
+  }
+
+  // 使用官方文档的简化方式初始化
+  return tcb.init()
+}
 
 export interface ProfessionalDocument {
   _id: string
@@ -59,120 +80,74 @@ interface ProfessionalListParams {
 export class Professional {
   /**
    * 获取专业人士列表
-   * @param params 查询参数
-   * @returns 专业人士列表和分页信息
+   * @param criteria 查询条件
+   * @returns 专业人士列表
    */
-  static async getList(params: ProfessionalListParams) {
+  static async getList(params: any) {
     try {
-      console.log('[专业人士] 开始获取列表, 参数:', params)
+      // 检查是否使用模拟数据库
+      const useMockDb = process.env.USE_MOCK_DB === 'true'
 
-      const page = params.page || 1
-      const pageSize = params.pageSize || 10
-
-      // 使用真实数据库查询
-      const collection = db.collection(collections.PROFESSIONALS)
-      console.log('[专业人士] 获取到集合:', collections.PROFESSIONALS)
-
-      // 构建查询条件
-      const query = {}
-      if (params.status) {
-        query['status'] = params.status
+      if (useMockDb) {
+        console.log('[专业人士] 使用模拟数据库')
+        return this.generateMockData(params)
       }
-      console.log('[专业人士] 查询条件:', query)
 
-      try {
-        // 使用集合查询
-        console.log('[专业人士] 执行分页查询')
+      console.log('[专业人士] 使用真实数据库')
+      const collection = db.collection(collections.PROFESSIONALS)
 
-        // 获取总数
-        const countResult = await collection.where(query).count()
-        console.log('[专业人士] 总数查询结果:', countResult)
-        const total = countResult.total || 0
+      const { pageSize = 10, pageNumber = 1, searchText = '' } = params
+      const skip = (pageNumber - 1) * pageSize
 
-        // 获取分页数据
-        const queryRef = collection.where(query)
-        console.log('[专业人士] 创建查询引用成功')
+      let query = {}
+      if (searchText) {
+        // 构建模糊搜索条件
+        query = {
+          name: db.RegExp({
+            regexp: searchText,
+            options: 'i',
+          }),
+        }
+      }
 
-        // 查询所有符合条件的数据（不进行分页，后面会手动处理）
-        const res = await queryRef.orderBy('updateTime', 'desc').get()
-        console.log('[专业人士] 查询结果:', res)
+      // 首先获取所有匹配的记录，按updateTime降序排序
+      const allRecordsResult = await collection.where(query).orderBy('updateTime', 'desc').get()
 
-        // 处理结果
-        let list = res.data || []
-        console.log('[专业人士] 原始数据列表长度:', list.length)
+      console.log('[专业人士] 获取到所有记录数量:', allRecordsResult.data?.length || 0)
 
-        // 根据_openid去重，保留updateTime最新的记录
-        const uniqueMap = new Map()
-        for (const item of list) {
-          const openid = item._openid
-          if (!openid) continue // 跳过没有_openid的记录
-
-          if (
-            !uniqueMap.has(openid) ||
-            (item.updateTime &&
-              new Date(item.updateTime) > new Date(uniqueMap.get(openid).updateTime))
-          ) {
-            // 确保id字段存在
-            uniqueMap.set(openid, {
-              ...item,
-              id: item.id || item._id, // 添加id字段
-            })
+      // 按_openid分组，保留每组最新的记录（已经按updateTime降序排序了）
+      const latestByOpenid = new Map<string, any>()
+      if (allRecordsResult.data && allRecordsResult.data.length > 0) {
+        allRecordsResult.data.forEach((record) => {
+          // 如果记录有_openid字段，且这个_openid还没有记录或当前记录更新
+          if (record._openid && !latestByOpenid.has(record._openid)) {
+            latestByOpenid.set(record._openid, record)
           }
-        }
+        })
+      }
 
-        // 转换Map为数组
-        list = Array.from(uniqueMap.values())
-        console.log('[专业人士] 去重后数据列表长度:', list.length)
+      // 转换回数组
+      const filteredList = Array.from(latestByOpenid.values())
+      console.log('[专业人士] 去重后记录数量:', filteredList.length)
 
-        // 如果数据库中没有数据，使用模拟数据
-        if (list.length === 0) {
-          console.log('[专业人士] 数据库中无数据，使用模拟数据')
-          // 生成10个模拟数据
-          const mockList = generateMockProfessionals(10).map((item) => ({
-            ...item,
-            id: item.id,
-            _id: item.id,
-            status: item.status || 'pending',
-            professionalTypes: [item.serviceType],
-            createTime: item.createTime,
-            updateTime: new Date().toISOString(),
-          }))
+      // 计算总数
+      const total = filteredList.length
 
-          // 根据status过滤
-          list = params.status ? mockList.filter((item) => item.status === params.status) : mockList
+      // 手动分页
+      const paginatedList = filteredList.slice(skip, skip + pageSize)
 
-          console.log('[专业人士] 生成的模拟数据:', list)
-        }
+      console.log('[专业人士] 分页后记录数量:', paginatedList.length)
 
-        // 手动执行分页
-        const skipCount = (page - 1) * pageSize
-        const limitCount = pageSize
-        const paginatedList = list.slice(skipCount, skipCount + limitCount)
-        console.log(
-          `[专业人士] 应用分页: skip=${skipCount}, limit=${limitCount}, 结果长度=${paginatedList.length}`,
-        )
-
-        // 返回去重和分页后的结果
-        return {
-          list: paginatedList,
-          pagination: {
-            total: list.length,
-            page,
-            pageSize,
-            totalPages: Math.ceil(list.length / pageSize),
-          },
-        }
-      } catch (queryError) {
-        console.error('[专业人士] 查询出错:', queryError)
-        console.error(
-          '[专业人士] 错误堆栈:',
-          queryError instanceof Error ? queryError.stack : '未知错误',
-        )
-        throw queryError
+      return {
+        total,
+        list: paginatedList,
+        pageSize,
+        pageNumber,
       }
     } catch (error) {
-      console.error('[专业人士] 获取列表失败:', error)
-      throw error
+      console.error('[Professional模型] 获取专业人士列表失败:', error)
+      // 出错时返回模拟数据
+      return this.generateMockData(params)
     }
   }
 
@@ -184,82 +159,172 @@ export class Professional {
   static async getDetail(id: string) {
     try {
       console.log('[专业人士] 开始获取详情, ID:', id)
+
+      // 检查是否使用模拟数据库
+      const useMockDb = process.env.USE_MOCK_DB === 'true'
+      if (useMockDb) {
+        console.log('[专业人士] 使用模拟数据')
+        return generateMockProfessionalDetail(id)
+      }
+
       // 查询数据库
       const collection = db.collection(collections.PROFESSIONALS)
       const res = await collection.doc(id).get()
       console.log('[专业人士] 详情查询结果:', res)
 
-      // 将cloud://格式的URL转换为https://格式
-      const convertCloudUrl = (url: string) => {
-        if (!url) return ''
-
-        // 直接返回原始URL，不再进行转换
-        return url
-      }
-
-      // 处理可能包含多个URL的字段
-      const convertMultiCloudUrls = (urlString: string) => {
-        if (!urlString) return ''
-
-        // 直接返回原始URL，不再进行转换
-        return urlString
-      }
-
       // 兼容不同的返回数据格式
       if (res.data) {
+        let professionalData
+
         if (Array.isArray(res.data) && res.data.length > 0) {
-          console.log('[专业人士] 找到详情数据(数组格式)')
-          const data = res.data[0]
+          professionalData = res.data[0]
 
-          // 转换各种证书URL
-          if (data.idCardFront) data.idCardFront = convertCloudUrl(data.idCardFront)
-          if (data.idCardBack) data.idCardBack = convertCloudUrl(data.idCardBack)
-          if (data.qualification) data.qualification = convertMultiCloudUrls(data.qualification)
-          if (data.education) data.education = convertMultiCloudUrls(data.education)
-          if (data.professional) data.professional = convertMultiCloudUrls(data.professional)
-          if (data.honor) data.honor = convertMultiCloudUrls(data.honor)
-          if (data.avatarUrl) data.avatarUrl = convertCloudUrl(data.avatarUrl)
+          // 如果有_openid，检查是否有更新的记录
+          if (professionalData._openid) {
+            console.log(`[专业人士] 检查是否有更新的记录，openid: ${professionalData._openid}`)
 
-          // 确保fileInfo中的URL也被转换
-          if (data.fileInfo) {
-            Object.keys(data.fileInfo).forEach((key) => {
-              if (data.fileInfo[key] && data.fileInfo[key].url) {
-                data.fileInfo[key].url = convertCloudUrl(data.fileInfo[key].url)
+            // 查询同一个openid的所有记录，按更新时间降序
+            const latestResult = await collection
+              .where({
+                _openid: professionalData._openid,
+              })
+              .orderBy('updateTime', 'desc')
+              .limit(1)
+              .get()
+
+            if (latestResult.data && latestResult.data.length > 0) {
+              const latestRecord = latestResult.data[0]
+
+              // 如果找到的最新记录与当前记录不同，使用最新记录
+              if (latestRecord._id !== professionalData._id) {
+                console.log(`[专业人士] 找到更新的记录: ${latestRecord._id}`)
+                professionalData = latestRecord
               }
-            })
-          }
-
-          // 确保包含id字段
-          return {
-            ...data,
-            id: data.id || data._id, // 优先使用已有id，否则使用_id
+            }
           }
         } else if (typeof res.data === 'object' && res.data !== null) {
-          console.log('[专业人士] 找到详情数据(对象格式)')
-          const data = res.data
+          professionalData = res.data
+
+          // 如果有_openid，检查是否有更新的记录
+          if (professionalData._openid) {
+            console.log(`[专业人士] 检查是否有更新的记录，openid: ${professionalData._openid}`)
+
+            // 查询同一个openid的所有记录，按更新时间降序
+            const latestResult = await collection
+              .where({
+                _openid: professionalData._openid,
+              })
+              .orderBy('updateTime', 'desc')
+              .limit(1)
+              .get()
+
+            if (latestResult.data && latestResult.data.length > 0) {
+              const latestRecord = latestResult.data[0]
+
+              // 如果找到的最新记录与当前记录不同，使用最新记录
+              if (latestRecord._id !== professionalData._id) {
+                console.log(`[专业人士] 找到更新的记录: ${latestRecord._id}`)
+                professionalData = latestRecord
+              }
+            }
+          }
+        }
+
+        if (professionalData) {
+          // 将cloud://格式的URL转换为https://格式
+          const convertCloudUrl = async (url: string) => {
+            if (!url) return ''
+
+            // 检查URL是否是cloud://开头
+            if (url.startsWith('cloud://')) {
+              try {
+                console.log('[专业人士] 转换云存储URL:', url)
+                // 获取临时访问URL
+                const app = getTcbApp()
+                const result = await app.getTempFileURL({
+                  fileList: [url],
+                })
+
+                console.log('[专业人士] 获取临时URL结果:', result)
+
+                if (result.fileList && result.fileList.length > 0) {
+                  const fileInfo = result.fileList[0] as any
+                  if (fileInfo.tempFileURL) {
+                    console.log('[专业人士] 转换成功:', fileInfo.tempFileURL)
+                    return fileInfo.tempFileURL
+                  }
+                }
+
+                console.warn('[专业人士] 无法获取临时URL，返回原始URL:', url)
+                return url
+              } catch (error) {
+                console.error('[专业人士] 转换URL失败:', error)
+                return url
+              }
+            }
+
+            // 如果不是cloud://开头，直接返回
+            return url
+          }
+
+          // 处理可能包含多个URL的字段
+          const convertMultiCloudUrls = async (urlString: string) => {
+            if (!urlString) return ''
+
+            // 检查是否包含cloud://开头的URL
+            if (urlString.includes('cloud://')) {
+              try {
+                // 分割URL字符串，可能是逗号分隔的多个URL
+                const urls = urlString.split(',').map((url) => url.trim())
+                const convertedUrls = await Promise.all(
+                  urls.map(async (url) => await convertCloudUrl(url)),
+                )
+                return convertedUrls.join(',')
+              } catch (error) {
+                console.error('[专业人士] 转换多个URL失败:', error)
+                return urlString
+              }
+            }
+
+            // 如果不包含cloud://，直接返回
+            return urlString
+          }
 
           // 转换各种证书URL
-          if (data.idCardFront) data.idCardFront = convertCloudUrl(data.idCardFront)
-          if (data.idCardBack) data.idCardBack = convertCloudUrl(data.idCardBack)
-          if (data.qualification) data.qualification = convertMultiCloudUrls(data.qualification)
-          if (data.education) data.education = convertMultiCloudUrls(data.education)
-          if (data.professional) data.professional = convertMultiCloudUrls(data.professional)
-          if (data.honor) data.honor = convertMultiCloudUrls(data.honor)
-          if (data.avatarUrl) data.avatarUrl = convertCloudUrl(data.avatarUrl)
+          if (professionalData.idCardFront)
+            professionalData.idCardFront = await convertCloudUrl(professionalData.idCardFront)
+          if (professionalData.idCardBack)
+            professionalData.idCardBack = await convertCloudUrl(professionalData.idCardBack)
+          if (professionalData.qualification)
+            professionalData.qualification = await convertMultiCloudUrls(
+              professionalData.qualification,
+            )
+          if (professionalData.education)
+            professionalData.education = await convertMultiCloudUrls(professionalData.education)
+          if (professionalData.professional)
+            professionalData.professional = await convertMultiCloudUrls(
+              professionalData.professional,
+            )
+          if (professionalData.honor)
+            professionalData.honor = await convertMultiCloudUrls(professionalData.honor)
+          if (professionalData.avatarUrl)
+            professionalData.avatarUrl = await convertCloudUrl(professionalData.avatarUrl)
 
           // 确保fileInfo中的URL也被转换
-          if (data.fileInfo) {
-            Object.keys(data.fileInfo).forEach((key) => {
-              if (data.fileInfo[key] && data.fileInfo[key].url) {
-                data.fileInfo[key].url = convertCloudUrl(data.fileInfo[key].url)
+          if (professionalData.fileInfo) {
+            for (const key of Object.keys(professionalData.fileInfo)) {
+              if (professionalData.fileInfo[key] && professionalData.fileInfo[key].url) {
+                professionalData.fileInfo[key].url = await convertCloudUrl(
+                  professionalData.fileInfo[key].url,
+                )
               }
-            })
+            }
           }
 
           // 确保包含id字段
           return {
-            ...data,
-            id: data.id || data._id, // 优先使用已有id，否则使用_id
+            ...professionalData,
+            id: professionalData.id || professionalData._id, // 优先使用已有id，否则使用_id
           }
         }
       }
@@ -322,6 +387,150 @@ export class Professional {
       throw error
     }
   }
+
+  /**
+   * 生成模拟数据用于测试
+   * @param params 查询参数
+   * @returns 模拟数据
+   */
+  static generateMockData({
+    pageSize = 10,
+    pageNumber = 1,
+    searchText = '',
+  }: {
+    pageSize?: number
+    pageNumber?: number
+    searchText?: string
+    [key: string]: any
+  }) {
+    console.log('[专业人士] 使用模拟数据')
+
+    // 生成模拟专业人士数据
+    const total = 100
+    const mockList = Array(Math.min(total, pageSize))
+      .fill(0)
+      .map((_, index) => {
+        const id = `mock-${(pageNumber - 1) * pageSize + index + 1}`
+        return {
+          id,
+          _id: id,
+          name: searchText
+            ? `${searchText}测试${index + 1}`
+            : `专业人士${(pageNumber - 1) * pageSize + index + 1}`,
+          avatarUrl:
+            'https://randomuser.me/api/portraits/men/' + Math.floor(Math.random() * 100) + '.jpg',
+          gender: Math.random() > 0.5 ? '男' : '女',
+          phone: '1' + Math.floor(Math.random() * 10000000000),
+          email: `test${index}@example.com`,
+          status: ['pending', 'approved', 'rejected'][Math.floor(Math.random() * 3)],
+          verifyStatus: ['pending', 'approved', 'rejected'][Math.floor(Math.random() * 3)],
+          professionalTypes: ['医生', '律师', '会计师'][Math.floor(Math.random() * 3)],
+          createTime: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+          updateTime: new Date().toISOString(),
+          isDeleted: false,
+        }
+      })
+
+    return {
+      total,
+      list: mockList,
+      pageSize,
+      pageNumber,
+    }
+  }
+
+  /**
+   * 通过ID获取专业人士详情
+   */
+  static async getById(id: string) {
+    try {
+      console.log(`[专业人士] 获取ID为 ${id} 的专业人士详情`)
+
+      // 检查是否使用模拟数据
+      const useMockDb = process.env.USE_MOCK_DB === 'true'
+      if (useMockDb) {
+        console.log('[专业人士] 使用模拟数据')
+        return generateMockProfessionalDetail(id)
+      }
+
+      // 查找指定ID的记录
+      const collection = db.collection(collections.PROFESSIONALS)
+      const res = await collection.doc(id).get()
+
+      if (res.data) {
+        let professionalData
+
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          professionalData = res.data[0]
+
+          // 如果有_openid，检查是否有更新的记录
+          if (professionalData._openid) {
+            console.log(`[专业人士] 检查是否有更新的记录，openid: ${professionalData._openid}`)
+
+            // 查询同一个openid的所有记录，按更新时间降序
+            const latestResult = await collection
+              .where({
+                _openid: professionalData._openid,
+              })
+              .orderBy('updateTime', 'desc')
+              .limit(1)
+              .get()
+
+            if (latestResult.data && latestResult.data.length > 0) {
+              const latestRecord = latestResult.data[0]
+
+              // 如果找到的最新记录与当前记录不同，使用最新记录
+              if (latestRecord._id !== professionalData._id) {
+                console.log(`[专业人士] 找到更新的记录: ${latestRecord._id}`)
+                professionalData = latestRecord
+              }
+            }
+          }
+        } else if (typeof res.data === 'object' && res.data !== null) {
+          professionalData = res.data
+
+          // 如果有_openid，检查是否有更新的记录
+          if (professionalData._openid) {
+            console.log(`[专业人士] 检查是否有更新的记录，openid: ${professionalData._openid}`)
+
+            // 查询同一个openid的所有记录，按更新时间降序
+            const latestResult = await collection
+              .where({
+                _openid: professionalData._openid,
+              })
+              .orderBy('updateTime', 'desc')
+              .limit(1)
+              .get()
+
+            if (latestResult.data && latestResult.data.length > 0) {
+              const latestRecord = latestResult.data[0]
+
+              // 如果找到的最新记录与当前记录不同，使用最新记录
+              if (latestRecord._id !== professionalData._id) {
+                console.log(`[专业人士] 找到更新的记录: ${latestRecord._id}`)
+                professionalData = latestRecord
+              }
+            }
+          }
+        }
+
+        if (professionalData) {
+          // 确保包含id字段
+          return {
+            ...professionalData,
+            id: professionalData.id || professionalData._id, // 优先使用已有id，否则使用_id
+          }
+        }
+      }
+
+      console.log(`[专业人士] 未找到ID为 ${id} 的专业人士，使用模拟数据`)
+      return generateMockProfessionalDetail(id)
+    } catch (error) {
+      console.error('[Professional模型] 获取专业人士详情失败:', error)
+      // 出错时返回模拟数据
+      return generateMockProfessionalDetail(id)
+    }
+  }
 }
 
 /**
@@ -373,6 +582,15 @@ function generateMockProfessionalDetail(id: string) {
       idCardBack: { url: 'https://img.freepik.com/free-vector/id-card-template_23-2147495264.jpg' },
       qualification: {
         url: 'https://img.freepik.com/free-vector/elegant-certificate-template-with-frame_23-2147494832.jpg',
+      },
+      education: {
+        url: 'https://img.freepik.com/free-vector/elegant-diploma-template-with-golden-details_23-2148774992.jpg',
+      },
+      professional: {
+        url: 'https://img.freepik.com/free-vector/professional-certification-template-flat-design_23-2149207293.jpg',
+      },
+      honor: {
+        url: 'https://img.freepik.com/free-vector/elegant-certificate-achievement-template-flat-style_23-2147947124.jpg',
       },
     },
   }

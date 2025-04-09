@@ -28,7 +28,12 @@ router.get(
         code: 200,
         message: '获取专业人士列表成功',
         data: result.list,
-        pagination: result.pagination,
+        pagination: {
+          total: result.total,
+          page: result.pageNumber,
+          pageSize: result.pageSize,
+          totalPages: Math.ceil(result.total / result.pageSize),
+        },
       })
     } catch (error: any) {
       console.error('获取专业人士列表失败:', error)

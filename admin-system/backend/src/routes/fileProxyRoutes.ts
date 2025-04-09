@@ -3,17 +3,34 @@
  * 用于处理云存储文件的访问
  */
 import { Request, Response } from 'express'
-import tcb from '@cloudbase/node-sdk'
+import * as tcb from '@cloudbase/node-sdk'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-// 初始化云开发环境
-const app = tcb.init({
-  env: process.env.TCB_ENV_ID,
-  secretId: process.env.TCB_SECRET_ID,
-  secretKey: process.env.TCB_SECRET_KEY,
-})
+// 初始化云环境配置
+const CLOUD_ENV_ID = process.env.TCB_ENV_ID || ''
+const SECRET_ID = process.env.TCB_SECRET_ID || ''
+const SECRET_KEY = process.env.TCB_SECRET_KEY || ''
+
+/**
+ * 初始化tcb应用实例
+ * 根据官方文档使用简化方式初始化
+ * https://cloud.tencent.com/document/product/876/19374
+ */
+const getTcbApp = () => {
+  // 根据是否有环境参数决定初始化方式
+  if (CLOUD_ENV_ID && SECRET_ID && SECRET_KEY) {
+    return tcb.init({
+      secretId: SECRET_ID,
+      secretKey: SECRET_KEY,
+      env: CLOUD_ENV_ID,
+    })
+  }
+
+  // 使用官方文档的简化方式初始化
+  return tcb.init()
+}
 
 /**
  * 处理云存储文件的请求
@@ -34,16 +51,16 @@ export async function handleCloudFile(req: Request, res: Response) {
     if (fileUrl.startsWith('cloud://')) {
       console.log('[文件代理] 检测到云存储文件:', fileUrl)
 
-      // 从cloud://格式的URL中提取文件路径
-      const filePath = fileUrl.replace(/^cloud:\/\/[^/]+\//, '')
-
       try {
-        // 获取临时访问URL
+        // 获取tcb应用实例
+        const app = getTcbApp()
+
+        // 获取临时访问URL，直接使用完整的cloud://格式URL
         const result = await app.getTempFileURL({
-          fileList: [filePath],
+          fileList: [fileUrl.trim()],
         })
 
-        if (result.fileList && result.fileList[0] && result.fileList[0].tempFileURL) {
+        if (result.fileList && result.fileList.length > 0 && result.fileList[0].tempFileURL) {
           const tempUrl = result.fileList[0].tempFileURL
           console.log('[文件代理] 获取到临时访问URL:', tempUrl)
           return res.redirect(tempUrl)

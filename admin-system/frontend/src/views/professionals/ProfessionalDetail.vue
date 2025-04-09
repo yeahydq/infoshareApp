@@ -105,10 +105,18 @@
                     :preview-src-list="[professional.idCardFront]"
                     fit="cover"
                     @error="(e) => handleImageError('身份证正面加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">身份证正面加载失败</div>
                       </div>
                     </template>
@@ -121,10 +129,18 @@
                     :preview-src-list="[professional.idCardBack]"
                     fit="cover"
                     @error="(e) => handleImageError('身份证反面加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">身份证反面加载失败</div>
                       </div>
                     </template>
@@ -141,10 +157,18 @@
                     :preview-src-list="[professional.qualification]"
                     fit="cover"
                     @error="(e) => handleImageError('资格证书加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">资格证书加载失败</div>
                       </div>
                     </template>
@@ -161,10 +185,18 @@
                     :preview-src-list="[professional.education]"
                     fit="cover"
                     @error="(e) => handleImageError('教育证明加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">教育证明加载失败</div>
                       </div>
                     </template>
@@ -181,10 +213,18 @@
                     :preview-src-list="[professional.professional]"
                     fit="cover"
                     @error="(e) => handleImageError('职业资格证明加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">职业资格证明加载失败</div>
                       </div>
                     </template>
@@ -201,10 +241,18 @@
                     :preview-src-list="[professional.honor]"
                     fit="cover"
                     @error="(e) => handleImageError('荣誉证书加载失败', e)"
+                    :initial-index="0"
+                    loading="lazy"
                   >
+                    <template #placeholder>
+                      <div class="image-loading">
+                        <i class="el-icon el-icon-loading"></i>
+                        <span>正在加载图片...</span>
+                      </div>
+                    </template>
                     <template #error>
                       <div class="image-error">
-                        <el-icon><PictureRounded /></el-icon>
+                        <i class="el-icon el-icon-picture"></i>
                         <div class="error-text">荣誉证书加载失败</div>
                       </div>
                     </template>
@@ -242,6 +290,7 @@ import {
   processCloudUrl,
   processMultiUrls,
   handleImageError as handleCloudImageError,
+  getFileInfoUrl,
 } from '@/utils/cloudUtils'
 import axios from 'axios'
 
@@ -296,15 +345,7 @@ const fetchProfessionalDetail = async () => {
       // 处理数据
       const data = response.data.data
 
-      // 处理证书URL
-      if (data.idCardFront) data.idCardFront = processCloudUrl(data.idCardFront)
-      if (data.idCardBack) data.idCardBack = processCloudUrl(data.idCardBack)
-      if (data.qualification) data.qualification = processMultiUrls(data.qualification)
-      if (data.education) data.education = processMultiUrls(data.education)
-      if (data.professional) data.professional = processMultiUrls(data.professional)
-      if (data.honor) data.honor = processMultiUrls(data.honor)
-      if (data.avatarUrl) data.avatarUrl = processCloudUrl(data.avatarUrl)
-
+      // 处理所有云存储URL
       professional.value = {
         ...data,
         id: data.id || data._id, // 确保ID字段统一
@@ -314,9 +355,16 @@ const fetchProfessionalDetail = async () => {
         phone: data.phone || '未提供',
         email: data.email || '未提供',
         name: data.name || '未命名专业人士',
-        avatar: processCloudUrl(data.avatar),
+        // 使用工具函数处理所有图片URL
+        idCardFront: getFileInfoUrl(data, 'idCardFront'),
+        idCardBack: getFileInfoUrl(data, 'idCardBack'),
+        qualification: getFileInfoUrl(data, 'qualification'),
+        education: getFileInfoUrl(data, 'education'),
+        professional: getFileInfoUrl(data, 'professional'),
+        honor: getFileInfoUrl(data, 'honor'),
       }
-      console.log('处理后的专业人士数据:', professional.value)
+
+      console.log('专业人士数据:', professional.value)
     } else {
       console.error('返回数据格式错误:', response.data)
       ElMessage.error(response.data?.message || '获取专业人士详情失败')
@@ -580,5 +628,27 @@ onMounted(() => {
   font-weight: bold;
   color: #909399;
   background-color: #f5f7fa;
+}
+
+.image-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 200px;
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+}
+
+.image-loading .el-icon {
+  margin-bottom: 10px;
+  font-size: 24px;
+  color: #409eff;
+}
+
+.certificate-item .el-image {
+  transition: all 0.3s ease;
 }
 </style>

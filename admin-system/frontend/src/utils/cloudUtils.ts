@@ -1,9 +1,94 @@
 // 缓存云文件的临时URL
 const tempCloudURLs: Record<string, string> = {}
 
+// 临时URL请求状态缓存，避免同一URL重复请求
+const pendingRequests: Record<string, Promise<string>> = {}
+
+/**
+ * 使用API获取云存储文件的临时URL
+ * @param {string} cloudUrl - cloud://格式的URL
+ * @returns {Promise<string>} 临时URL
+ */
+const fetchTempFileURL = async (cloudUrl: string): Promise<string> => {
+  try {
+    // 清理URL，去除可能的空白字符
+    const cleanUrl = cloudUrl.trim()
+
+    if (!cleanUrl.startsWith('cloud://')) {
+      return cleanUrl
+    }
+
+    // 如果已有相同URL的请求正在进行中，则复用该请求
+    if (typeof pendingRequests[cleanUrl] !== 'undefined') {
+      console.log(`已有相同URL的请求进行中，复用请求: ${cleanUrl}`)
+      return pendingRequests[cleanUrl]
+    }
+
+    console.log(`请求临时URL API: ${cleanUrl}`)
+    // 创建请求Promise并存储到pendingRequests
+    const requestPromise = new Promise<string>((resolve, reject) => {
+      // 使用普通函数包装异步操作
+      const fetchUrl = async () => {
+        try {
+          // 调用后端API获取临时URL
+          const response = await fetch('/api/cloud/getSignedUrl', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: cleanUrl }),
+          })
+
+          if (!response.ok) {
+            throw new Error(`获取临时URL失败: ${response.statusText}`)
+          }
+
+          const data = await response.json()
+
+          if (data.code === 0 && data.data && data.data.url) {
+            console.log(`API获取临时URL成功: ${data.data.url}`)
+            // 保存到缓存
+            tempCloudURLs[cleanUrl] = data.data.url
+            resolve(data.data.url)
+          } else {
+            throw new Error(data.message || '获取临时URL失败')
+          }
+        } catch (error) {
+          console.error('获取临时URL失败:', error)
+          // 如果API请求失败，回退到本地生成的URL
+          if (cleanUrl.startsWith('cloud://')) {
+            const fallbackUrl = constructCloudUrl(cleanUrl)
+            console.log(`API获取失败，使用本地生成的URL: ${fallbackUrl}`)
+            tempCloudURLs[cleanUrl] = fallbackUrl
+            resolve(fallbackUrl)
+          } else {
+            resolve(cleanUrl)
+          }
+        } finally {
+          // 请求完成后，从pendingRequests中删除
+          if (typeof pendingRequests[cleanUrl] !== 'undefined') {
+            delete pendingRequests[cleanUrl]
+          }
+        }
+      }
+
+      // 执行异步函数
+      fetchUrl()
+    })
+
+    // 存储请求Promise
+    pendingRequests[cleanUrl] = requestPromise
+
+    return requestPromise
+  } catch (error) {
+    console.error('获取临时URL过程中发生错误:', error)
+    return cloudUrl
+  }
+}
+
 /**
  * 直接从云存储URL构建可能的临时URL
- * 这是一个临时解决方案，模拟微信小程序的 getTempFileURL 功能
+ * 这是一个临时解决方案，作为API调用失败的备选方案
  */
 const constructCloudUrl = (cloudUrl: string): string => {
   try {
@@ -39,7 +124,7 @@ const constructCloudUrl = (cloudUrl: string): string => {
 /**
  * 处理云存储路径，将cloud://格式的URL转为可访问的URL
  */
-export const processCloudUrl = (url: string): string => {
+export const processCloudUrl = async (url: string): Promise<string> => {
   if (!url) return ''
 
   // 如果是云存储路径
@@ -50,25 +135,15 @@ export const processCloudUrl = (url: string): string => {
       return tempCloudURLs[url]
     }
 
-    // 异步获取临时URL（不阻塞当前函数）
-    setTimeout(() => {
-      console.log(`开始构建云文件临时链接: ${url}`)
-      try {
-        const tempUrl = constructCloudUrl(url)
-        console.log(`构建临时URL成功: ${url} -> ${tempUrl}`)
-
-        // 保存到缓存
-        tempCloudURLs[url] = tempUrl
-
-        // 触发刷新（可选，需要配合组件实现）
-        document.dispatchEvent(new CustomEvent('forceRefreshImages', { detail: { url } }))
-      } catch (err) {
-        console.error(`构建云文件临时链接失败: ${url}`, err)
-      }
-    }, 0)
-
-    // 先返回一个代理URL作为临时显示
-    return `/proxy/cloud-file?url=${encodeURIComponent(url)}`
+    // 直接通过API获取临时URL
+    try {
+      const tempUrl = await fetchTempFileURL(url)
+      return tempUrl
+    } catch (error) {
+      console.error(`获取云文件临时链接失败: ${url}`, error)
+      // 如果获取失败，返回代理URL作为备选方案
+      return `/proxy/cloud-file?url=${encodeURIComponent(url)}`
+    }
   }
 
   return url
@@ -77,14 +152,13 @@ export const processCloudUrl = (url: string): string => {
 /**
  * 处理可能包含多个逗号分隔的URL
  */
-export const processMultiUrls = (urlString: string): string => {
+export const processMultiUrls = async (urlString: string): Promise<string> => {
   if (!urlString) return ''
 
   if (urlString.includes(',')) {
-    return urlString
-      .split(',')
-      .map((url) => processCloudUrl(url.trim()))
-      .join(',')
+    const urls = urlString.split(',')
+    const processedUrls = await Promise.all(urls.map((url) => processCloudUrl(url.trim())))
+    return processedUrls.join(',')
   }
 
   return processCloudUrl(urlString)
@@ -102,10 +176,8 @@ export const getSignedUrl = async (url: string): Promise<string> => {
         return tempCloudURLs[url]
       }
 
-      // 构建临时URL
-      const tempUrl = constructCloudUrl(url)
-      tempCloudURLs[url] = tempUrl
-      return tempUrl
+      // 获取临时URL
+      return await fetchTempFileURL(url)
     }
 
     // 如果是代理URL，提取原始cloud://地址
@@ -148,13 +220,17 @@ export const handleImageError = async (event: Event, fallbackUrl?: string): Prom
       }
     }
 
-    // 如果是cloud://格式，直接构建临时URL
+    // 如果是cloud://格式，获取临时URL
     if (cloudUrl.startsWith('cloud://')) {
-      console.log('检测到cloud://格式URL，尝试直接构建临时URL')
-      const tempUrl = constructCloudUrl(cloudUrl)
-      console.log('构建临时URL:', tempUrl)
+      console.log('检测到cloud://格式URL，尝试获取临时URL')
 
-      // 缓存并返回
+      // 强制绕过缓存重新获取
+      delete tempCloudURLs[cloudUrl]
+
+      const tempUrl = await fetchTempFileURL(cloudUrl)
+      console.log('获取临时URL成功:', tempUrl)
+
+      // 缓存并应用
       tempCloudURLs[cloudUrl] = tempUrl
       imgElement.src = tempUrl
       return
@@ -177,4 +253,28 @@ export const handleImageError = async (event: Event, fallbackUrl?: string): Prom
       imgElement.src = '/assets/placeholder-image.png'
     }
   }
+}
+
+/**
+ * 处理来自fileInfo对象的URL
+ * 支持从fileInfo.field.url或直接访问字段获取URL
+ * @param {Object} data - 包含url信息的对象
+ * @param {string} field - 要获取的字段名
+ * @returns {string} 处理后的URL
+ */
+export const getFileInfoUrl = (data: any, field: string): string => {
+  if (!data) return ''
+
+  // 获取URL
+  let url = ''
+
+  // 优先从fileInfo对象中获取URL
+  if (data.fileInfo && data.fileInfo[field] && data.fileInfo[field].url) {
+    url = data.fileInfo[field].url
+  } else {
+    // 如果不存在fileInfo或对应字段，则尝试直接从顶层对象获取
+    url = data[field] || ''
+  }
+
+  return url
 }

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import axios from 'axios'
+import * as tcb from '@cloudbase/node-sdk'
 
 /**
  * 云存储控制器
@@ -27,61 +28,6 @@ const checkRequiredConfig = (): boolean => {
 }
 
 /**
- * 解析cloud://格式的文件路径
- */
-interface ParsedCloudUrl {
-  envId: string
-  bucket: string
-  filePath: string
-  fullPath: string
-}
-
-const parseCloudUrl = (cloudUrl: string): ParsedCloudUrl => {
-  if (!cloudUrl || !cloudUrl.startsWith('cloud://')) {
-    throw new Error('无效的云存储URL格式')
-  }
-
-  try {
-    // 去掉cloud://前缀
-    const path = cloudUrl.substring(8)
-
-    // 找到第一个点，分隔环境ID和文件路径
-    const dotIndex = path.indexOf('.')
-    if (dotIndex === -1) {
-      throw new Error('无效的云存储URL格式，缺少环境分隔符')
-    }
-
-    // 提取环境ID
-    const envId = path.substring(0, dotIndex)
-
-    // 剩余部分为文件路径
-    const remaining = path.substring(dotIndex + 1)
-
-    // 找到第一个斜杠，分隔存储桶和文件路径
-    const slashIndex = remaining.indexOf('/')
-    if (slashIndex === -1) {
-      throw new Error('无效的云存储URL格式，缺少文件路径')
-    }
-
-    // 提取存储桶名
-    const bucket = remaining.substring(0, slashIndex)
-
-    // 提取文件路径
-    const filePath = remaining.substring(slashIndex + 1)
-
-    return {
-      envId,
-      bucket,
-      filePath,
-      fullPath: `${bucket}/${filePath}`,
-    }
-  } catch (error) {
-    console.error('解析云存储URL失败:', error)
-    throw error
-  }
-}
-
-/**
  * 记录权限信息，用于调试
  */
 const logPermissionInfo = (): void => {
@@ -96,16 +42,38 @@ const logPermissionInfo = (): void => {
 }
 
 /**
+ * 初始化tcb应用实例
+ * 根据官方文档使用简化方式初始化
+ * https://cloud.tencent.com/document/product/876/19374
+ */
+const getTcbApp = () => {
+  // 根据是否有环境参数决定初始化方式
+  if (CLOUD_ENV_ID && SECRET_ID && SECRET_KEY) {
+    return tcb.init({
+      secretId: SECRET_ID,
+      secretKey: SECRET_KEY,
+      env: CLOUD_ENV_ID,
+    })
+  }
+
+  // 使用官方文档的简化方式初始化
+  return tcb.init()
+}
+
+/**
  * 获取预签名URL
  */
 export const getSignedUrl = async (req: Request, res: Response): Promise<void> => {
   try {
     const { url } = req.body
 
-    console.log('请求获取预签名URL:', url)
+    // 清理URL，去除可能的空白字符
+    const cleanUrl = url ? url.trim() : ''
+
+    console.log('请求获取预签名URL:', cleanUrl)
 
     // 参数验证
-    if (!url) {
+    if (!cleanUrl) {
       res.status(400).json({
         code: 400,
         message: '缺少url参数',
@@ -113,66 +81,50 @@ export const getSignedUrl = async (req: Request, res: Response): Promise<void> =
       return
     }
 
-    // 检查必要配置
-    if (!checkRequiredConfig()) {
-      res.status(500).json({
-        code: 500,
-        message: '云环境配置不完整，请检查后端配置',
-      })
-      return
-    }
-
     // 记录权限信息
     logPermissionInfo()
 
-    // 解析云存储URL
-    const parsedUrl = parseCloudUrl(url)
-    console.log('解析的云存储URL:', parsedUrl)
-
-    // 构建直接访问URL（测试用，可能无效）
-    const directUrl = `https://${parsedUrl.bucket}-${parsedUrl.envId}.tcb.qcloud.la/${parsedUrl.filePath}`
-
-    // 尝试获取临时访问URL（这需要在实际环境中集成云开发SDK或调用云API）
-    // 以下代码演示了如何调用，但可能需要根据实际环境调整
     try {
-      console.log('尝试直接构建访问URL')
+      console.log('尝试使用cloudbase SDK获取临时URL')
 
-      // 如果集成了云开发SDK，可以使用以下代码获取真正的临时访问URL
-      // const tcbAdmin = require('tcb-admin-node');
-      // const app = tcbAdmin.init({
-      //   secretId: SECRET_ID,
-      //   secretKey: SECRET_KEY,
-      //   env: CLOUD_ENV_ID
-      // });
-      //
-      // const result = await app.getTempFileURL({
-      //   fileList: [url]
-      // });
-      //
-      // if (result.fileList && result.fileList[0] && result.fileList[0].tempFileURL) {
-      //   directUrl = result.fileList[0].tempFileURL;
-      // }
+      // 使用封装的方法获取tcb应用实例
+      const app = getTcbApp()
 
-      // 返回测试URL
-      res.json({
-        code: 0,
-        data: {
-          url: directUrl,
-          isTestUrl: true, // 标记这是测试URL
-        },
-        message: '已返回测试URL，需要集成真实云服务SDK获取实际预签名URL',
+      // 直接获取临时文件URL，无需自己解析cloud://格式
+      const result = await app.getTempFileURL({
+        fileList: [cleanUrl],
       })
-    } catch (error) {
+
+      console.log('获取临时URL结果:', result)
+
+      // 检查返回结果中是否有文件列表
+      if (result.fileList && result.fileList.length > 0) {
+        const fileInfo = result.fileList[0] as any // 使用any类型解决maxAge属性不存在的问题
+
+        // 检查是否有临时URL
+        if (fileInfo.tempFileURL) {
+          res.json({
+            code: 0,
+            data: {
+              url: fileInfo.tempFileURL,
+              fileID: fileInfo.fileID,
+              maxAge: fileInfo.maxAge || 7200000, // 默认2小时有效期
+            },
+            message: '获取临时URL成功',
+          })
+          return
+        }
+      }
+
+      // 如果没有找到临时URL，抛出错误
+      throw new Error('获取临时URL失败，返回结果不包含有效的URL')
+    } catch (error: any) {
       console.error('获取临时URL失败:', error)
 
-      // 返回构建的URL作为回退选项
-      res.json({
-        code: 0,
-        data: {
-          url: directUrl,
-          isTestUrl: true,
-        },
-        message: '获取临时URL失败，返回测试URL',
+      // 在无法获取临时URL时返回错误
+      res.status(500).json({
+        code: 500,
+        message: '获取临时URL失败: ' + (error.message || '未知错误'),
       })
     }
   } catch (error: any) {
@@ -192,7 +144,10 @@ export const testCloudAccess = async (req: Request, res: Response): Promise<void
   try {
     const { url } = req.body
 
-    if (!url) {
+    // 清理URL，去除可能的空白字符
+    const cleanUrl = url ? url.trim() : ''
+
+    if (!cleanUrl) {
       res.status(400).json({
         code: 400,
         message: '缺少url参数',
@@ -200,33 +155,16 @@ export const testCloudAccess = async (req: Request, res: Response): Promise<void
       return
     }
 
-    console.log('测试云存储访问权限:', url)
-
-    // 检查必要配置
-    if (!checkRequiredConfig()) {
-      res.status(500).json({
-        code: 500,
-        message: '云环境配置不完整，请检查后端配置',
-      })
-      return
-    }
+    console.log('测试云存储访问权限:', cleanUrl)
 
     // 记录环境信息
     console.log('测试环境信息:')
     console.log(`- Node.js版本: ${process.version}`)
     console.log(`- 操作系统: ${process.platform} ${process.arch}`)
 
-    // 解析云存储URL
-    const parsedUrl = parseCloudUrl(url)
-
     // 构建测试结果
     const results = {
-      parseResult: parsedUrl,
-      directAccess: {
-        success: false,
-        url: '',
-        error: null as any,
-      },
+      fileID: cleanUrl,
       signedAccess: {
         success: false,
         url: '',
@@ -234,19 +172,50 @@ export const testCloudAccess = async (req: Request, res: Response): Promise<void
       },
     }
 
-    // 构建直接访问URL
-    const directUrl = `https://${parsedUrl.bucket}-${parsedUrl.envId}.tcb.qcloud.la/${parsedUrl.filePath}`
-    results.directAccess.url = directUrl
-
-    // 测试直接访问（通过HEAD请求检查是否可访问）
+    // 测试获取临时URL
     try {
-      await axios.head(directUrl, { timeout: 5000 })
-      results.directAccess.success = true
+      console.log('尝试获取临时URL')
+
+      // 使用封装的方法获取tcb应用实例
+      const app = getTcbApp()
+
+      // 获取临时文件URL
+      const result = await app.getTempFileURL({
+        fileList: [cleanUrl],
+      })
+
+      console.log('获取临时URL结果:', result)
+
+      if (result.fileList && result.fileList.length > 0) {
+        const fileInfo = result.fileList[0] as any // 使用any类型解决maxAge属性不存在的问题
+
+        if (fileInfo.tempFileURL) {
+          results.signedAccess.success = true
+          results.signedAccess.url = fileInfo.tempFileURL
+
+          // 测试临时URL是否可访问
+          try {
+            await axios.head(fileInfo.tempFileURL, { timeout: 5000 })
+          } catch (error: any) {
+            results.signedAccess.error = {
+              message: '临时URL请求失败: ' + error.message,
+              status: error.response?.status,
+            }
+          }
+        } else {
+          results.signedAccess.error = {
+            message: '获取的临时URL为空',
+          }
+        }
+      } else {
+        results.signedAccess.error = {
+          message: '没有获取到文件信息',
+        }
+      }
     } catch (error: any) {
-      results.directAccess.success = false
-      results.directAccess.error = {
+      results.signedAccess.success = false
+      results.signedAccess.error = {
         message: error.message,
-        status: error.response?.status,
       }
     }
 

@@ -54,7 +54,7 @@
         >
           <template #error>
             <div class="image-error">
-              <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+              <el-icon><PictureRounded /></el-icon>
               <div>加载失败</div>
             </div>
           </template>
@@ -85,7 +85,7 @@
         >
           <template #error>
             <div class="image-error">
-              <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+              <el-icon><PictureRounded /></el-icon>
               <div>加载失败</div>
             </div>
           </template>
@@ -125,7 +125,6 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
@@ -190,16 +189,19 @@ const testDirectAccess = () => {
     return
   }
 
-  if (!form.cloudPath.startsWith('cloud://')) {
+  // 清理URL，移除空白字符
+  const cloudPath = form.cloudPath.trim()
+
+  if (!cloudPath.startsWith('cloud://')) {
     ElMessage.warning('云存储路径必须以cloud://开头')
     return
   }
 
   loading.direct = true
-  addLog('info', `开始测试直接访问: ${form.cloudPath}`)
+  addLog('info', `开始测试直接访问: ${cloudPath}`)
 
   // 构建代理URL
-  proxyUrl.value = `/proxy/cloud-file?url=${encodeURIComponent(form.cloudPath)}`
+  proxyUrl.value = `/proxy/cloud-file?url=${encodeURIComponent(cloudPath)}`
   addLog('success', `生成代理URL: ${proxyUrl.value}`)
 
   loading.direct = false
@@ -212,17 +214,20 @@ const testSignedAccess = async () => {
     return
   }
 
-  if (!form.cloudPath.startsWith('cloud://')) {
+  // 清理URL，移除空白字符
+  const cloudPath = form.cloudPath.trim()
+
+  if (!cloudPath.startsWith('cloud://')) {
     ElMessage.warning('云存储路径必须以cloud://开头')
     return
   }
 
   loading.signed = true
-  addLog('info', `开始测试签名URL访问: ${form.cloudPath}`)
+  addLog('info', `开始测试签名URL访问: ${cloudPath}`)
 
   try {
     const response = await axios.post('/api/cloud/getSignedUrl', {
-      url: form.cloudPath,
+      url: cloudPath,
     })
 
     if (response.data && response.data.code === 0 && response.data.data) {

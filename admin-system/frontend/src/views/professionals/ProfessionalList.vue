@@ -15,7 +15,7 @@
         @keyup.enter="handleSearch"
       >
         <template #prefix>
-          <el-icon><Search /></el-icon>
+          <i class="el-icon-search"></i>
         </template>
       </el-input>
 
@@ -36,41 +36,66 @@
     </div>
 
     <el-table v-loading="loading" :data="professionals" style="width: 100%" border>
+      <template #empty>
+        <div class="empty-data">
+          <el-empty description="未找到专业人士数据">
+            <template #description>
+              <p>当前未找到符合条件的专业人士数据</p>
+              <el-button type="primary" size="small" @click="resetAndFetch">重置搜索条件</el-button>
+            </template>
+          </el-empty>
+        </div>
+      </template>
       <el-table-column label="基本信息" min-width="250">
         <template #default="{ row }">
           <div class="professional-info">
-            <el-avatar :size="50" :src="row.avatar" />
+            <el-avatar
+              :size="50"
+              :src="row.avatar || row.avatarUrl"
+              @error="() => handleAvatarError(row)"
+            >
+              {{ row.name ? row.name.substring(0, 1) : '?' }}
+            </el-avatar>
             <div class="info-text">
-              <div class="name">{{ row.name }}</div>
-              <div class="phone">{{ row.phone }}</div>
+              <div class="name">{{ row.name || '未命名' }}</div>
+              <div class="phone">{{ row.phone || '无电话' }}</div>
               <div class="tags">
-                <el-tag size="small">{{ row.profession }}</el-tag>
-                <el-tag size="small" type="info">{{ row.specialization }}</el-tag>
+                <el-tag size="small" v-if="row.profession">{{ row.profession }}</el-tag>
+                <el-tag size="small" type="info" v-if="row.specialization">
+                  {{ row.specialization }}
+                </el-tag>
               </div>
             </div>
           </div>
         </template>
       </el-table-column>
 
-      <el-table-column label="服务地区" prop="region" min-width="100" />
+      <el-table-column label="服务地区" min-width="100">
+        <template #default="{ row }">{{ row.region || row.serviceArea || '未知地区' }}</template>
+      </el-table-column>
 
       <el-table-column label="服务内容" min-width="150">
         <template #default="{ row }">
           <div class="service-types">
             <el-tag
-              v-for="(type, index) in row.serviceTypes"
+              v-for="(type, index) in row.serviceTypes || row.professionalTypes || []"
               :key="index"
               size="small"
               class="service-tag"
             >
               {{ type }}
             </el-tag>
+            <span v-if="!(row.serviceTypes || row.professionalTypes || []).length">
+              暂无服务内容
+            </span>
           </div>
         </template>
       </el-table-column>
 
       <el-table-column label="从业经验" min-width="100">
-        <template #default="{ row }">{{ row.experience }} 年</template>
+        <template #default="{ row }">
+          {{ row.experience || '未知' }} {{ row.experience ? '年' : '' }}
+        </template>
       </el-table-column>
 
       <el-table-column label="评分" min-width="120">
@@ -130,8 +155,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import ElMessageBox from 'element-plus/es/components/message-box/index'
 import router from '@/router'
 import axios from 'axios'
 
@@ -184,6 +209,20 @@ const fetchProfessionals = async () => {
       professionals.value = response.data.data.map((pro: any) => ({
         ...pro,
         id: pro.id || pro._id, // 确保有id字段，优先使用id，如果没有则使用_id
+        avatar: pro.avatarUrl || pro.avatar || '', // 使用avatarUrl或avatar字段
+        serviceTypes: pro.professionalTypes || [pro.profession || pro.serviceType || '未分类'], // 使用professionalTypes或创建默认数组
+        profession:
+          pro.profession || (pro.professionalTypes ? pro.professionalTypes[0] : '未知专业'),
+        specialization:
+          pro.specialization ||
+          (pro.professionalTypes && pro.professionalTypes.length > 1
+            ? pro.professionalTypes[1]
+            : ''),
+        experience: pro.experience || 0,
+        region: pro.serviceArea || pro.city || pro.region || '未知地区',
+        rating: pro.rating || 0,
+        reviewCount: pro.reviewCount || 0,
+        registerTime: pro.createTime || pro.registerTime || '未知时间',
       }))
 
       if (response.data.pagination) {
@@ -373,6 +412,19 @@ const getStatusText = (status: string) => {
     frozen: '已冻结',
   }
   return statusMap[status] || '未知'
+}
+
+// 头像加载失败处理
+const handleAvatarError = (professional: Professional) => {
+  console.log('头像加载失败:', professional.name)
+}
+
+// 重置搜索条件并重新获取数据
+const resetAndFetch = () => {
+  searchQuery.value = ''
+  statusFilter.value = 'all'
+  currentPage.value = 1
+  fetchProfessionals()
 }
 
 onMounted(() => {
