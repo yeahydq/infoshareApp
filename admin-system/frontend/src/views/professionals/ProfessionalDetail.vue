@@ -151,13 +151,18 @@
             </el-collapse-item>
             <el-collapse-item title="资格证书" name="qualification">
               <div v-if="professional.qualification" class="certificate-images">
-                <div class="certificate-item">
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.qualification)"
+                  :key="`qualification-${index}`"
+                  class="certificate-item"
+                >
+                  <h4>资格证书 {{ index + 1 }}</h4>
                   <el-image
-                    :src="professional.qualification"
-                    :preview-src-list="[professional.qualification]"
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.qualification)"
+                    :initial-index="index"
                     fit="cover"
                     @error="(e) => handleImageError('资格证书加载失败', e)"
-                    :initial-index="0"
                     loading="lazy"
                   >
                     <template #placeholder>
@@ -179,13 +184,18 @@
             </el-collapse-item>
             <el-collapse-item title="教育证明" name="education">
               <div v-if="professional.education" class="certificate-images">
-                <div class="certificate-item">
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.education)"
+                  :key="`education-${index}`"
+                  class="certificate-item"
+                >
+                  <h4>教育证明 {{ index + 1 }}</h4>
                   <el-image
-                    :src="professional.education"
-                    :preview-src-list="[professional.education]"
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.education)"
+                    :initial-index="index"
                     fit="cover"
                     @error="(e) => handleImageError('教育证明加载失败', e)"
-                    :initial-index="0"
                     loading="lazy"
                   >
                     <template #placeholder>
@@ -206,14 +216,19 @@
               <el-empty v-else description="未上传教育证明"></el-empty>
             </el-collapse-item>
             <el-collapse-item title="职业资格" name="professional">
-              <div v-if="professional.professional" class="certificate-images">
-                <div class="certificate-item">
+              <div v-if="professional.professionalCert" class="certificate-images">
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.professionalCert)"
+                  :key="`professional-${index}`"
+                  class="certificate-item"
+                >
+                  <h4>职业资格 {{ index + 1 }}</h4>
                   <el-image
-                    :src="professional.professional"
-                    :preview-src-list="[professional.professional]"
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.professionalCert)"
+                    :initial-index="index"
                     fit="cover"
                     @error="(e) => handleImageError('职业资格证明加载失败', e)"
-                    :initial-index="0"
                     loading="lazy"
                   >
                     <template #placeholder>
@@ -235,13 +250,18 @@
             </el-collapse-item>
             <el-collapse-item title="荣誉证书" name="honor">
               <div v-if="professional.honor" class="certificate-images">
-                <div class="certificate-item">
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.honor)"
+                  :key="`honor-${index}`"
+                  class="certificate-item"
+                >
+                  <h4>荣誉证书 {{ index + 1 }}</h4>
                   <el-image
-                    :src="professional.honor"
-                    :preview-src-list="[professional.honor]"
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.honor)"
+                    :initial-index="index"
                     fit="cover"
                     @error="(e) => handleImageError('荣誉证书加载失败', e)"
-                    :initial-index="0"
                     loading="lazy"
                   >
                     <template #placeholder>
@@ -315,6 +335,7 @@ interface Professional {
   qualification?: string
   education?: string
   professional?: string
+  professionalCert?: string
   honor?: string
   rejectReason?: string
 }
@@ -323,6 +344,22 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const professional = ref<Professional | null>(null)
+
+// 处理逗号分隔的URL列表
+const parseMultiUrls = (urlString: string): string[] => {
+  if (!urlString) return []
+
+  // 如果包含逗号，按逗号分割
+  if (urlString.includes(',')) {
+    return urlString
+      .split(',')
+      .map((url) => url.trim())
+      .filter((url) => url)
+  }
+
+  // 否则返回单个URL的数组
+  return [urlString]
+}
 
 // 获取专业人士详情
 const fetchProfessionalDetail = async () => {
@@ -344,8 +381,54 @@ const fetchProfessionalDetail = async () => {
     if (response.data && response.data.code === 0 && response.data.data) {
       // 处理数据
       const data = response.data.data
+      console.log('处理原始数据:', data)
 
-      // 处理所有云存储URL
+      // 获取并处理基本图片URL
+      const idCardFront = getFileInfoUrl(data, 'idCardFront')
+      const idCardBack = getFileInfoUrl(data, 'idCardBack')
+
+      // 获取可能包含多个URL的字段
+      let qualification = getFileInfoUrl(data, 'qualification')
+      let education = getFileInfoUrl(data, 'education')
+      let professionalImg = getFileInfoUrl(data, 'professional')
+      let honor = getFileInfoUrl(data, 'honor')
+
+      // 检查professional和professionalCert字段
+      const professionalCert = data.professionalCert
+        ? getFileInfoUrl(data, 'professionalCert')
+        : professionalImg
+
+      console.log('获取到的证书图片URLs:')
+      console.log('身份证正面:', idCardFront)
+      console.log('身份证反面:', idCardBack)
+      console.log('资格证书:', qualification)
+      console.log('教育证明:', education)
+      console.log('职业资格:', professionalImg)
+      console.log('职业资格证书:', professionalCert)
+      console.log('荣誉证书:', honor)
+
+      // 尝试处理逗号分隔的URL列表
+      try {
+        if (qualification && qualification.includes(',')) {
+          console.log('检测到资格证书包含多个URL')
+        }
+        if (education && education.includes(',')) {
+          console.log('检测到教育证明包含多个URL')
+        }
+        if (professionalImg && professionalImg.includes(',')) {
+          console.log('检测到职业资格包含多个URL')
+        }
+        if (professionalCert && professionalCert.includes(',')) {
+          console.log('检测到职业资格证书包含多个URL')
+        }
+        if (honor && honor.includes(',')) {
+          console.log('检测到荣誉证书包含多个URL')
+        }
+      } catch (error) {
+        console.error('处理多URL时出错:', error)
+      }
+
+      // 处理所有云存储URL并赋值
       professional.value = {
         ...data,
         id: data.id || data._id, // 确保ID字段统一
@@ -356,15 +439,16 @@ const fetchProfessionalDetail = async () => {
         email: data.email || '未提供',
         name: data.name || '未命名专业人士',
         // 使用工具函数处理所有图片URL
-        idCardFront: getFileInfoUrl(data, 'idCardFront'),
-        idCardBack: getFileInfoUrl(data, 'idCardBack'),
-        qualification: getFileInfoUrl(data, 'qualification'),
-        education: getFileInfoUrl(data, 'education'),
-        professional: getFileInfoUrl(data, 'professional'),
-        honor: getFileInfoUrl(data, 'honor'),
+        idCardFront,
+        idCardBack,
+        qualification,
+        education,
+        professional: professionalImg,
+        professionalCert,
+        honor,
       }
 
-      console.log('专业人士数据:', professional.value)
+      console.log('处理后的专业人士数据:', professional.value)
     } else {
       console.error('返回数据格式错误:', response.data)
       ElMessage.error(response.data?.message || '获取专业人士详情失败')
@@ -565,10 +649,13 @@ onMounted(() => {
 
 .certificate-item {
   width: 300px;
+  margin-bottom: 15px;
 }
 
 .certificate-item h4 {
   margin-bottom: 10px;
+  font-size: 14px;
+  color: #606266;
 }
 
 .certificate-item .el-image {
@@ -576,6 +663,13 @@ onMounted(() => {
   height: 200px;
   border: 1px solid #ebeef5;
   border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.certificate-item .el-image:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
 }
 
 .reject-info {
@@ -646,9 +740,5 @@ onMounted(() => {
   margin-bottom: 10px;
   font-size: 24px;
   color: #409eff;
-}
-
-.certificate-item .el-image {
-  transition: all 0.3s ease;
 }
 </style>

@@ -65,11 +65,19 @@
                     {{ reviewStatus.qualification === 'pass' ? '已通过' : '未通过' }}
                   </el-tag>
                 </div>
-                <el-image
-                  :src="professional.qualification"
-                  :preview-src-list="[professional.qualification]"
-                  fit="cover"
-                ></el-image>
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.qualification)"
+                  :key="`qualification-${index}`"
+                  class="certificate-wrapper"
+                >
+                  <div class="certificate-label">证书 {{ index + 1 }}</div>
+                  <el-image
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.qualification)"
+                    :initial-index="index"
+                    fit="cover"
+                  ></el-image>
+                </div>
                 <div class="doc-actions">
                   <el-button
                     type="success"
@@ -98,11 +106,19 @@
                     {{ reviewStatus.professional === 'pass' ? '已通过' : '未通过' }}
                   </el-tag>
                 </div>
-                <el-image
-                  :src="professional.professional"
-                  :preview-src-list="[professional.professional]"
-                  fit="cover"
-                ></el-image>
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.professional)"
+                  :key="`professional-${index}`"
+                  class="certificate-wrapper"
+                >
+                  <div class="certificate-label">证书 {{ index + 1 }}</div>
+                  <el-image
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.professional)"
+                    :initial-index="index"
+                    fit="cover"
+                  ></el-image>
+                </div>
                 <div class="doc-actions">
                   <el-button
                     type="success"
@@ -131,11 +147,19 @@
                     {{ reviewStatus.education === 'pass' ? '已通过' : '未通过' }}
                   </el-tag>
                 </div>
-                <el-image
-                  :src="professional.education"
-                  :preview-src-list="[professional.education]"
-                  fit="cover"
-                ></el-image>
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.education)"
+                  :key="`education-${index}`"
+                  class="certificate-wrapper"
+                >
+                  <div class="certificate-label">证书 {{ index + 1 }}</div>
+                  <el-image
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.education)"
+                    :initial-index="index"
+                    fit="cover"
+                  ></el-image>
+                </div>
                 <div class="doc-actions">
                   <el-button type="success" size="small" @click="markDocument('education', 'pass')">
                     通过
@@ -156,11 +180,19 @@
                     {{ reviewStatus.honor === 'pass' ? '已通过' : '未通过' }}
                   </el-tag>
                 </div>
-                <el-image
-                  :src="professional.honor"
-                  :preview-src-list="[professional.honor]"
-                  fit="cover"
-                ></el-image>
+                <div
+                  v-for="(url, index) in parseMultiUrls(professional.honor)"
+                  :key="`honor-${index}`"
+                  class="certificate-wrapper"
+                >
+                  <div class="certificate-label">证书 {{ index + 1 }}</div>
+                  <el-image
+                    :src="url"
+                    :preview-src-list="parseMultiUrls(professional.honor)"
+                    :initial-index="index"
+                    fit="cover"
+                  ></el-image>
+                </div>
                 <div class="doc-actions">
                   <el-button type="success" size="small" @click="markDocument('honor', 'pass')">
                     通过
@@ -293,10 +325,34 @@ import {
   Message as IconMail,
 } from '@element-plus/icons-vue'
 
+// 专业人士类型定义
+interface Professional {
+  _id?: string
+  id?: string
+  name?: string
+  avatarUrl?: string
+  phone?: string
+  email?: string
+  status?: string
+  professionalTypes?: string[]
+  serviceDescription?: string
+  experience?: string
+  selectedCity?: string
+  selectedDistrict?: string
+  idCardFront?: string
+  idCardBack?: string
+  qualification?: string
+  education?: string
+  professional?: string
+  professionalCert?: string
+  honor?: string
+  [key: string]: any
+}
+
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
-const professional = ref(null)
+const professional = ref<Professional | null>(null)
 const isSubmitting = ref(false)
 
 // 审核表单
@@ -403,6 +459,22 @@ const submitReview = async () => {
 // 返回列表
 const goBack = () => {
   router.push('/professionals')
+}
+
+// 处理逗号分隔的URL列表
+const parseMultiUrls = (urlString: string): string[] => {
+  if (!urlString) return []
+
+  // 如果包含逗号，按逗号分割
+  if (urlString.includes(',')) {
+    return urlString
+      .split(',')
+      .map((url) => url.trim())
+      .filter((url) => url)
+  }
+
+  // 否则返回单个URL的数组
+  return [urlString]
 }
 
 onMounted(() => {
@@ -516,5 +588,15 @@ onMounted(() => {
   width: 100%;
   height: 200px;
   border-radius: 4px;
+}
+
+.certificate-wrapper {
+  margin-bottom: 15px;
+}
+
+.certificate-label {
+  margin-bottom: 5px;
+  font-size: 13px;
+  color: #606266;
 }
 </style>
