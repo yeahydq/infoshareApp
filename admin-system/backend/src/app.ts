@@ -11,7 +11,7 @@ import userRoutes from './routes/userRoutes'
 import bookingRoutes from './routes/bookingRoutes'
 import dashboardRoutes from './routes/dashboardRoutes'
 import serviceTypeRoutes from './routes/serviceTypeRoutes'
-import { initMockData } from './utils/mockDataInitializer'
+import cloudRoutes from './routes/cloudRoutes'
 import { handleCloudFile } from './routes/fileProxyRoutes'
 
 // 加载环境变量
@@ -55,6 +55,7 @@ app.use('/api/professionals', professionalRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/service-types', serviceTypeRoutes)
+app.use('/api/cloud', cloudRoutes)
 
 // 根路由
 app.get('/', (req: Request, res: Response) => {
@@ -73,7 +74,7 @@ app.use((req: Request, res: Response) => {
 })
 
 // 错误处理
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack)
   res.status(500).json({
     code: 500,

@@ -15,7 +15,7 @@
             <el-avatar
               :size="100"
               :src="professional.avatarUrl || professional.avatar"
-              @error="handleImageError('头像加载失败')"
+              @error="(e) => handleImageError('头像加载失败', e)"
             >
               <div class="avatar-fallback">
                 {{ professional.name ? professional.name.substring(0, 1) : '?' }}
@@ -104,11 +104,11 @@
                     :src="professional.idCardFront"
                     :preview-src-list="[professional.idCardFront]"
                     fit="cover"
-                    @error="handleImageError('身份证正面加载失败')"
+                    @error="(e) => handleImageError('身份证正面加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">身份证正面加载失败</div>
                       </div>
                     </template>
@@ -120,11 +120,11 @@
                     :src="professional.idCardBack"
                     :preview-src-list="[professional.idCardBack]"
                     fit="cover"
-                    @error="handleImageError('身份证反面加载失败')"
+                    @error="(e) => handleImageError('身份证反面加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">身份证反面加载失败</div>
                       </div>
                     </template>
@@ -140,11 +140,11 @@
                     :src="professional.qualification"
                     :preview-src-list="[professional.qualification]"
                     fit="cover"
-                    @error="handleImageError('资格证书加载失败')"
+                    @error="(e) => handleImageError('资格证书加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">资格证书加载失败</div>
                       </div>
                     </template>
@@ -160,11 +160,11 @@
                     :src="professional.education"
                     :preview-src-list="[professional.education]"
                     fit="cover"
-                    @error="handleImageError('教育证明加载失败')"
+                    @error="(e) => handleImageError('教育证明加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">教育证明加载失败</div>
                       </div>
                     </template>
@@ -180,11 +180,11 @@
                     :src="professional.professional"
                     :preview-src-list="[professional.professional]"
                     fit="cover"
-                    @error="handleImageError('职业资格证明加载失败')"
+                    @error="(e) => handleImageError('职业资格证明加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">职业资格证明加载失败</div>
                       </div>
                     </template>
@@ -200,11 +200,11 @@
                     :src="professional.honor"
                     :preview-src-list="[professional.honor]"
                     fit="cover"
-                    @error="handleImageError('荣誉证书加载失败')"
+                    @error="(e) => handleImageError('荣誉证书加载失败', e)"
                   >
                     <template #error>
                       <div class="image-error">
-                        <el-icon><ElementPlusIconsVue.PictureRounded /></el-icon>
+                        <el-icon><PictureRounded /></el-icon>
                         <div class="error-text">荣誉证书加载失败</div>
                       </div>
                     </template>
@@ -238,7 +238,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ElMessageBox from 'element-plus/es/components/message-box/index'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import {
+  processCloudUrl,
+  processMultiUrls,
+  handleImageError as handleCloudImageError,
+} from '@/utils/cloudUtils'
 import axios from 'axios'
 
 interface Professional {
@@ -289,32 +293,6 @@ const fetchProfessionalDetail = async () => {
     console.log('专业人士详情响应:', response.data)
 
     if (response.data && response.data.code === 0 && response.data.data) {
-      // 处理云存储URL
-      const processCloudUrl = (url) => {
-        if (!url) return ''
-
-        // 将cloud://格式的URL转为代理URL
-        if (url.startsWith('cloud://')) {
-          return `/proxy/cloud-file?url=${encodeURIComponent(url)}`
-        }
-
-        return url
-      }
-
-      // 处理可能包含多个逗号分隔的URL
-      const processMultiUrls = (urlString) => {
-        if (!urlString) return ''
-
-        if (urlString.includes(',')) {
-          return urlString
-            .split(',')
-            .map((url) => processCloudUrl(url.trim()))
-            .join(',')
-        }
-
-        return processCloudUrl(urlString)
-      }
-
       // 处理数据
       const data = response.data.data
 
@@ -455,8 +433,13 @@ const getStatusText = (status) => {
 }
 
 // 图片加载失败处理
-const handleImageError = (message: string) => {
+const handleImageError = (message: string, event?: Event) => {
   console.error(`图片加载失败: ${message}`)
+
+  // 使用工具函数处理图片加载错误
+  if (event) {
+    handleCloudImageError(event)
+  }
 }
 
 onMounted(() => {

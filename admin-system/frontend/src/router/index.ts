@@ -83,6 +83,12 @@ const router = createRouter({
           component: () => import('../views/Settings.vue'),
           meta: { title: '系统设置', requiresAuth: true },
         },
+        {
+          path: 'cloud-test',
+          name: 'CloudTest',
+          component: () => import('../views/cloud-test.vue'),
+          meta: { title: '云存储测试', requiresAuth: true },
+        },
       ],
     },
   ],

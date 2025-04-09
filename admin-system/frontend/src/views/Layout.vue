@@ -27,6 +27,10 @@
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>
           </el-menu-item>
+          <el-menu-item index="/cloud-test">
+            <el-icon><CloudFilled /></el-icon>
+            <span>云存储测试</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
       <el-container class="main-container">
@@ -71,18 +75,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, getCurrentInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
-import {
-  Fold,
-  Expand,
-  User,
-  UserFilled,
-  Calendar,
-  Setting,
-  HomeFilled as Dashboard,
-} from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+
+// 注册所有图标组件
+onMounted(() => {
+  const instance = getCurrentInstance()
+  if (instance) {
+    const app = instance.appContext.app
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component)
+    }
+  }
+})
 
 // 侧边栏折叠状态
 const isCollapse = ref(false)
@@ -103,10 +110,10 @@ const activeMenu = computed(() => {
 // 面包屑
 const breadcrumbs = computed(() => {
   const { meta } = route
-  const items = []
+  const items: string[] = []
 
   if (meta && meta.title) {
-    items.push(meta.title)
+    items.push(meta.title as string)
   }
 
   return items

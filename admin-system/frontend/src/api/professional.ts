@@ -55,3 +55,14 @@ export const getServiceTypes = async () => {
     throw error
   }
 }
+
+// 获取云存储文件的预签名URL
+export const getCloudFileSignedUrl = async (url: string) => {
+  try {
+    const response = await axios.post('/api/cloud/getSignedUrl', { url })
+    return response.data
+  } catch (error) {
+    console.error('获取预签名URL失败:', error)
+    throw error
+  }
+}
