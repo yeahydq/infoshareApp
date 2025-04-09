@@ -8,7 +8,7 @@
         </div>
         <el-menu :default-active="activeMenu" class="menu" router :collapse="isCollapse">
           <el-menu-item index="/dashboard">
-            <el-icon><Dashboard /></el-icon>
+            <el-icon><Menu /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
           <el-menu-item index="/professionals">
@@ -16,7 +16,7 @@
             <span>专业人士管理</span>
           </el-menu-item>
           <el-menu-item index="/users">
-            <el-icon><UserFilled /></el-icon>
+            <el-icon><Avatar /></el-icon>
             <span>用户管理</span>
           </el-menu-item>
           <el-menu-item index="/bookings">
@@ -28,7 +28,7 @@
             <span>系统设置</span>
           </el-menu-item>
           <el-menu-item index="/cloud-test">
-            <el-icon><CloudFilled /></el-icon>
+            <el-icon><Upload /></el-icon>
             <span>云存储测试</span>
           </el-menu-item>
         </el-menu>
@@ -37,8 +37,7 @@
         <el-header class="header">
           <div class="header-left">
             <el-icon class="fold-icon" @click="toggleCollapse">
-              <Fold v-if="!isCollapse" />
-              <Expand v-else />
+              <component :is="isCollapse ? 'Expand' : 'Fold'" />
             </el-icon>
             <el-breadcrumb separator="/">
               <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
@@ -75,21 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, getCurrentInstance } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus/es/components/message-box/index'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-
-// 注册所有图标组件
-onMounted(() => {
-  const instance = getCurrentInstance()
-  if (instance) {
-    const app = instance.appContext.app
-    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-      app.component(key, component)
-    }
-  }
-})
+import { ElMessageBox } from 'element-plus'
 
 // 侧边栏折叠状态
 const isCollapse = ref(false)
