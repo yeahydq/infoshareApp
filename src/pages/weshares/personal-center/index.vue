@@ -31,7 +31,7 @@
     </view>
 
     <view class="service-cards">
-      <view class="service-card" @click="navigateTo(NavigationRoutes.FIND_TEACHERS)">
+      <view class="service-card" @click="navigateTo(NavigationRoutes.FIND_PROFESSIONALS)">
         <view class="service-icon">🔍</view>
         <view class="service-text">帮我找</view>
         <view class="service-icon-arrow">></view>
@@ -125,7 +125,7 @@ import { useUserStore } from '@/store'
 import { login } from '@/service/auth'
 
 const NavigationRoutes = {
-  FIND_TEACHERS: '../find-teachers/index',
+  FIND_PROFESSIONALS: '../find-teachers/index',
   TEACHER_REGISTRATION: '../teacher-registration/index',
   PERSONAL_INFO: '../personal-info/index',
   QR_CODE: '../qr-code/index',

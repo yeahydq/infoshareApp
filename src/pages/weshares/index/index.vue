@@ -16,7 +16,7 @@
         <text class="down-arrow">▼</text>
       </view>
       <view class="search-input" @click="focusSearch">
-        <text class="placeholder">搜索老师/课程</text>
+        <text class="placeholder">搜索专业人士/服务</text>
       </view>
       <view class="search-icon">🔍</view>
     </view>
@@ -55,30 +55,30 @@
       </view>
     </view>
 
-    <!-- 教师推荐 -->
+    <!-- 专业人士推荐 -->
     <view class="featured-section">
       <view class="featured-header">
-        <view class="featured-title">优选名师</view>
-        <view class="featured-more" @click="navigateTorecommendedTeacher">
+        <view class="featured-title">优选专业人士</view>
+        <view class="featured-more" @click="navigateToRecommendedProfessionals">
           更多
           <text class="arrow">></text>
         </view>
       </view>
 
-      <scroll-view class="featured-teachers" scroll-x>
+      <scroll-view class="featured-professionals" scroll-x>
         <view
-          class="teacher-card"
-          v-for="(teacher, index) in featuredTeachers"
+          class="professional-card"
+          v-for="(professional, index) in featuredProfessionals"
           :key="index"
-          @click="viewTeacherDetail(teacher)"
+          @click="viewProfessionalDetail(professional)"
         >
-          <image class="teacher-avatar" :src="teacher.avatar" mode="aspectFill" />
-          <view class="teacher-info">
-            <view class="teacher-name">{{ teacher.name }}</view>
-            <view class="teacher-subject">{{ teacher.subject }}</view>
-            <view class="teacher-rating">
-              <text class="rating">{{ teacher.rating }}</text>
-              <text class="rating-count">({{ teacher.ratingCount }})</text>
+          <image class="professional-avatar" :src="professional.avatar" mode="aspectFill" />
+          <view class="professional-info">
+            <view class="professional-name">{{ professional.name }}</view>
+            <view class="professional-specialty">{{ professional.specialty }}</view>
+            <view class="professional-rating">
+              <text class="rating">{{ professional.rating }}</text>
+              <text class="rating-count">({{ professional.ratingCount }})</text>
             </view>
           </view>
         </view>
@@ -87,23 +87,32 @@
 
     <!-- 服务选项 -->
     <view class="service-options">
-      <view class="service-card online" @click="navigateToFindTeachers('online')">
+      <view class="service-card online" @click="navigateToFindProfessionals('online')">
         <view class="service-content">
-          <view class="service-title">在线辅导</view>
-          <view class="service-subtitle">全国名师在线</view>
-          <view class="service-button">选在线老师</view>
+          <view class="service-title">线上服务</view>
+          <view class="service-subtitle">专业人士远程指导</view>
+          <view class="service-button">立即预约</view>
         </view>
         <image class="service-img" src="/static/image/online-teaching.png" mode="aspectFit" />
       </view>
 
-      <view class="service-card in-person" @click="navigateToFindTeachers('in-person')">
+      <view class="service-card in-person" @click="navigateToFindProfessionals('in-person')">
         <view class="service-content">
-          <view class="service-title">上门辅导</view>
-          <view class="service-subtitle">名师面对面</view>
-          <view class="service-button">选上门老师</view>
+          <view class="service-title">线下服务</view>
+          <view class="service-subtitle">专业人士上门服务</view>
+          <view class="service-button">立即预约</view>
         </view>
         <image class="service-img" src="/static/image/in-person-teaching.png" mode="aspectFit" />
       </view>
+    </view>
+
+    <!-- 注册引导 -->
+    <view class="register-prompt" @click="navigateToRegister">
+      <view class="prompt-content">
+        <view class="prompt-title">成为专业人士</view>
+        <view class="prompt-subtitle">分享您的专业知识，获取额外收入</view>
+      </view>
+      <view class="prompt-button">立即注册</view>
     </view>
   </view>
 </template>
@@ -117,90 +126,90 @@ const currentLocation = ref('济南市')
 const bannerList = ref([
   {
     image: '/static/image/banner1.png',
-    title: '家教预约',
+    title: '专业服务预约',
     subtitle: '小程序上线了',
-    link: '/pages/activity/new',
+    link: '/pages/weshares/activity/new',
   },
   {
     image: '/static/image/banner2.png',
     title: '暑期特惠',
-    subtitle: '名师课程8折起',
-    link: '/pages/activity/summer',
+    subtitle: '专业服务8折起',
+    link: '/pages/weshares/activity/summer',
   },
 ])
 
 const categories = ref([
   {
-    icon: '/static/image/management.png',
-    label: '管理学',
-    description: '企业管理/市场营销',
-    class: 'management',
+    icon: '/static/image/education.png',
+    label: '教育服务',
+    description: '语文/数学/英语/物理',
+    class: 'education',
+  },
+  {
+    icon: '/static/image/repair.png',
+    label: '维修服务',
+    description: '水管/电路/空调/保洁',
+    class: 'repair',
   },
   {
     icon: '/static/image/medicine.png',
-    label: '医学',
-    description: '临床医学/护理',
+    label: '医疗服务',
+    description: '医学咨询/保健服务',
     class: 'medicine',
   },
   {
-    icon: '/static/image/agriculture.png',
-    label: '农学',
-    description: '农业科学/园艺',
-    class: 'agriculture',
-  },
-  {
     icon: '/static/image/engineering.png',
-    label: '工学',
+    label: '工程技术',
     description: '机械/电子/计算机',
     class: 'engineering',
   },
   {
-    icon: '/static/image/science.png',
-    label: '理学',
-    description: '数学/物理/化学',
-    class: 'science',
+    icon: '/static/image/business.png',
+    label: '商业服务',
+    description: '管理咨询/营销策划',
+    class: 'business',
   },
   {
-    icon: '/static/image/history.png',
-    label: '历史学',
-    description: '中国史/世界史',
-    class: 'history',
+    icon: '/static/image/legal.png',
+    label: '法律服务',
+    description: '法律咨询/合同审查',
+    class: 'legal',
   },
   {
-    icon: '/static/image/literature.png',
-    label: '文学',
-    description: '中文/外语',
-    class: 'literature',
+    icon: '/static/image/design.png',
+    label: '艺术设计',
+    description: '平面设计/室内设计',
+    class: 'design',
   },
   {
     icon: '/static/image/more.png',
-    label: '更多',
+    label: '更多服务',
     description: '查看全部',
     class: 'more',
   },
 ])
 
-const featuredTeachers = ref([
+const featuredProfessionals = ref([
   {
     id: 1,
-    name: '张老师',
-    subject: '高中数学',
+    name: '张先生',
+    specialty: '数学辅导',
     avatar: '/static/image/teacher1.png',
     rating: 4.9,
     ratingCount: 128,
   },
   {
     id: 2,
-    name: '李老师',
-    subject: '初中英语',
+    name: '李小姐',
+    specialty: '英语辅导',
     avatar: '/static/image/teacher2.png',
     rating: 4.8,
     ratingCount: 96,
   },
   {
     id: 3,
-    name: '王老师',
-    subject: '小学语文',
+    name: '王先生',
+    specialty: '水电维修',
     avatar: '/static/image/teacher3.png',
     rating: 4.9,
     ratingCount: 156,
@@ -231,37 +240,43 @@ const handleBannerClick = (banner) => {
 
 const handleCategoryClick = (category) => {
   uni.navigateTo({
-    url: `/pages/category/${category.label}`,
+    url: `/pages/weshares/find-teachers/index?category=${encodeURIComponent(category.label)}`,
   })
 }
 
-const viewTeacherDetail = (teacher) => {
+const viewProfessionalDetail = (professional) => {
   uni.navigateTo({
-    url: `/pages/teacher-details/index?id=${teacher.id}`,
+    url: `/pages/weshares/teacher-details/index?id=${professional.id}`,
   })
 }
 
-const navigateToFindTeachers = (type) => {
+const navigateToFindProfessionals = (type) => {
   uni.navigateTo({
-    url: `/pages/find-teachers/index?type=${type}`,
+    url: `/pages/weshares/find-teachers/index?type=${type}`,
   })
 }
 
 function navigateToOrders() {
-  console.log('Navigating to Orders page')
-  // This page doesn't exist yet, so navigate to home
-  window.location.href = '/pages/index/index'
+  uni.switchTab({
+    url: '/pages/weshares/orders/index',
+  })
 }
 
 function navigateToPersonalCenter() {
-  console.log('Navigating to Personal Center page')
-  window.location.href = '/pages/personal-center/index'
+  uni.switchTab({
+    url: '/pages/weshares/personal-center/index',
+  })
 }
 
-function navigateTorecommendedTeacher() {
-  console.log('Navigating to Address Management page')
+function navigateToRecommendedProfessionals() {
   uni.navigateTo({
     url: '../recommended-teacher/index',
+  })
+}
+
+function navigateToRegister() {
+  uni.navigateTo({
+    url: '/pages/weshares/teacher-registration/index',
   })
 }
 
