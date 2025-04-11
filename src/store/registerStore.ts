@@ -69,15 +69,47 @@ export const useRegisterStore = defineStore('register', {
     setModifyMode(isModify: boolean) {
       this.isModifyMode = isModify
       try {
+        // 如果设置为true，保存当前时间戳
+        if (isModify) {
+          const timestamp = new Date().getTime()
+          uni.setStorageSync('professionalRegisterModifyTimestamp', timestamp)
+        } else {
+          uni.removeStorageSync('professionalRegisterModifyTimestamp')
+        }
         uni.setStorageSync('professionalRegisterModifyMode', isModify)
       } catch (error) {
         console.error('保存修改模式状态失败:', error)
       }
     },
 
+    // 检查修改模式是否过期 (30分钟过期)
+    checkModifyModeExpired() {
+      try {
+        const modifyTimestamp = uni.getStorageSync('professionalRegisterModifyTimestamp')
+        if (modifyTimestamp) {
+          const currentTime = new Date().getTime()
+          const thirtyMinutes = 30 * 60 * 1000 // 30分钟的毫秒数
+
+          // 如果修改模式已经存在超过30分钟，则自动重置
+          if (currentTime - modifyTimestamp > thirtyMinutes) {
+            console.log('修改模式已过期，自动重置')
+            this.setModifyMode(false)
+            return true
+          }
+        }
+        return false
+      } catch (error) {
+        console.error('检查修改模式过期失败:', error)
+        return false
+      }
+    },
+
     // 加载本地存储数据初始化状态
     loadFromStorage() {
       try {
+        // 先检查修改模式是否过期
+        this.checkModifyModeExpired()
+
         const step1Storage = uni.getStorageSync('professionalRegisterStep1')
         const step2Storage = uni.getStorageSync('professionalRegisterStep2')
         const step3Storage = uni.getStorageSync('professionalRegisterStep3')

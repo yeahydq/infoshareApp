@@ -138,6 +138,9 @@ const handleEditFromReview = (step) => {
 onMounted(async () => {
   console.log('Teacher registration index page mounted')
 
+  // 检查修改模式是否过期
+  registerStore.checkModifyModeExpired()
+
   // 检查用户是否已登录
   if (!userStore.userInfo?.openid) {
     uni.showToast({
@@ -169,14 +172,35 @@ onMounted(async () => {
     uni.hideLoading()
 
     if (result && result.hasApplication) {
-      // 用户有申请记录，检查是否处于修改模式
-      if (registerStore.isModifyMode) {
+      // 用户有申请记录，检查状态和修改模式
+      const appStatus = result.application.status
+      console.log('云端查询：用户有申请记录，状态为:', appStatus)
+
+      // 获取URL参数，检查是否携带step参数
+      const pages = getCurrentPages()
+      const currentPage = pages[pages.length - 1]
+      const options = currentPage.options || {}
+      const hasStepParam = !!options.step
+
+      // 如果是已通过审核的状态，且不是从修改资料按钮点击过来的（没有step参数）
+      // 直接跳转到状态页面
+      if (appStatus === 'approved' && !hasStepParam) {
+        console.log('已通过审核状态，直接跳转到状态页面')
+        registerStore.setModifyMode(false) // 重置修改模式
+        uni.redirectTo({
+          url: '/pages/weshares/teacher-registration/status',
+        })
+        return
+      }
+
+      // 如果是处于修改模式，且是通过修改资料按钮点击进来的
+      if (registerStore.isModifyMode && hasStepParam) {
         console.log('修改模式：从状态页进入，显示第4页')
         // 如果是修改模式，直接显示第4页
         activeComponent.value = 'registerPage4'
       } else {
         // 非修改模式，跳转到状态页
-        console.log('云端查询：用户有申请记录，状态为:', result.application.status)
+        console.log('非修改模式，跳转到状态页')
         uni.redirectTo({
           url: '/pages/weshares/teacher-registration/status',
         })

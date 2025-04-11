@@ -120,7 +120,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { login } from '@/service/auth'
 
@@ -174,22 +174,57 @@ const professionalButtonText = computed(() => {
 })
 
 // 根据专业人员状态跳转到不同页面
-const navigateToRegister = () => {
-  const status = userStore.userInfo.professionalStatus
-
+const navigateToRegister = async () => {
   if (!hasLogin.value) {
     // 未登录先登录
     handleLogin()
     return
   }
 
-  if (status === 'approved') {
-    // 已通过审核，跳转到专业人员主页
-    navigateTo(NavigationRoutes.PROFESSIONAL_HOME)
-  } else {
-    // 其他状态都跳转到注册/审核页面
-    navigateTo(NavigationRoutes.TEACHER_REGISTRATION)
+  try {
+    // 显示加载中提示
+    uni.showLoading({
+      title: '加载中...',
+    })
+
+    // 从服务器获取最新状态
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'checkApplication',
+      },
+    })
+
+    uni.hideLoading()
+
+    if (result && result.hasApplication) {
+      // 更新本地状态
+      const latestStatus = result.application.status
+      console.log('从服务器获取的专业人士状态:', latestStatus)
+
+      if (latestStatus !== userStore.userInfo.professionalStatus) {
+        console.log('更新本地专业人士状态:', latestStatus)
+        userStore.setUserInfo({
+          ...userStore.userInfo,
+          professionalStatus: latestStatus,
+          updateTime: new Date().getTime(),
+        })
+      }
+
+      // 如果有申请记录，直接导航到状态页面
+      if (latestStatus === 'pending' || latestStatus === 'approved') {
+        console.log('直接导航到专业人士状态页面')
+        uni.navigateTo({ url: '../teacher-registration/status' })
+        return
+      }
+    }
+  } catch (error) {
+    uni.hideLoading()
+    console.error('获取专业人士状态失败:', error)
   }
+
+  // 如果没有申请记录或状态不是pending/approved，则导航到注册页面
+  navigateTo(NavigationRoutes.TEACHER_REGISTRATION)
 }
 
 const navigateToSettings = () => {
@@ -232,6 +267,36 @@ const navigateToTimeSchedule = () => {
     url: '../time-schedule',
   })
 }
+
+// 页面加载时获取最新状态
+onMounted(async () => {
+  // 如果用户已登录，刷新专业人士状态
+  if (hasLogin.value) {
+    try {
+      const { result } = await uni.cloud.callFunction({
+        name: 'profRegister',
+        data: {
+          action: 'checkApplication',
+        },
+      })
+
+      if (result && result.hasApplication) {
+        // 更新本地状态
+        const latestStatus = result.application.status
+        if (latestStatus !== userStore.userInfo.professionalStatus) {
+          console.log('页面加载时更新专业人士状态:', latestStatus)
+          userStore.setUserInfo({
+            ...userStore.userInfo,
+            professionalStatus: latestStatus,
+            updateTime: new Date().getTime(),
+          })
+        }
+      }
+    } catch (error) {
+      console.error('获取专业人士状态失败:', error)
+    }
+  }
+})
 </script>
 
 <style>

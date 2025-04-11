@@ -1,11 +1,27 @@
 <template>
   <view class="container">
     <!-- 顶部状态栏 -->
-    <view class="status-banner">
-      <view class="status-icon">⏳</view>
+    <view
+      class="status-banner"
+      :class="{ approved: userStore.userInfo.professionalStatus === 'approved' }"
+    >
+      <view class="status-icon">
+        <template v-if="userStore.userInfo.professionalStatus === 'approved'">✅</template>
+        <template v-else>⏳</template>
+      </view>
       <view class="status-info">
-        <view class="status-title">您的申请正在审核中</view>
-        <view class="status-desc">我们的工作人员正在审核您的资料，请耐心等待</view>
+        <view class="status-title">
+          <template v-if="userStore.userInfo.professionalStatus === 'approved'">
+            您的申请已通过审核
+          </template>
+          <template v-else>您的申请正在审核中</template>
+        </view>
+        <view class="status-desc">
+          <template v-if="userStore.userInfo.professionalStatus === 'approved'">
+            您可以修改个人资料和服务信息
+          </template>
+          <template v-else>我们的工作人员正在审核您的资料，请耐心等待</template>
+        </view>
       </view>
     </view>
 
@@ -22,27 +38,47 @@
         <view class="step-dot"></view>
         <view class="step-info">
           <view class="step-title">资料审核中</view>
-          <view class="step-time">处理中</view>
+          <view class="step-time">
+            <template v-if="userStore.userInfo.professionalStatus === 'approved'">已完成</template>
+            <template v-else>处理中</template>
+          </view>
         </view>
       </view>
-      <view class="progress-step">
+      <view
+        class="progress-step"
+        :class="{ active: userStore.userInfo.professionalStatus === 'approved' }"
+      >
         <view class="step-dot"></view>
         <view class="step-info">
           <view class="step-title">审核完成</view>
-          <view class="step-time">待完成</view>
+          <view class="step-time">
+            <template v-if="userStore.userInfo.professionalStatus === 'approved'">已完成</template>
+            <template v-else>待完成</template>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 审核提示 -->
     <view class="review-tips">
-      <text>我们会在1-3个工作日内完成审核，请耐心等待</text>
-      <text>审核结果将通过短信通知您，请保持手机畅通</text>
+      <template v-if="userStore.userInfo.professionalStatus === 'approved'">
+        <text>您的申请已经通过审核，可以开始接单了</text>
+        <text>您可以随时修改个人资料和服务信息</text>
+      </template>
+      <template v-else>
+        <text>我们会在1-3个工作日内完成审核，请耐心等待</text>
+        <text>审核结果将通过短信通知您，请保持手机畅通</text>
+      </template>
     </view>
 
     <!-- 修改资料按钮 -->
     <view class="action-buttons">
-      <button class="modify-btn" @click="handleModify">修改资料</button>
+      <button class="modify-btn" @click="handleModify">
+        <template v-if="userStore.userInfo.professionalStatus === 'approved'">
+          修改个人资料
+        </template>
+        <template v-else>修改资料</template>
+      </button>
       <button class="back-btn" @click="handleBack">返回首页</button>
     </view>
   </view>
@@ -124,7 +160,7 @@ const handleModify = async () => {
 
       // 跳转到第四页（预览页）
       uni.navigateTo({
-        url: '/pages/weshares/teacher-registration/index?step=4',
+        url: '/pages/weshares/teacher-registration/index?step=4&from=status',
       })
     } else {
       throw new Error(result.message || '获取申请信息失败')
@@ -146,7 +182,10 @@ const handleBack = () => {
 }
 
 // 页面加载时检查状态
-onMounted(() => {
+onMounted(async () => {
+  // 重置修改模式状态
+  registerStore.setModifyMode(false)
+
   // 检查用户是否已登录
   if (!userStore.userInfo?.openid) {
     uni.showToast({
@@ -159,18 +198,75 @@ onMounted(() => {
     return
   }
 
-  // 检查是否有正在审核的申请
-  if (
-    !userStore.userInfo.professionalStatus ||
-    userStore.userInfo.professionalStatus !== 'pending'
-  ) {
-    uni.showToast({
-      title: '您没有正在审核的申请',
-      icon: 'none',
+  // 显示加载状态
+  uni.showLoading({
+    title: '加载中...',
+  })
+
+  try {
+    // 从服务器获取最新的专业人士状态
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'checkApplication',
+      },
     })
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
+
+    uni.hideLoading()
+
+    if (result && result.hasApplication) {
+      // 获取到最新状态，更新本地用户状态
+      const latestStatus = result.application.status
+      console.log('从服务器获取的专业人士状态:', latestStatus)
+
+      // 如果服务器状态与本地状态不同，更新本地状态
+      if (latestStatus !== userStore.userInfo.professionalStatus) {
+        console.log('更新本地状态:', latestStatus)
+        userStore.setUserInfo({
+          ...userStore.userInfo,
+          professionalStatus: latestStatus,
+          updateTime: new Date().getTime(),
+        })
+      }
+
+      // 如果没有状态或状态不是pending或approved，则显示提示并返回
+      if (!latestStatus || (latestStatus !== 'pending' && latestStatus !== 'approved')) {
+        uni.showToast({
+          title: '您没有审核中或已通过的申请',
+          icon: 'none',
+        })
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
+      }
+    } else {
+      // 没有申请记录
+      uni.showToast({
+        title: '您没有申请记录',
+        icon: 'none',
+      })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    }
+  } catch (error) {
+    uni.hideLoading()
+    console.error('获取专业人士状态失败:', error)
+
+    // 发生错误时，使用本地状态进行检查
+    if (
+      !userStore.userInfo.professionalStatus ||
+      (userStore.userInfo.professionalStatus !== 'pending' &&
+        userStore.userInfo.professionalStatus !== 'approved')
+    ) {
+      uni.showToast({
+        title: '您没有申请记录',
+        icon: 'none',
+      })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    }
   }
 })
 </script>
@@ -190,6 +286,10 @@ onMounted(() => {
   background: linear-gradient(45deg, #fdf0cc, #f7e8b0);
   border-radius: 12rpx;
   box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.05);
+
+  &.approved {
+    background: linear-gradient(45deg, #d4f8d4, #c1e8c1);
+  }
 
   .status-icon {
     margin-right: 20rpx;
