@@ -675,9 +675,9 @@ const confirmModify = async () => {
         icon: 'success',
       })
 
-      // 延迟跳转到第五页，使用navigateTo
+      // 延迟跳转到首页，使用switchTab
       setTimeout(() => {
-        uni.navigateTo({
+        uni.switchTab({
           url: '/pages/weshares/index/index',
         })
       }, 1500)
@@ -1507,9 +1507,9 @@ const handleSubmit = async () => {
         icon: 'success',
       })
 
-      // 延迟跳转到第五页，使用navigateTo
+      // 延迟跳转到首页，使用switchTab
       setTimeout(() => {
-        uni.navigateTo({
+        uni.switchTab({
           url: '/pages/weshares/index/index',
         })
       }, 1500)
