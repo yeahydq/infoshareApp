@@ -289,11 +289,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue'
 import { useUserStore } from '@/store'
 import { useRegisterStore } from '@/store/registerStore'
 import PageLayout from '@/components/PageLayout/PageLayout.vue'
 import { login } from '@/service/auth'
+import allCategories from '@/config/categoryData'
 
 const userStore = useUserStore()
 const registerStore = useRegisterStore()
@@ -374,20 +375,6 @@ const formData = reactive<FormData>({
 // 专业类型搜索与分类
 const searchKeyword = ref('')
 const recentTypes = ref<string[]>([])
-const allCategories = [
-  {
-    name: '教育',
-    types: ['语文辅导', '数学辅导', '英语辅导', '物理辅导'],
-  },
-  {
-    name: '维修服务',
-    types: ['水管', '电路', '空调', '保洁'],
-  },
-  {
-    name: '其他',
-    types: ['其他'],
-  },
-]
 const filteredCategories = ref(allCategories)
 const filteredTypes = ref<string[]>([])
 

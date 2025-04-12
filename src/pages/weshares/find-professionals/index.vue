@@ -264,7 +264,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { cityAreaData } from '@/config/areaData'
+import { cityAreaData, simpleCityList } from '@/config/areaData'
+import allCategories from '@/config/categoryData'
 
 // 使用内联默认头像，避免依赖外部文件
 const defaultAvatarUrl =
@@ -292,13 +293,8 @@ const onlyAvailable = ref(true) // 默认只显示有可用时间段的专业人
 
 // 分类列表
 const categories = ref([
-  { id: 'education', name: '教育培训' },
+  { id: 'education', name: '教育' },
   { id: 'repair', name: '维修服务' },
-  { id: 'it', name: 'IT技术' },
-  { id: 'design', name: '设计服务' },
-  { id: 'finance', name: '金融财务' },
-  { id: 'medical', name: '医疗健康' },
-  { id: 'legal', name: '法律咨询' },
   { id: 'other', name: '其他服务' },
 ])
 

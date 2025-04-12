@@ -160,6 +160,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { simpleCityList } from '@/config/areaData'
+import allCategories from '@/config/categoryData'
 import { checkProfessionalStatus, updateProfessionalStatus } from '@/service/professional'
 import { useUserStore } from '@/store'
 
@@ -194,51 +195,21 @@ const bannerList = ref([
 const categories = ref([
   {
     icon: '/static/image/literature.png',
-    label: '教育服务',
-    description: '语文/数学/英语/物理',
+    label: allCategories[0].name,
+    description: allCategories[0].types.join('/'),
     class: 'education',
   },
   {
     icon: '/static/image/bulb.png',
-    label: '维修服务',
-    description: '水管/电路/空调/保洁',
+    label: allCategories[1].name,
+    description: allCategories[1].types.join('/'),
     class: 'repair',
   },
   {
-    icon: '/static/image/medicine.png',
-    label: '医疗服务',
-    description: '医学咨询/保健服务',
-    class: 'medicine',
-  },
-  {
-    icon: '/static/image/engineering.png',
-    label: '工程技术',
-    description: '机械/电子/计算机',
-    class: 'engineering',
-  },
-  {
-    icon: '/static/image/management.png',
-    label: '商业服务',
-    description: '管理咨询/营销策划',
-    class: 'business',
-  },
-  {
-    icon: '/static/image/release.png',
-    label: '法律服务',
-    description: '法律咨询/合同审查',
-    class: 'legal',
-  },
-  {
-    icon: '/static/image/science.png',
-    label: '艺术设计',
-    description: '平面设计/室内设计',
-    class: 'design',
-  },
-  {
     icon: '/static/image/more.png',
-    label: '更多服务',
+    label: allCategories[2].name,
     description: '查看全部',
-    class: 'more',
+    class: 'other',
   },
 ])
 
@@ -281,7 +252,7 @@ const showLocationPicker = () => {
 
 const focusSearch = () => {
   uni.navigateTo({
-    url: '/pages/search/index',
+    url: '../find-professionals/index',
   })
 }
 
@@ -293,7 +264,7 @@ const handleBannerClick = (banner) => {
 
 const handleCategoryClick = (category) => {
   uni.navigateTo({
-    url: `/pages/weshares/find-professionals/index?category=${encodeURIComponent(category.label)}`,
+    url: `/pages/weshares/find-professionals/index?category=${encodeURIComponent(category.class)}`,
   })
 }
 
