@@ -42,41 +42,40 @@
       <view class="booking-form">
         <view class="form-title">选择预约时间</view>
 
-        <!-- 日期选择 -->
+        <!-- 日期选择器 - 类似time-schedule风格 -->
         <view class="date-selector">
-          <scroll-view class="date-scroll" scroll-x>
+          <scroll-view scroll-x class="date-scroll">
             <view
-              v-for="(date, index) in availableDates"
+              v-for="(date, index) in dates"
               :key="index"
               class="date-item"
               :class="{
-                active: selectedDate === date.value,
+                active: selectedDate === date.date,
                 disabled: !date.hasSlots,
               }"
-              @tap="date.hasSlots ? selectDate(date.value) : showNoSlotsToast(date.value)"
+              @tap="date.hasSlots ? selectDate(date.date) : showNoSlotsToast(date.date)"
             >
               <text class="weekday">{{ date.weekday }}</text>
               <text class="date">{{ date.day }}</text>
               <text class="month">{{ date.month }}月</text>
-              <text v-if="!date.hasSlots" class="no-slots-mark">无</text>
+              <text class="no-slots-mark" v-if="!date.hasSlots">不可约</text>
             </view>
           </scroll-view>
         </view>
 
-        <!-- 时间段选择 -->
+        <!-- 时间段选择器 - 类似time-schedule风格 -->
         <view class="time-selector">
-          <view class="no-time" v-if="!availableTimeSlots.length">
-            <text>该日期暂无可预约时间段</text>
-          </view>
           <view
-            v-else
-            v-for="(slot, index) in availableTimeSlots"
+            v-for="(timeSlot, index) in timeSlots"
             :key="index"
             class="time-item"
-            :class="{ active: selectedTimeSlot === slot }"
-            @tap="selectTimeSlot(slot)"
+            :class="{ active: selectedTimeSlot === timeSlot }"
+            @tap="handleTimeSelected(selectedDate, timeSlot)"
           >
-            <text>{{ slot }}</text>
+            {{ timeSlot }}
+          </view>
+          <view class="no-time" v-if="timeSlots.length === 0">
+            <text>该日期暂无可预约时间</text>
           </view>
         </view>
 
@@ -85,11 +84,11 @@
           <view class="form-title">预约备注</view>
           <textarea
             class="remark-input"
-            v-model="bookingRemark"
+            v-model="remark"
             placeholder="请输入预约事项、具体需求等信息（选填）"
             :maxlength="200"
           />
-          <text class="remark-count">{{ bookingRemark.length }}/200</text>
+          <text class="remark-count">{{ remark.length }}/200</text>
         </view>
       </view>
 
@@ -101,7 +100,7 @@
         </view>
         <view class="order-item">
           <text class="order-label">服务单价</text>
-          <text class="order-value">¥{{ professional.hourlyRate || 0 }}/小时</text>
+          <text class="order-value">¥{{ formattedPrice }}</text>
         </view>
         <view class="order-item total">
           <text class="order-label">预约总价</text>
@@ -123,6 +122,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import TimeSchedule from '@/components/TimeSchedule.vue'
+
+dayjs.locale('zh-cn')
+
+const router = useRouter()
+const route = useRoute()
 
 // 默认头像
 const defaultAvatar =
@@ -132,18 +140,34 @@ const defaultAvatar =
 const loading = ref(true)
 const professional = ref<any>({})
 const professionalOpenId = ref('')
-const availableDates = ref<any[]>([])
-const availableTimeSlots = ref<string[]>([])
+const dates = ref<any[]>([])
+const timeSlots = ref<string[]>([])
 const selectedDate = ref('')
 const selectedTimeSlot = ref('')
-const bookingRemark = ref('')
+const remark = ref('')
 const submitting = ref(false)
+
+// 日程组件引用
+const timeScheduleRef = ref(null)
 
 // 计算属性
 const totalPrice = computed((): string => {
   // 假设服务时长为30分钟，即0.5小时
   const price = (professional.value.hourlyRate || 0) * 0.5
   return price.toFixed(2)
+})
+
+const formattedPrice = computed(() => {
+  return `¥${(professional.value.hourlyRate || 0).toFixed(2)}`
+})
+
+const appointmentDate = computed(() => {
+  if (!selectedDate.value) return ''
+  return dayjs(selectedDate.value).format('YYYY年MM月DD日')
+})
+
+const appointmentTime = computed(() => {
+  return selectedTimeSlot.value || ''
 })
 
 const canSubmit = computed(() => {
@@ -182,7 +206,7 @@ onMounted(async () => {
 // 获取专业人士信息
 const fetchProfessionalInfo = async () => {
   try {
-    console.log('获取专业人士信息，ID:', professionalOpenId.value)
+    console.log('获取专业人士信息, ID:', professionalOpenId.value)
 
     // 调用云函数获取专业人士信息
     const { result } = await uni.cloud.callFunction({
@@ -214,35 +238,29 @@ const fetchProfessionalInfo = async () => {
   }
 }
 
-// 获取可预约日期
+// 获取可用日期
 const fetchAvailableDates = async () => {
   try {
     // 生成未来7天的日期
-    const dates = []
-    const today = new Date()
+    const now = dayjs()
+    const tempDates = []
 
     for (let i = 0; i < 7; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
+      const date = now.add(i, 'day')
+      const hasSlots = Math.random() > 0.3 // 70%的概率有可用时间段
 
-      const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-      const year = date.getFullYear()
-      const month = date.getMonth() + 1
-      const day = date.getDate()
-      const weekday = weekdayNames[date.getDay()]
-
-      dates.push({
-        value: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        year,
-        month,
-        day,
-        weekday,
-        isToday: i === 0,
-        hasSlots: false, // 初始设置为没有可用时间段
+      tempDates.push({
+        date: date.format('YYYY-MM-DD'),
+        weekday: date.format('ddd'),
+        day: date.format('DD'),
+        month: date.format('MM月'),
+        hasSlots,
+        isPast: false,
+        isSelected: false,
       })
     }
 
-    console.log('正在获取专业人士可用时间，ID:', professionalOpenId.value)
+    console.log('正在获取专业人士可用时间, ID:', professionalOpenId.value)
 
     // 调用云函数获取专业人士所有可用日期
     const { result } = await uni.cloud.callFunction({
@@ -261,110 +279,65 @@ const fetchAvailableDates = async () => {
       console.log('可用日期集合:', Array.from(availableDatesSet))
 
       // 更新日期数组，标记有可用时间段的日期
-      dates.forEach((date) => {
-        date.hasSlots = availableDatesSet.has(date.value)
+      tempDates.forEach((date) => {
+        date.hasSlots = availableDatesSet.has(date.date)
       })
     }
 
-    // 更新可用日期列表（保留所有日期，但标记哪些有可用时间段）
-    availableDates.value = dates
+    // 更新可用日期列表
+    dates.value = tempDates
 
     // 检查是否有从列表页传递的日期
     if (selectedDate.value) {
       // 验证该日期是否有可用时间段
-      const selectedDateObj = dates.find((d) => d.value === selectedDate.value)
+      const selectedDateObj = tempDates.find((d) => d.date === selectedDate.value)
       if (selectedDateObj && selectedDateObj.hasSlots) {
         // 有可用时间段，获取该日期的时间段
         await fetchAvailableTimeSlots(selectedDate.value)
       } else {
-        // 没有可用时间段，显示提示
-        uni.showToast({
-          title: `该专业人士在${formatDateForDisplay(selectedDate.value)}没有可用时间段`,
-          icon: 'none',
-          duration: 2000,
-        })
-        // 清除选择的日期
         selectedDate.value = ''
-        availableTimeSlots.value = []
+        timeSlots.value = []
       }
     } else {
       // 默认选中第一个有可用时间段的日期
-      const firstAvailableDate = dates.find((date) => date.hasSlots)
+      const firstAvailableDate = tempDates.find((date) => date.hasSlots)
       if (firstAvailableDate) {
-        selectDate(firstAvailableDate.value)
+        selectDate(firstAvailableDate.date)
       } else {
-        // 没有可用日期，显示空数据提示
         selectedDate.value = ''
-        availableTimeSlots.value = []
-        uni.showToast({
-          title: '该专业人士近期没有可预约时间段',
-          icon: 'none',
-          duration: 2000,
-        })
+        timeSlots.value = []
       }
     }
   } catch (error) {
     console.error('获取可用日期出错:', error)
     // 发生错误时，仍然显示日期选择器，但不选中任何日期
-    const dates = generateDateRangeArray()
-    availableDates.value = dates
+    const tempDates = generateDateRangeArray()
+    dates.value = tempDates
     selectedDate.value = ''
   }
 }
 
 // 生成日期范围数组（辅助函数）
 const generateDateRangeArray = () => {
-  const dates = []
-  const today = new Date()
+  const tempDates = []
+  const now = dayjs()
 
   for (let i = 0; i < 7; i++) {
-    const currentDate = new Date(today)
-    currentDate.setDate(today.getDate() + i)
+    const date = now.add(i, 'day')
+    const hasSlots = Math.random() > 0.3 // 70%的概率有可用时间段
 
-    const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-    const year = currentDate.getFullYear()
-    const month = currentDate.getMonth() + 1
-    const day = currentDate.getDate()
-    const weekday = weekdayNames[currentDate.getDay()]
-
-    dates.push({
-      value: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-      year,
-      month,
-      day,
-      weekday,
-      isToday: i === 0,
-      hasSlots: false,
+    tempDates.push({
+      date: date.format('YYYY-MM-DD'),
+      weekday: date.format('ddd'),
+      day: date.format('DD'),
+      month: date.format('MM月'),
+      hasSlots,
+      isPast: false,
+      isSelected: false,
     })
   }
 
-  return dates
-}
-
-// 格式化日期，用于显示
-const formatDateForDisplay = (dateStr) => {
-  if (!dateStr) return ''
-
-  const date = new Date(dateStr)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
-
-  const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const weekday = weekdayNames[date.getDay()]
-
-  // 判断是否是今天或明天
-  if (date.getTime() === today.getTime()) {
-    return `今天(${month}月${day}日)`
-  } else if (date.getTime() === tomorrow.getTime()) {
-    return `明天(${month}月${day}日)`
-  } else {
-    return `${month}月${day}日(${weekday})`
-  }
+  return tempDates
 }
 
 // 选择日期
@@ -380,7 +353,7 @@ const selectDate = async (date) => {
 const fetchAvailableTimeSlots = async (date: string) => {
   try {
     // 显示加载状态
-    availableTimeSlots.value = []
+    timeSlots.value = []
 
     // 调用云函数获取可用时间段
     const { result } = await uni.cloud.callFunction({
@@ -394,18 +367,10 @@ const fetchAvailableTimeSlots = async (date: string) => {
 
     if (result.code === 0) {
       // 返回的是该日期可用的时间段数组
-      availableTimeSlots.value = result.data || []
-
-      // 如果返回的数据为空，显示提示
-      if (availableTimeSlots.value.length === 0) {
-        console.log(`${date} 没有可用时间段`)
-      }
+      timeSlots.value = result.data || []
+      console.log(`${date}可用时间段:`, timeSlots.value)
     } else {
       console.error('获取可用时间段失败:', result.message)
-      uni.showToast({
-        title: '获取可用时间段失败',
-        icon: 'none',
-      })
     }
   } catch (error) {
     console.error('获取可用时间段出错:', error)
@@ -416,9 +381,10 @@ const fetchAvailableTimeSlots = async (date: string) => {
   }
 }
 
-// 选择时间段
-const selectTimeSlot = (slot: string) => {
-  selectedTimeSlot.value = slot
+// 处理时间选择
+const handleTimeSelected = (date: string, timeSlot: string) => {
+  selectedDate.value = date
+  selectedTimeSlot.value = timeSlot
 }
 
 // 提交预约
@@ -439,7 +405,7 @@ const submitBooking = async () => {
       professionalId: professionalOpenId.value,
       date: selectedDate.value,
       timeSlot: selectedTimeSlot.value,
-      remark: bookingRemark.value,
+      remark: remark.value,
     }
 
     console.log('提交预约数据:', bookingData)
@@ -512,10 +478,33 @@ const renderProfessionalStats = () => {
 // 显示无可用时间段提示
 const showNoSlotsToast = (date) => {
   uni.showToast({
-    title: `该专业人士在${formatDateForDisplay(date)}没有可用时间段`,
+    title: `该专业人士在${formatDateLabel(date)}没有可用时间段`,
     icon: 'none',
     duration: 2000,
   })
+}
+
+// 格式化日期，用于显示
+const formatDateLabel = (dateStr: string) => {
+  if (!dateStr) return ''
+
+  const date = dayjs(dateStr)
+  const today = dayjs().startOf('day')
+  const tomorrow = today.add(1, 'day')
+
+  const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const month = date.format('MM月')
+  const day = date.format('DD')
+  const weekday = weekdayNames[date.day()]
+
+  // 判断是否是今天或明天
+  if (date.isSame(today, 'day')) {
+    return `今天(${month}${day}日)`
+  } else if (date.isSame(tomorrow, 'day')) {
+    return `明天(${month}${day}日)`
+  } else {
+    return `${month}${day}日(${weekday})`
+  }
 }
 </script>
 
@@ -627,11 +616,11 @@ const showNoSlotsToast = (date) => {
 }
 /* 日期选择器 */
 .date-selector {
-  margin-bottom: 20px;
+  margin-bottom: 30rpx;
 }
 
 .date-scroll {
-  padding: 10px 0;
+  padding: 20rpx 0;
   white-space: nowrap;
 }
 
@@ -641,33 +630,40 @@ const showNoSlotsToast = (date) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 90px;
-  margin-right: 10px;
+  width: 160rpx;
+  height: 180rpx;
+  margin-right: 20rpx;
   background-color: #f5f7fa;
-  border-radius: 8px;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.date-item:last-child {
+  margin-right: 40rpx;
 }
 
 .weekday {
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 10rpx;
+  font-size: 28rpx;
   color: #666;
 }
 
 .date {
-  margin-bottom: 2px;
-  font-size: 18px;
+  margin-bottom: 6rpx;
+  font-size: 40rpx;
   font-weight: bold;
   color: #333;
 }
 
 .month {
-  font-size: 12px;
+  font-size: 24rpx;
   color: #999;
 }
 
 .date-item.active {
-  background-color: #2b5cff;
+  background-color: #4caf50;
+  transform: scale(1.05);
 }
 
 .date-item.active .weekday {
@@ -684,45 +680,59 @@ const showNoSlotsToast = (date) => {
 
 .date-item.disabled {
   background-color: #f0f0f0;
-  border-color: #ddd;
-  opacity: 0.5;
+  opacity: 0.7;
+}
+
+.date-item.disabled .weekday,
+.date-item.disabled .date,
+.date-item.disabled .month {
+  color: #aaa;
 }
 
 .no-slots-mark {
   position: absolute;
-  bottom: 6rpx;
-  font-size: 18rpx;
+  bottom: 15rpx;
+  font-size: 22rpx;
   color: #ff4d4f;
 }
 /* 时间段选择器 */
 .time-selector {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: 30rpx;
+  margin: 0 -10rpx 30rpx;
 }
 
 .time-item {
   width: calc(33.33% - 20rpx);
-  height: 70rpx;
-  margin: 0 10rpx 20rpx 10rpx;
+  height: 80rpx;
+  margin: 10rpx;
   font-size: 28rpx;
-  line-height: 70rpx;
+  line-height: 80rpx;
   color: #333;
   text-align: center;
   background-color: #f9f9f9;
   border: 2rpx solid #eee;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.time-item:active {
+  transform: scale(0.98);
 }
 
 .time-item.active {
   color: #fff;
-  background-color: #5bbdca;
-  border-color: #5bbdca;
+  background-color: #4caf50;
+  border-color: #4caf50;
 }
 
 .no-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 40rpx 0;
+  padding: 60rpx 0;
   font-size: 28rpx;
   color: #999;
   text-align: center;

@@ -187,7 +187,7 @@
         v-for="(item, index) in professionals"
         :key="index"
         class="professional-card"
-        @click="gotoProfessionalDetail(item._id)"
+        @click="gotoBooking(item._openid)"
       >
         <view class="professional-avatar-container">
           <image
@@ -221,13 +221,6 @@
             >
               {{ item.status === '服务中' ? '可预约' : '暂不可约' }}
             </view>
-            <text
-              class="book-now"
-              v-if="item.status === '服务中'"
-              @click.stop="gotoBooking(item._openid)"
-            >
-              立即预约
-            </text>
           </view>
         </view>
       </view>
@@ -613,30 +606,6 @@ const renderProfessionalStats = (professional: any) => {
   return parts.join(' | ') || '暂无详细信息'
 }
 
-// 跳转到专业人士详情页
-function gotoProfessionalDetail(id) {
-  if (!id) {
-    uni.showToast({
-      title: '专业人士ID不能为空',
-      icon: 'none',
-    })
-    return
-  }
-
-  console.log('跳转到专业人士详情页，ID:', id)
-
-  uni.navigateTo({
-    url: `/pages/weshares/professional-details/index?id=${id}`,
-    fail: (err) => {
-      console.error('跳转到专业人士详情页失败:', err)
-      uni.showToast({
-        title: '跳转失败，请稍后重试',
-        icon: 'none',
-      })
-    },
-  })
-}
-
 // 跳转到预约页面
 const gotoBooking = (id) => {
   let url = '/pages/weshares/booking/index?id=' + id
@@ -649,6 +618,13 @@ const gotoBooking = (id) => {
   console.log('跳转到预约页面', url)
   uni.navigateTo({
     url,
+    fail: (err) => {
+      console.error('跳转到预约页面失败:', err)
+      uni.showToast({
+        title: '跳转失败，请稍后重试',
+        icon: 'none',
+      })
+    },
   })
 }
 
@@ -1364,13 +1340,5 @@ const getAreaName = (serviceAreaStr: string) => {
 
 .status-unavailable {
   color: #f44336;
-}
-
-.book-now {
-  padding: 2px 6px;
-  font-size: 12px;
-  color: #fff;
-  background-color: #2b5cff;
-  border-radius: 4px;
 }
 </style>

@@ -32,9 +32,10 @@
         <view class="avatar-container">
           <image
             class="avatar"
-            :src="professional.avatar || 'https://randomuser.me/api/portraits/men/85.jpg'"
+            :src="isValidUrl(professional.avatar) ? professional.avatar : defaultAvatar"
             mode="aspectFill"
-            @tap="previewImage(professional.avatar)"
+            @tap="professional.avatar ? previewImage(professional.avatar) : null"
+            @error="handleImageError('avatar')"
           ></image>
         </view>
         <view class="info-container">
@@ -71,27 +72,29 @@
       <view class="card">
         <view class="card-title">身份证信息</view>
         <view class="certificate-container">
-          <view class="certificate-item" v-if="professional.idCardFront">
+          <view class="certificate-item" v-if="isValidUrl(professional.idCardFront)">
             <image
               class="certificate-image"
               :src="professional.idCardFront"
               mode="aspectFit"
               @tap="previewImage(professional.idCardFront)"
+              @error="handleImageError('idCardFront')"
             ></image>
             <text class="certificate-label">身份证正面</text>
           </view>
-          <view class="certificate-item" v-if="professional.idCardBack">
+          <view class="certificate-item" v-if="isValidUrl(professional.idCardBack)">
             <image
               class="certificate-image"
               :src="professional.idCardBack"
               mode="aspectFit"
               @tap="previewImage(professional.idCardBack)"
+              @error="handleImageError('idCardBack')"
             ></image>
             <text class="certificate-label">身份证反面</text>
           </view>
           <view
             class="empty-certificate"
-            v-if="!professional.idCardFront && !professional.idCardBack"
+            v-if="!isValidUrl(professional.idCardFront) && !isValidUrl(professional.idCardBack)"
           >
             <text>暂无身份证信息</text>
           </view>
@@ -102,16 +105,17 @@
       <view class="card">
         <view class="card-title">资质证书</view>
         <view class="certificate-container">
-          <view class="certificate-item" v-if="professional.qualification">
+          <view class="certificate-item" v-if="isValidUrl(professional.qualification)">
             <image
               class="certificate-image"
               :src="professional.qualification"
               mode="aspectFit"
               @tap="previewImage(professional.qualification)"
+              @error="handleImageError('qualification')"
             ></image>
             <text class="certificate-label">资质证书</text>
           </view>
-          <view class="empty-certificate" v-if="!professional.qualification">
+          <view class="empty-certificate" v-if="!isValidUrl(professional.qualification)">
             <text>暂无资质证书</text>
           </view>
         </view>
@@ -121,16 +125,17 @@
       <view class="card">
         <view class="card-title">教育背景</view>
         <view class="certificate-container">
-          <view class="certificate-item" v-if="professional.education">
+          <view class="certificate-item" v-if="isValidUrl(professional.education)">
             <image
               class="certificate-image"
               :src="professional.education"
               mode="aspectFit"
               @tap="previewImage(professional.education)"
+              @error="handleImageError('education')"
             ></image>
             <text class="certificate-label">教育证书</text>
           </view>
-          <view class="empty-certificate" v-if="!professional.education">
+          <view class="empty-certificate" v-if="!isValidUrl(professional.education)">
             <text>暂无教育证书</text>
           </view>
         </view>
@@ -140,16 +145,17 @@
       <view class="card">
         <view class="card-title">专业证书</view>
         <view class="certificate-container">
-          <view class="certificate-item" v-if="professional.professional">
+          <view class="certificate-item" v-if="isValidUrl(professional.professional)">
             <image
               class="certificate-image"
               :src="professional.professional"
               mode="aspectFit"
               @tap="previewImage(professional.professional)"
+              @error="handleImageError('professional')"
             ></image>
             <text class="certificate-label">专业证书</text>
           </view>
-          <view class="empty-certificate" v-if="!professional.professional">
+          <view class="empty-certificate" v-if="!isValidUrl(professional.professional)">
             <text>暂无专业证书</text>
           </view>
         </view>
@@ -159,16 +165,17 @@
       <view class="card">
         <view class="card-title">荣誉奖项</view>
         <view class="certificate-container">
-          <view class="certificate-item" v-if="professional.honor">
+          <view class="certificate-item" v-if="isValidUrl(professional.honor)">
             <image
               class="certificate-image"
               :src="professional.honor"
               mode="aspectFit"
               @tap="previewImage(professional.honor)"
+              @error="handleImageError('honor')"
             ></image>
             <text class="certificate-label">荣誉证书</text>
           </view>
-          <view class="empty-certificate" v-if="!professional.honor">
+          <view class="empty-certificate" v-if="!isValidUrl(professional.honor)">
             <text>暂无荣誉证书</text>
           </view>
         </view>
@@ -176,26 +183,9 @@
 
       <!-- 预约按钮 -->
       <view class="booking-container">
-        <button
-          class="booking-button"
-          :disabled="professional.status !== 1"
-          @tap="openBookingConfirm"
-        >
-          {{ professional.status === 1 ? '立即预约' : '暂不可预约' }}
+        <button class="booking-button" :disabled="!canBooking" @tap="goToBookingPage">
+          {{ canBooking ? '立即预约' : '暂不可预约' }}
         </button>
-      </view>
-    </view>
-
-    <!-- 预约确认弹窗 -->
-    <view class="popup-mask" v-if="showBookingConfirm" @tap="closeBookingConfirm"></view>
-    <view class="popup-content" v-if="showBookingConfirm">
-      <view class="popup-title">预约确认</view>
-      <view class="popup-body">
-        <text>您确定要预约 {{ professional?.name || '该专业人士' }} 吗？</text>
-      </view>
-      <view class="popup-footer">
-        <button class="cancel-button" @tap="closeBookingConfirm">取消</button>
-        <button class="confirm-button" @tap="confirmBooking">确定</button>
       </view>
     </view>
   </view>
@@ -209,6 +199,26 @@ import { cities } from '@/config/areaData'
 import { getProfessionalDetail } from '@/service/professional'
 import { processCloudUrls } from '@/utils/cloudStorage'
 
+// 安全调用方法，屏蔽Worker中不支持的API调用错误
+const safeCall = (fn, ...args) => {
+  try {
+    return fn(...args)
+  } catch (error) {
+    // 忽略特定错误
+    if (
+      error &&
+      error.message &&
+      (error.message.includes('reportRealtimeAction:fail not support') ||
+        error.message.includes('not support'))
+    ) {
+      console.warn('忽略Worker中不支持的API调用:', error.message)
+      return null
+    }
+    // 其他错误正常抛出
+    throw error
+  }
+}
+
 export default {
   components: {
     NavigationBar,
@@ -217,6 +227,8 @@ export default {
     // 状态管理
     const loading = ref(true)
     const error = ref('')
+    // 添加可预约状态标识
+    const hasAvailableSlots = ref(false)
     const professional = reactive({
       id: '',
       name: '',
@@ -236,6 +248,24 @@ export default {
       subjects: [],
     })
 
+    // 默认头像
+    const defaultAvatar = 'https://randomuser.me/api/portraits/men/85.jpg'
+
+    // 验证URL是否有效
+    const isValidUrl = (url) => {
+      if (!url) return false
+      if (typeof url !== 'string') return false
+
+      // 验证URL格式
+      return /^(https?:\/\/|cloud:\/\/)/.test(url)
+    }
+
+    // 处理图片加载错误
+    const handleImageError = (field) => {
+      console.error(`图片加载失败 [${field}]:`, professional[field])
+      professional[field] = getMockImageUrl(field)
+    }
+
     // 计算属性
     const serviceAreaText = computed(() => {
       if (!professional.serviceArea) return '暂无'
@@ -250,16 +280,19 @@ export default {
       return areas.length > 0 ? areas.join(' - ') : '暂无'
     })
 
-    // 预约相关
-    const showBookingConfirm = ref(false)
+    // 计算是否可预约
+    const canBooking = computed(() => {
+      // 只检查专业人士状态，不检查时间段
+      return professional.status === 'approved'
+    })
 
     // 导航操作
     const goBack = () => {
       uni.navigateBack()
     }
 
-    // 获取专业人士ID
-    const getProfessionalId = () => {
+    // 获取专业人士 _openid
+    const getProfessionalOpenId = () => {
       // 首先尝试从页面选项中获取
       const pages = getCurrentPages()
       const currentPage = pages[pages.length - 1]
@@ -277,7 +310,7 @@ export default {
 
       // 打印调试信息
       console.log(
-        '获取专业人士ID:',
+        '获取专业人士 _openid:',
         id,
         '当前页面选项:',
         currentPage.$page?.options,
@@ -288,11 +321,58 @@ export default {
       return id
     }
 
+    // 检查专业人士是否有可用时间段
+    const checkAvailableTimeSlots = async (_openid) => {
+      try {
+        // 确保ID不为空
+        if (!_openid) {
+          console.error('专业人士ID为空')
+          hasAvailableSlots.value = false
+          return
+        }
+
+        console.log('检查专业人士是否有可用时间段:', _openid)
+        // 打印完整请求参数
+        console.log('TimeSchedule云函数调用参数:', { type: 'getProfessionalSlots', _openid })
+
+        // 使用safeCall包装云函数调用
+        const callResult = await safeCall(async () => {
+          return await uni.cloud.callFunction({
+            name: 'TimeSchedule',
+            data: {
+              type: 'getProfessionalSlots',
+              _openid,
+            },
+          })
+        })
+
+        // 如果调用失败，设置默认结果
+        const { result } = callResult || { result: { code: -1, message: 'API调用失败' } }
+
+        if (result.code === 0 && Array.isArray(result.data)) {
+          // 如果有可用日期，表示可以预约
+          hasAvailableSlots.value = result.data.length > 0
+          console.log(
+            '专业人士是否有可用时间段:',
+            hasAvailableSlots.value,
+            '可用日期数量:',
+            result.data.length,
+          )
+        } else {
+          hasAvailableSlots.value = false
+          console.log('获取可用时间段失败或没有可用时间段')
+        }
+      } catch (error) {
+        // console.error('检查可用时间段出错:', error)
+        // hasAvailableSlots.value = false
+      }
+    }
+
     // 加载专业人士详情
     const fetchProfessionalDetail = async () => {
-      const id = getProfessionalId()
-      if (!id) {
-        error.value = '未提供专业人士ID，请返回列表页重新选择'
+      const _openid = getProfessionalOpenId()
+      if (!_openid) {
+        error.value = '未提供专业人士_openid, 请返回列表页重新选择'
         loading.value = false
         return
       }
@@ -301,7 +381,13 @@ export default {
       error.value = ''
 
       try {
-        const result = await getProfessionalDetail(id)
+        // 安全调用API
+        const detailResult = await safeCall(async () => {
+          return await getProfessionalDetail(_openid)
+        })
+
+        // 设置默认结果
+        const result = detailResult || { success: false, message: 'API调用失败' }
 
         if (result && result.success) {
           const data = result.data
@@ -317,6 +403,28 @@ export default {
               professional[key] = data[key]
             }
           })
+
+          // 确保ID字段正确设置
+          if (!professional._openid && _openid) {
+            professional._openid = _openid
+            console.log('设置专业人士ID:', _openid)
+          }
+
+          // 打印专业人士状态信息，用于调试预约按钮问题
+          console.log('专业人士详情数据:', professional)
+          console.log('专业人士_openid:', professional._openid || _openid)
+          console.log('专业人士状态:', professional.status, '类型:', typeof professional.status)
+
+          // 检查是否有可用时间段
+          if (professional.status === 'approved') {
+            // 使用获取到的id作为备选
+            await checkAvailableTimeSlots(professional._openid || _openid)
+          } else {
+            console.log('专业人士状态不为1，不检查可用时间段')
+            hasAvailableSlots.value = false
+          }
+
+          console.log('最终可预约状态:', canBooking.value)
 
           // 处理云存储URL
           await processCloudStorageUrls()
@@ -350,8 +458,15 @@ export default {
 
       // 收集所有字段的云存储URL
       fields.forEach((field) => {
-        if (professional[field] && professional[field].startsWith('cloud://')) {
+        if (
+          professional[field] &&
+          typeof professional[field] === 'string' &&
+          professional[field].startsWith('cloud://')
+        ) {
           urls.push(professional[field])
+        } else if (professional[field] && typeof professional[field] !== 'string') {
+          console.error(`非法图片URL格式 [${field}]:`, professional[field])
+          professional[field] = getMockImageUrl(field)
         }
       })
 
@@ -360,19 +475,29 @@ export default {
       try {
         console.log('开始处理云存储URL:', urls)
         // 处理云存储URL为临时URL
-        const result = await processCloudUrls(urls)
+        const processResult = await safeCall(async () => {
+          return await processCloudUrls(urls)
+        })
 
-        if (result && result.success) {
+        // 设置默认结果
+        const result = processResult || { success: false, message: 'API调用失败' }
+
+        if (result.success) {
           // 将处理结果保存到映射对象中
           const urlMap = result.data.urlMapping || {}
           console.log('获取到的临时URL映射:', urlMap)
 
           // 更新专业人士数据中的云存储URL为临时URL
           fields.forEach((field) => {
-            if (professional[field] && professional[field].startsWith('cloud://')) {
+            if (
+              professional[field] &&
+              typeof professional[field] === 'string' &&
+              professional[field].startsWith('cloud://')
+            ) {
               const tempUrl = urlMap[professional[field]]
               if (tempUrl) {
-                professional[field] = tempUrl
+                // 确保URL格式正确
+                professional[field] = tempUrl.trim()
               } else {
                 // 如果获取不到临时URL，使用模拟URL
                 professional[field] = getMockImageUrl(field)
@@ -445,30 +570,99 @@ export default {
     // 预览图片
     const previewImage = (url) => {
       if (!url) return
-      uni.previewImage({
-        urls: [url],
-        current: url,
+
+      // 检查URL格式，避免错误的路径
+      if (!/^(https?:\/\/|cloud:\/\/)/.test(url)) {
+        console.error('图片URL格式不正确:', url)
+        uni.showToast({
+          title: '无法预览图片',
+          icon: 'none',
+        })
+        return
+      }
+
+      // 安全处理URL，确保正确编码
+      try {
+        const safeUrl = encodeURI(decodeURI(url))
+
+        // 使用safeCall包装API调用
+        safeCall(() => {
+          uni.previewImage({
+            urls: [safeUrl],
+            current: safeUrl,
+            fail: (err) => {
+              console.error('预览图片失败:', err, '图片URL:', url)
+              uni.showToast({
+                title: '预览图片失败',
+                icon: 'none',
+              })
+            },
+          })
+        })
+      } catch (error) {
+        console.error('处理图片URL出错:', error, '原始URL:', url)
+        uni.showToast({
+          title: '图片URL格式错误',
+          icon: 'none',
+        })
+      }
+    }
+
+    // 跳转到预约页面
+    const goToBookingPage = () => {
+      console.log('尝试跳转到预约页面')
+      console.log('当前专业人士状态:', professional.status, '类型:', typeof professional.status)
+      console.log('是否有可用时间段:', hasAvailableSlots.value)
+      console.log('预约按钮是否禁用:', !canBooking.value)
+
+      if (!canBooking.value) {
+        if (professional.status !== 1) {
+          console.log('该专业人士不可预约，状态值不为1')
+          uni.showToast({
+            title: '该专业人士暂不接受预约',
+            icon: 'none',
+          })
+        } else if (!hasAvailableSlots.value) {
+          console.log('该专业人士没有可用时间段')
+          uni.showToast({
+            title: '该专业人士近期没有可预约时间段',
+            icon: 'none',
+          })
+        }
+        return
+      }
+
+      // 获取专业人士ID
+      const professionalId = professional._openid || getProfessionalOpenId()
+      if (!professionalId) {
+        console.error('无法获取专业人士ID')
+        uni.showToast({
+          title: '跳转失败，无法获取专业人士信息',
+          icon: 'none',
+        })
+        return
+      }
+
+      // 获取当前日期作为预约起始日期
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+
+      console.log('跳转至预约页面，专业人士ID:', professionalId)
+
+      // 跳转到预约页面
+      uni.navigateTo({
+        url: `/pages/weshares/booking/index?id=${professionalId}&date=${dateStr}`,
+        fail: (err) => {
+          console.error('跳转到预约页面失败:', err)
+          uni.showToast({
+            title: '跳转失败，请重试',
+            icon: 'none',
+          })
+        },
       })
-    }
-
-    // 打开预约确认弹窗
-    const openBookingConfirm = () => {
-      if (professional.status !== 1) return
-      showBookingConfirm.value = true
-    }
-
-    // 关闭预约弹窗
-    const closeBookingConfirm = () => {
-      showBookingConfirm.value = false
-    }
-
-    // 确认预约
-    const confirmBooking = () => {
-      uni.showToast({
-        title: '预约功能即将上线',
-        icon: 'none',
-      })
-      closeBookingConfirm()
     }
 
     // 生命周期钩子
@@ -481,14 +675,15 @@ export default {
       error,
       professional,
       serviceAreaText,
-      showBookingConfirm,
+      canBooking,
+      defaultAvatar,
+      isValidUrl,
+      handleImageError,
       goBack,
       retryFetch,
       makePhoneCall,
       previewImage,
-      openBookingConfirm,
-      closeBookingConfirm,
-      confirmBooking,
+      goToBookingPage,
     }
   },
 }
@@ -722,93 +917,5 @@ export default {
       opacity: 0.7;
     }
   }
-}
-
-// 弹窗样式
-.popup-mask {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 998;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.popup-content {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 999;
-  width: 80%;
-  overflow: hidden;
-  background-color: #fff;
-  border-radius: 12rpx;
-  transform: translate(-50%, -50%);
-
-  .popup-title {
-    padding: 30rpx 0;
-    font-size: 32rpx;
-    font-weight: 500;
-    text-align: center;
-    border-bottom: 1rpx solid #f0f0f0;
-  }
-
-  .popup-body {
-    padding: 40rpx 30rpx;
-
-    .popup-text {
-      font-size: 30rpx;
-      color: #333;
-      text-align: center;
-    }
-  }
-
-  .popup-footer {
-    display: flex;
-    border-top: 1rpx solid #f0f0f0;
-
-    .popup-button {
-      display: flex;
-      flex: 1;
-      align-items: center;
-      justify-content: center;
-      height: 90rpx;
-      font-size: 32rpx;
-
-      &.cancel {
-        color: #606266;
-        border-right: 1rpx solid #f0f0f0;
-      }
-
-      &.confirm {
-        color: #2979ff;
-      }
-    }
-  }
-}
-
-.cancel-button,
-.confirm-button {
-  flex: 1;
-  height: 90rpx;
-  padding: 0;
-  margin: 0;
-  font-size: 32rpx;
-  line-height: 90rpx;
-  background-color: transparent;
-
-  &::after {
-    border: none;
-  }
-}
-
-.cancel-button {
-  color: #606266;
-  border-right: 1rpx solid #f0f0f0;
-}
-
-.confirm-button {
-  color: #2979ff;
 }
 </style>
