@@ -10,19 +10,33 @@
 <template>
   <view class="container">
     <!-- 搜索栏 -->
-    <view class="search-bar">
-      <view class="location" @click="showLocationPicker">
-        {{ currentLocation }}
-        <text class="down-arrow">▼</text>
+    <view class="search-container">
+      <view class="search-bar">
+        <view class="location" @click="showLocationPicker">
+          <text class="location-icon">📍</text>
+          {{ currentLocation }}
+          <text class="down-arrow">▼</text>
+        </view>
+        <view class="search-input-wrapper" @click="focusSearch">
+          <view class="search-input">
+            <text class="search-icon">🔍</text>
+            <text class="placeholder">搜索专业人士/服务</text>
+          </view>
+        </view>
       </view>
-      <view class="search-input" @click="focusSearch">
-        <text class="placeholder">搜索专业人士/服务</text>
-      </view>
-      <view class="search-icon">🔍</view>
     </view>
 
     <!-- 轮播图 -->
-    <!-- <swiper class="banner" circular autoplay interval="3000" duration="500">
+    <swiper
+      class="banner"
+      circular
+      autoplay
+      interval="3000"
+      duration="500"
+      indicator-dots
+      indicator-color="rgba(255,255,255,0.6)"
+      indicator-active-color="#ffffff"
+    >
       <swiper-item v-for="(item, index) in bannerList" :key="index">
         <image
           class="banner-img"
@@ -35,37 +49,36 @@
           <view class="banner-subtitle">{{ item.subtitle }}</view>
         </view>
       </swiper-item>
-    </swiper> -->
+    </swiper>
 
     <!-- 分类导航 -->
+    <view class="section-title">服务分类</view>
     <view class="category-section">
       <view class="category-grid">
         <view
           class="category-item"
-          v-for="(item, index) in categories"
+          v-for="(category, index) in categories"
           :key="index"
-          @click="handleCategoryClick(item)"
+          @click="handleCategoryClick(category)"
         >
-          <view class="category-icon" :class="item.class">
-            <image :src="item.icon" mode="aspectFit" class="category-icon-img" />
+          <view class="category-icon" :class="category.class">
+            <image :src="category.icon" mode="aspectFit" class="category-icon-img" />
           </view>
-          <view class="category-label">{{ item.label }}</view>
-          <view class="category-desc">{{ item.description }}</view>
+          <view class="category-content">
+            <view class="category-label">{{ category.label }}</view>
+            <view class="category-desc">{{ category.description }}</view>
+          </view>
+          <view class="category-arrow">
+            <text>›</text>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 专业人士推荐 -->
+    <view class="section-title" v-if="!isRegisteredProfessional">热门推荐</view>
     <view class="featured-section" v-if="!isRegisteredProfessional">
-      <view class="featured-header">
-        <view class="featured-title">优选专业人士</view>
-        <view class="featured-more" @click="navigateToRecommendedProfessionals">
-          更多
-          <text class="arrow">></text>
-        </view>
-      </view>
-
-      <scroll-view class="featured-professionals" scroll-x>
+      <view class="professional-cards">
         <view
           class="professional-card"
           v-for="(professional, index) in featuredProfessionals"
@@ -77,34 +90,19 @@
             <view class="professional-name">{{ professional.name }}</view>
             <view class="professional-specialty">{{ professional.specialty }}</view>
             <view class="professional-rating">
+              <text class="star-icon">★</text>
               <text class="rating">{{ professional.rating }}</text>
               <text class="rating-count">({{ professional.ratingCount }})</text>
             </view>
           </view>
         </view>
-      </scroll-view>
+      </view>
+
+      <view class="view-more" @click="navigateToRecommendedProfessionals">
+        查看更多
+        <text class="arrow">›</text>
+      </view>
     </view>
-
-    <!-- 服务选项 -->
-    <!-- <view class="service-options">
-      <view class="service-card online" @click="navigateToFindProfessionals('online')">
-        <view class="service-content">
-          <view class="service-title">线上服务</view>
-          <view class="service-subtitle">专业人士远程指导</view>
-          <view class="service-button">立即预约</view>
-        </view>
-        <image class="service-img" src="/static/image/online-teaching.png" mode="aspectFit" />
-      </view>
-
-      <view class="service-card in-person" @click="navigateToFindProfessionals('in-person')">
-        <view class="service-content">
-          <view class="service-title">线下服务</view>
-          <view class="service-subtitle">专业人士上门服务</view>
-          <view class="service-button">立即预约</view>
-        </view>
-        <image class="service-img" src="/static/image/in-person-teaching.png" mode="aspectFit" />
-      </view>
-    </view> -->
 
     <!-- 注册引导 -->
     <view v-if="!isRegisteredProfessional" class="register-prompt" @click="navigateToRegister">
@@ -424,14 +422,321 @@ watch(
 </script>
 
 <style>
-@import './index.css';
+.container {
+  min-height: 100vh;
+  padding-bottom: 30rpx;
+  background-color: #f7f8fa;
+}
+/* 搜索栏样式 */
+.search-container {
+  padding: 20rpx 30rpx;
+  background: linear-gradient(135deg, #2b5cff, #3f9aff);
+}
+
+.search-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: white;
+}
+
+.location-icon {
+  margin-right: 8rpx;
+  font-size: 28rpx;
+}
+
+.down-arrow {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 24rpx;
+  margin-bottom: 10rpx;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 40rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  margin-right: 12rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+.placeholder {
+  font-size: 28rpx;
+  color: #999;
+}
+/* 轮播图样式 */
+.banner {
+  width: 100%;
+  height: 280rpx;
+}
+
+.banner-img {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20rpx;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+}
+
+.banner-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: white;
+}
+
+.banner-subtitle {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+/* 分类导航样式 */
+.section-title {
+  margin: 30rpx 20rpx 20rpx;
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.category-section {
+  padding: 20rpx;
+  margin: 0 20rpx 30rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.category-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #f9fafc;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.category-item:active {
+  background-color: #f0f2f5;
+  transform: scale(0.98);
+}
+
+.category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80rpx;
+  height: 80rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.category-icon.education {
+  background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+}
+
+.category-icon.repair {
+  background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+}
+
+.category-icon.other {
+  background: linear-gradient(135deg, #d4fc79, #96e6a1);
+}
+
+.category-icon-img {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.category-content {
+  flex: 1;
+}
+
+.category-label {
+  margin-bottom: 6rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+}
+
+.category-desc {
+  font-size: 24rpx;
+  color: #888;
+  text-align: left;
+}
+
+.category-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10rpx;
+  font-size: 36rpx;
+  color: #aaa;
+}
+/* 专业人士推荐样式 */
+.featured-section {
+  padding: 20rpx;
+  margin: 0 20rpx 30rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.professional-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.professional-card {
+  display: flex;
+  padding: 20rpx;
+  background-color: #f9fafc;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.professional-card:active {
+  background-color: #f0f2f5;
+  transform: scale(0.98);
+}
+
+.professional-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.professional-info {
+  flex: 1;
+}
+
+.professional-name {
+  margin-bottom: 8rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.professional-specialty {
+  margin-bottom: 10rpx;
+  font-size: 24rpx;
+  color: #888;
+}
+
+.professional-rating {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.star-icon {
+  margin-right: 6rpx;
+  font-size: 24rpx;
+  color: #ffba00;
+}
+
+.rating {
+  font-weight: 500;
+  color: #333;
+}
+
+.rating-count {
+  margin-left: 6rpx;
+}
+
+.view-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0 10rpx;
+  margin-top: 10rpx;
+  font-size: 28rpx;
+  color: #2b5cff;
+}
+
+.arrow {
+  margin-left: 6rpx;
+  font-size: 28rpx;
+}
+/* 注册引导样式 */
+.register-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  margin: 10rpx 20rpx 30rpx;
+  background: linear-gradient(135deg, #2b5cff, #3f9aff);
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(43, 92, 255, 0.2);
+}
+
+.prompt-content {
+  flex: 1;
+}
+
+.prompt-title {
+  margin-bottom: 8rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: white;
+}
+
+.prompt-subtitle {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.prompt-button {
+  padding: 12rpx 30rpx;
+  font-size: 26rpx;
+  color: #2b5cff;
+  background-color: white;
+  border-radius: 30rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+}
 /* 专业人士状态卡片样式 */
 .pro-status-card {
   display: flex;
   flex-direction: column;
   padding: 30rpx;
-  margin: 20rpx;
-  background-color: #ffffff;
+  margin: 10rpx 20rpx 30rpx;
+  background: linear-gradient(to right, #ffffff, #f8f9ff);
   border-radius: 16rpx;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
 }
@@ -516,5 +821,11 @@ watch(
   text-align: center;
   background-color: #2b5cff;
   border-radius: 40rpx;
+  box-shadow: 0 4rpx 12rpx rgba(43, 92, 255, 0.2);
+  transition: transform 0.2s;
+}
+
+.status-button:active {
+  transform: scale(0.95);
 }
 </style>
