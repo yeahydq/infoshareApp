@@ -335,13 +335,13 @@ function navigateToRegister() {
 
 function navigateToMySchedule() {
   uni.navigateTo({
-    url: '/pages/weshares/my-schedule/index',
+    url: '../time-schedule',
   })
 }
 
 function navigateToManageSchedule() {
   uni.navigateTo({
-    url: '/pages/weshares/manage-schedule/index',
+    url: '../time-schedule',
   })
 }
 
