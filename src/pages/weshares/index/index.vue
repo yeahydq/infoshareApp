@@ -158,11 +158,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { simpleCityList } from '@/config/areaData'
 import { checkProfessionalStatus, updateProfessionalStatus } from '@/service/professional'
+import { useUserStore } from '@/store'
 
 const { safeAreaInsets } = uni.getSystemInfoSync()
+const userStore = useUserStore()
 
 // 用户注册专业人士状态
 const isRegisteredProfessional = ref(false)
@@ -346,6 +348,12 @@ function navigateToManageSchedule() {
 // 检查用户是否已注册为专业人士
 const checkUserProfessionalStatus = async () => {
   try {
+    // 先检查用户是否已登录
+    if (!userStore.isLogined) {
+      isRegisteredProfessional.value = false
+      return
+    }
+
     const result = await checkProfessionalStatus()
 
     if (result.isApproved) {
@@ -366,6 +374,17 @@ const checkUserProfessionalStatus = async () => {
   } catch (error) {
     console.error('检查专业人士状态出错:', error)
     isRegisteredProfessional.value = false
+  }
+}
+
+// 重置专业人士状态
+const resetProfessionalStatus = () => {
+  isRegisteredProfessional.value = false
+  professionalStatus.value = {
+    isAvailable: true,
+    todayBookings: 0,
+    weekBookings: 0,
+    rating: 5.0,
   }
 }
 
@@ -416,6 +435,21 @@ onMounted(() => {
   // 检查用户是否已注册为专业人士
   checkUserProfessionalStatus()
 })
+
+// 监听用户登录状态变化
+watch(
+  () => userStore.isLogined,
+  (isLoggedIn) => {
+    console.log('用户登录状态变化:', isLoggedIn)
+    if (isLoggedIn) {
+      // 用户登录，检查专业人士状态
+      checkUserProfessionalStatus()
+    } else {
+      // 用户退出登录，重置专业人士状态
+      resetProfessionalStatus()
+    }
+  },
+)
 </script>
 
 <style>
