@@ -123,6 +123,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { login } from '@/service/auth'
+import { checkProfessionalStatus } from '@/service/professional'
 
 const NavigationRoutes = {
   FIND_PROFESSIONALS: '../find-teachers/index',
@@ -273,25 +274,8 @@ onMounted(async () => {
   // 如果用户已登录，刷新专业人士状态
   if (hasLogin.value) {
     try {
-      const { result } = await uni.cloud.callFunction({
-        name: 'profRegister',
-        data: {
-          action: 'checkApplication',
-        },
-      })
-
-      if (result && result.hasApplication) {
-        // 更新本地状态
-        const latestStatus = result.application.status
-        if (latestStatus !== userStore.userInfo.professionalStatus) {
-          console.log('页面加载时更新专业人士状态:', latestStatus)
-          userStore.setUserInfo({
-            ...userStore.userInfo,
-            professionalStatus: latestStatus,
-            updateTime: new Date().getTime(),
-          })
-        }
-      }
+      await checkProfessionalStatus()
+      // 通用方法会自动更新userStore，不需要额外处理
     } catch (error) {
       console.error('获取专业人士状态失败:', error)
     }

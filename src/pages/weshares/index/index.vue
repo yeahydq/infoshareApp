@@ -22,7 +22,7 @@
     </view>
 
     <!-- 轮播图 -->
-    <swiper class="banner" circular autoplay interval="3000" duration="500">
+    <!-- <swiper class="banner" circular autoplay interval="3000" duration="500">
       <swiper-item v-for="(item, index) in bannerList" :key="index">
         <image
           class="banner-img"
@@ -35,7 +35,7 @@
           <view class="banner-subtitle">{{ item.subtitle }}</view>
         </view>
       </swiper-item>
-    </swiper>
+    </swiper> -->
 
     <!-- 分类导航 -->
     <view class="category-section">
@@ -56,7 +56,7 @@
     </view>
 
     <!-- 专业人士推荐 -->
-    <view class="featured-section">
+    <view class="featured-section" v-if="!isRegisteredProfessional">
       <view class="featured-header">
         <view class="featured-title">优选专业人士</view>
         <view class="featured-more" @click="navigateToRecommendedProfessionals">
@@ -86,7 +86,7 @@
     </view>
 
     <!-- 服务选项 -->
-    <view class="service-options">
+    <!-- <view class="service-options">
       <view class="service-card online" @click="navigateToFindProfessionals('online')">
         <view class="service-content">
           <view class="service-title">线上服务</view>
@@ -104,15 +104,55 @@
         </view>
         <image class="service-img" src="/static/image/in-person-teaching.png" mode="aspectFit" />
       </view>
-    </view>
+    </view> -->
 
     <!-- 注册引导 -->
-    <view class="register-prompt" @click="navigateToRegister">
+    <view v-if="!isRegisteredProfessional" class="register-prompt" @click="navigateToRegister">
       <view class="prompt-content">
         <view class="prompt-title">成为专业人士</view>
         <view class="prompt-subtitle">分享您的专业知识，获取额外收入</view>
       </view>
       <view class="prompt-button">立即注册</view>
+    </view>
+
+    <!-- 已注册专业人士的预约状态 -->
+    <view v-else class="pro-status-card" @click="navigateToMySchedule">
+      <view class="status-header">
+        <view class="status-title">我的接单状态</view>
+        <view
+          class="status-subtitle"
+          :class="{ 'status-unavailable': !professionalStatus.isAvailable }"
+        >
+          {{ professionalStatus.isAvailable ? '当前可接单' : '当前暂停接单' }}
+        </view>
+        <view class="status-switch">
+          <switch
+            :checked="professionalStatus.isAvailable"
+            @change="toggleAvailabilityStatus"
+            color="#07c160"
+          />
+        </view>
+      </view>
+      <view class="status-content">
+        <view class="status-item">
+          <view class="status-label">今日预约</view>
+          <view class="status-value">{{ professionalStatus.todayBookings || 0 }}</view>
+        </view>
+        <view class="status-item">
+          <view class="status-label">本周预约</view>
+          <view class="status-value">{{ professionalStatus.weekBookings || 0 }}</view>
+        </view>
+        <view class="status-item">
+          <view class="status-label">总评分</view>
+          <view class="status-value rating">
+            {{ professionalStatus.rating || '5.0' }}
+            <text class="star">★</text>
+          </view>
+        </view>
+      </view>
+      <view class="status-footer">
+        <view class="status-button" @click.stop="navigateToManageSchedule">管理排班</view>
+      </view>
     </view>
   </view>
 </template>
@@ -120,8 +160,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { simpleCityList } from '@/config/areaData'
+import { checkProfessionalStatus, updateProfessionalStatus } from '@/service/professional'
 
 const { safeAreaInsets } = uni.getSystemInfoSync()
+
+// 用户注册专业人士状态
+const isRegisteredProfessional = ref(false)
+const professionalStatus = ref({
+  isAvailable: true, // 是否可接单
+  todayBookings: 0, // 今日预约数
+  weekBookings: 0, // 本周预约数
+  rating: 5.0, // 总评分
+})
 
 const currentLocation = ref(simpleCityList[0] || '济南市')
 const bannerList = ref([
@@ -141,13 +191,13 @@ const bannerList = ref([
 
 const categories = ref([
   {
-    icon: '/static/image/education.png',
+    icon: '/static/image/literature.png',
     label: '教育服务',
     description: '语文/数学/英语/物理',
     class: 'education',
   },
   {
-    icon: '/static/image/repair.png',
+    icon: '/static/image/bulb.png',
     label: '维修服务',
     description: '水管/电路/空调/保洁',
     class: 'repair',
@@ -165,19 +215,19 @@ const categories = ref([
     class: 'engineering',
   },
   {
-    icon: '/static/image/business.png',
+    icon: '/static/image/management.png',
     label: '商业服务',
     description: '管理咨询/营销策划',
     class: 'business',
   },
   {
-    icon: '/static/image/legal.png',
+    icon: '/static/image/release.png',
     label: '法律服务',
     description: '法律咨询/合同审查',
     class: 'legal',
   },
   {
-    icon: '/static/image/design.png',
+    icon: '/static/image/science.png',
     label: '艺术设计',
     description: '平面设计/室内设计',
     class: 'design',
@@ -281,6 +331,77 @@ function navigateToRegister() {
   })
 }
 
+function navigateToMySchedule() {
+  uni.navigateTo({
+    url: '/pages/weshares/my-schedule/index',
+  })
+}
+
+function navigateToManageSchedule() {
+  uni.navigateTo({
+    url: '/pages/weshares/manage-schedule/index',
+  })
+}
+
+// 检查用户是否已注册为专业人士
+const checkUserProfessionalStatus = async () => {
+  try {
+    const result = await checkProfessionalStatus()
+
+    if (result.isApproved) {
+      isRegisteredProfessional.value = true
+
+      // 如果已注册并通过审核，获取预约状态
+      if (result.professionalData) {
+        professionalStatus.value = {
+          isAvailable: result.professionalData.isAvailable || false,
+          todayBookings: result.professionalData.todayBookings || 0,
+          weekBookings: result.professionalData.weekBookings || 0,
+          rating: result.professionalData.rating || 5.0,
+        }
+      }
+    } else {
+      isRegisteredProfessional.value = false
+    }
+  } catch (error) {
+    console.error('检查专业人士状态出错:', error)
+    isRegisteredProfessional.value = false
+  }
+}
+
+// 切换专业人士可用状态
+const toggleAvailabilityStatus = async (e) => {
+  const newStatus = e.detail.value
+  try {
+    const result = await updateProfessionalStatus({
+      isAvailable: newStatus,
+    })
+
+    if (result.success) {
+      professionalStatus.value.isAvailable = newStatus
+      uni.showToast({
+        title: newStatus ? '已切换为可接单状态' : '已暂停接单',
+        icon: 'none',
+      })
+    } else {
+      // 更新失败，恢复原状态
+      professionalStatus.value.isAvailable = !newStatus
+      uni.showToast({
+        title: result.message,
+        icon: 'none',
+      })
+    }
+  } catch (error) {
+    console.error('更新接单状态出错:', error)
+    // 更新失败，恢复原状态
+    professionalStatus.value.isAvailable = !newStatus
+    uni.showToast({
+      title: '网络错误，请稍后重试',
+      icon: 'none',
+    })
+  }
+}
+
 // 生命周期钩子
 onMounted(() => {
   // 获取位置信息
@@ -291,9 +412,104 @@ onMounted(() => {
       console.log('当前位置：', res)
     },
   })
+
+  // 检查用户是否已注册为专业人士
+  checkUserProfessionalStatus()
 })
 </script>
 
 <style>
 @import './index.css';
+/* 专业人士状态卡片样式 */
+.pro-status-card {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  margin: 20rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.status-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.status-subtitle {
+  padding: 6rpx 16rpx;
+  margin-left: 20rpx;
+  font-size: 24rpx;
+  color: #fff;
+  background-color: #07c160;
+  border-radius: 20rpx;
+}
+
+.status-unavailable {
+  background-color: #ff6b6b;
+}
+
+.status-switch {
+  margin-left: auto;
+}
+
+.status-content {
+  display: flex;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.status-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-label {
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.status-value {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.status-value.rating {
+  display: flex;
+  align-items: center;
+}
+
+.status-value .star {
+  margin-left: 4rpx;
+  font-size: 28rpx;
+  color: #ffba00;
+}
+
+.status-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 30rpx;
+}
+
+.status-button {
+  padding: 16rpx 40rpx;
+  font-size: 28rpx;
+  color: #ffffff;
+  text-align: center;
+  background-color: #2b5cff;
+  border-radius: 40rpx;
+}
 </style>
