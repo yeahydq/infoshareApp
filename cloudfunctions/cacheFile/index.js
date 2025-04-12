@@ -54,51 +54,52 @@ function normalizeFileID(fileID) {
 }
 
 // 获取文件临时链接
-async function getTempFileURL(fileID) {
+async function getTempFileURL(fileIDs) {
   try {
-    const normalizedFile = normalizeFileID(fileID)
-    
-    // 如果不是云存储文件，直接返回原路径
-    if (!normalizedFile.isCloudFile) {
-      return {
-        success: true,
-        tempFileURL: normalizedFile.fileID,
-        isLocalFile: true
-      }
-    }
-    
-    // 获取临时链接
-    const result = await cloud.getTempFileURL({
-      fileList: [normalizedFile.fileID]
-    })
-    
-    if (result.fileList && result.fileList.length > 0) {
-      const fileInfo = result.fileList[0]
-      
-      if (fileInfo.status === 0 && fileInfo.tempFileURL) {
-        return {
-          success: true,
-          tempFileURL: fileInfo.tempFileURL,
-          fileID: normalizedFile.fileID
-        }
-      } else {
-        console.error('获取临时链接失败:', fileInfo)
-        return {
-          success: false,
-          error: fileInfo.errMsg || '获取临时链接失败'
-        }
-      }
-    } else {
+    if (!fileIDs || (Array.isArray(fileIDs) && fileIDs.length === 0)) {
       return {
         success: false,
-        error: '获取临时链接失败，返回结果为空'
+        message: '无效的文件ID'
       }
     }
-  } catch (err) {
-    console.error('获取临时链接时出错:', err)
+    
+    // 将单个ID转换为数组
+    const fileIDArray = Array.isArray(fileIDs) ? fileIDs : [fileIDs]
+    
+    // 处理cloud://前缀
+    const processedFileIDs = fileIDArray.map(fileID => {
+      if (typeof fileID === 'string' && fileID.startsWith('cloud://')) {
+        return fileID
+      } else if (typeof fileID === 'string') {
+        return `cloud://${fileID}`
+      }
+      return fileID
+    })
+    
+    // 调用云存储API获取临时URL
+    const result = await cloud.getTempFileURL({
+      fileList: processedFileIDs
+    })
+    
+    // 处理结果
+    const tempFileURLs = result.fileList.map(file => ({
+      fileID: file.fileID,
+      tempFileURL: file.tempFileURL,
+      status: file.status,
+      errMsg: file.errMsg
+    }))
+    
+    return {
+      success: true,
+      fileList: tempFileURLs,
+      errMsg: result.errMsg
+    }
+  } catch (error) {
+    console.error('获取临时文件链接失败:', error)
     return {
       success: false,
-      error: err.message || '获取临时链接时出错'
+      message: '获取临时文件链接失败',
+      error: error.message
     }
   }
 }
@@ -165,7 +166,7 @@ exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   console.log('正在处理文件:', event)
   
-  const { type, fileID, userID } = event
+  const { type, fileID, userID, action, fileIDs } = event
 
   // 根据请求类型进行处理
   if (type === 'avatar') {
@@ -180,6 +181,8 @@ exports.main = async (event, context) => {
     return {
       exists
     }
+  } else if (action === 'getTempFileURL') {
+    return await getTempFileURL(fileIDs)
   }
 
   return {

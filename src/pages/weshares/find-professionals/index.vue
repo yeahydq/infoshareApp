@@ -184,47 +184,51 @@
     <!-- 专业人士列表 -->
     <view class="professional-list" v-else>
       <view
-        v-for="professional in professionals"
-        :key="professional._id"
+        v-for="(item, index) in professionals"
+        :key="index"
         class="professional-card"
-        @click="gotoProfessionalDetail(professional._id)"
+        @click="gotoProfessionalDetail(item._id)"
       >
-        <view class="professional-level-tag" v-if="professional.level">
-          {{ professional.level }}
+        <view class="professional-avatar-container">
+          <image
+            :src="item.avatarUrl || defaultAvatarUrl"
+            mode="aspectFill"
+            class="professional-avatar"
+          ></image>
         </view>
-        <image
-          class="professional-avatar"
-          :src="professional.avatarUrl || defaultAvatarUrl"
-          mode="aspectFill"
-        />
         <view class="professional-info">
-          <view class="professional-name">
-            <text>{{ professional.name || '匿名专家' }}</text>
-            <text class="verify-icon" v-if="professional.verified">✓</text>
+          <view class="professional-name-row">
+            <text class="professional-name">{{ item.name || '匿名专家' }}</text>
+            <text class="professional-gender" v-if="item.gender">
+              {{ item.gender === '男' ? '♂' : '♀' }}
+            </text>
           </view>
-          <view class="professional-stats">
-            <text>{{ renderProfessionalStats(professional) }}</text>
+
+          <view class="professional-area" v-if="item.serviceArea">
+            <text class="professional-area-text">{{ getAreaName(item.serviceArea) }}</text>
           </view>
-          <view class="professional-rating">
-            <text
-              v-for="n in 5"
-              :key="n"
-              class="star"
-              :class="{ filled: n <= (professional.rating || 5) }"
+
+          <view class="professional-experience" v-if="isValidField(item.experience)">
+            <text class="professional-experience-text">{{ item.experience }}</text>
+          </view>
+
+          <view class="professional-status">
+            <view
+              :class="[
+                'status-tag',
+                item.status === '服务中' ? 'status-available' : 'status-unavailable',
+              ]"
             >
-              ★
-            </text>
-            <text class="review-count" v-if="professional.reviewCount">
-              ({{ professional.reviewCount }})
+              {{ item.status === '服务中' ? '可预约' : '暂不可约' }}
+            </view>
+            <text
+              class="book-now"
+              v-if="item.status === '服务中'"
+              @click.stop="gotoBooking(item._openid)"
+            >
+              立即预约
             </text>
           </view>
-        </view>
-        <view class="professional-price" v-if="professional.hourlyRate">
-          ¥{{ professional.hourlyRate }}/小时
-        </view>
-        <view class="professional-price-hidden" v-else></view>
-        <view class="book-button" @click.stop="gotoBooking(professional._openid)">
-          <text>去预约</text>
         </view>
       </view>
     </view>
@@ -347,6 +351,109 @@ function generateDateRangeArray() {
   return dates
 }
 
+/**
+ * 批量处理云存储链接
+ * @param items 需要处理的专业人士数据列表
+ * @returns 处理后的数据
+ */
+const batchProcessCloudUrls = async (items: any[]) => {
+  if (!items || items.length === 0) {
+    return []
+  }
+
+  // 深拷贝数据，避免修改原始数据
+  const cleanedItems = JSON.parse(JSON.stringify(items))
+
+  // 清理显示字段中的云存储链接
+  cleanedItems.forEach((item) => {
+    // 遍历所有字段，处理可能包含云存储链接的字段
+    Object.keys(item).forEach((key) => {
+      if (typeof item[key] === 'string' && item[key].includes('cloud://')) {
+        if (key !== 'avatarUrl') {
+          // 对于非头像字段，如果包含云存储链接，设置为适当的替代文本
+          if (key === 'experience') {
+            // 尝试从经验字段提取年份信息
+            const yearMatch = item[key].match(/(\d+)年/)
+            if (yearMatch && yearMatch[1]) {
+              item[key] = `${yearMatch[1]}年专业经验`
+            } else {
+              item[key] = '专业经验丰富'
+            }
+          } else if (key === 'education') {
+            item[key] = '专业教育背景'
+          } else {
+            // 其他字段设置为空字符串
+            item[key] = ''
+          }
+        }
+      }
+    })
+  })
+
+  // 收集所有需要处理的云存储URL
+  const cloudUrls: string[] = []
+  const urlMapping: Record<string, number[]> = {}
+
+  cleanedItems.forEach((item, itemIndex) => {
+    // 仅处理头像URL
+    if (
+      item.avatarUrl &&
+      typeof item.avatarUrl === 'string' &&
+      item.avatarUrl.startsWith('cloud://')
+    ) {
+      if (!cloudUrls.includes(item.avatarUrl)) {
+        cloudUrls.push(item.avatarUrl)
+        urlMapping[item.avatarUrl] = [itemIndex]
+      } else {
+        urlMapping[item.avatarUrl].push(itemIndex)
+      }
+    }
+  })
+
+  if (cloudUrls.length === 0) {
+    console.log('没有需要转换的云存储链接')
+    return cleanedItems
+  }
+
+  console.log(`需要转换${cloudUrls.length}个云存储链接`)
+
+  try {
+    const res = await uni.cloud.callFunction({
+      name: 'getTemporaryUrl',
+      data: { cloudPaths: cloudUrls },
+    })
+
+    // 安全地处理返回结果
+    const resultData = res?.result && typeof res.result === 'object' ? res.result : {}
+    const urlData = resultData.data && typeof resultData.data === 'object' ? resultData.data : {}
+
+    // 使用返回的临时URL更新数据
+    Object.keys(urlData).forEach((cloudPath) => {
+      const tempUrl = urlData[cloudPath]
+      const itemIndices = urlMapping[cloudPath]
+
+      if (itemIndices && tempUrl) {
+        itemIndices.forEach((idx) => {
+          cleanedItems[idx].avatarUrl = tempUrl
+        })
+      }
+    })
+  } catch (error) {
+    console.error('获取临时URL失败:', error)
+  }
+
+  return cleanedItems
+}
+
+/**
+ * 检查字段是否为有效的非云存储链接字符串
+ */
+const isValidField = (field: any): boolean => {
+  if (!field) return false
+  if (typeof field !== 'string') return false
+  return !field.includes('cloud://')
+}
+
 // 页面加载时获取专业人士列表
 onMounted(() => {
   fetchProfessionals()
@@ -391,10 +498,16 @@ const fetchProfessionals = async (refresh = true) => {
     console.log('获取专业人士列表结果:', result)
 
     if (result.success) {
+      // 处理云存储图片链接
+      let processedData = result.data || []
+
+      // 批量处理云存储链接
+      processedData = await batchProcessCloudUrls(processedData)
+
       if (refresh) {
-        professionals.value = result.data || []
+        professionals.value = processedData
       } else {
-        professionals.value = [...professionals.value, ...(result.data || [])]
+        professionals.value = [...professionals.value, ...processedData]
       }
 
       hasMore.value = result.hasMore || false
@@ -461,7 +574,6 @@ const toggleSortOrder = (type: string) => {
     sortType.value = type
     sortOrder.value = 'desc'
   }
-  fetchProfessionals()
 }
 
 // 搜索
@@ -673,6 +785,35 @@ const getEmptyMessage = () => {
   }
 
   return onlyAvailable.value ? '暂无可预约的专业人士' : '暂无符合条件的专业人士'
+}
+
+/**
+ * 根据服务区域字符串获取区域名称
+ */
+const getAreaName = (serviceAreaStr: string) => {
+  if (!serviceAreaStr) return '未设置服务区域'
+
+  // 如果是JSON字符串，尝试解析
+  try {
+    if (serviceAreaStr.startsWith('{') || serviceAreaStr.startsWith('[')) {
+      const areaObj = JSON.parse(serviceAreaStr)
+      // 根据解析出的结构提取区域名称
+      if (Array.isArray(areaObj)) {
+        return areaObj
+          .map((area) => area.fullName || area.name || '')
+          .filter(Boolean)
+          .join(', ')
+      } else if (areaObj.fullName || areaObj.name) {
+        return areaObj.fullName || areaObj.name
+      }
+    }
+
+    // 如果只是普通字符串，直接返回
+    return serviceAreaStr
+  } catch (e) {
+    // 解析失败时，直接返回原字符串
+    return serviceAreaStr
+  }
 }
 </script>
 
@@ -1128,21 +1269,16 @@ const getEmptyMessage = () => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.professional-level-tag {
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 2px 6px;
-  font-size: 12px;
-  color: white;
-  background: linear-gradient(135deg, #51a8ff, #2b5cff);
-  border-radius: 0 10px 0 10px;
-}
-
-.professional-avatar {
+.professional-avatar-container {
   width: 80px;
   height: 80px;
   margin-right: 12px;
+  border-radius: 50%;
+}
+
+.professional-avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
 }
 
@@ -1153,12 +1289,71 @@ const getEmptyMessage = () => {
   justify-content: space-between;
 }
 
-.professional-name {
+.professional-name-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 5px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.professional-name {
+  flex: 1;
+}
+
+.professional-gender {
+  margin-left: 5px;
+  font-size: 14px;
+  color: #999;
+}
+
+.professional-area {
+  margin-bottom: 5px;
+}
+
+.professional-area-text {
+  font-size: 12px;
+  color: #999;
+}
+
+.professional-experience {
+  margin-bottom: 5px;
+}
+
+.professional-experience-text {
+  font-size: 12px;
+  color: #999;
+}
+
+.professional-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+
+.status-tag {
+  padding: 2px 6px;
+  font-size: 12px;
+  color: #999;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.status-available {
+  color: #4caf50;
+}
+
+.status-unavailable {
+  color: #f44336;
+}
+
+.book-now {
+  padding: 2px 6px;
+  font-size: 12px;
+  color: #fff;
+  background-color: #2b5cff;
+  border-radius: 4px;
 }
 </style>
