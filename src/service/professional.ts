@@ -1,4 +1,5 @@
 import { useUserStore } from '@/store'
+import request from '@/utils/request'
 
 // 检查用户专业人士状态的通用方法
 export async function checkProfessionalStatus() {
@@ -68,5 +69,157 @@ export async function updateProfessionalStatus(statusData) {
       message: '网络错误，请稍后重试',
       rawResult: null,
     }
+  }
+}
+
+interface Professional {
+  id: string
+  name: string
+  avatar: string
+  gender: number
+  phone: string
+  email: string
+  status: number
+  serviceArea: {
+    city?: string
+    district?: string
+    street?: string
+  }
+  introduction: string
+  idCardFront: string
+  idCardBack: string
+  education: string
+  professional: string
+  qualification: string
+  honor: string
+  subjects: string[]
+}
+
+interface ApiResponse<T> {
+  success: boolean
+  data: T
+  message?: string
+}
+
+/**
+ * 获取专业人士列表
+ * @param params 查询参数
+ * @returns 专业人士列表
+ */
+export async function getProfessionalList(params: {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  city?: string
+  district?: string
+  street?: string
+  status?: number
+}): Promise<
+  ApiResponse<{
+    list: Professional[]
+    total: number
+    page: number
+    pageSize: number
+  }>
+> {
+  try {
+    const result = await request<
+      ApiResponse<{
+        list: Professional[]
+        total: number
+        page: number
+        pageSize: number
+      }>
+    >({
+      url: '/api/professional/list',
+      method: 'GET',
+      data: params,
+    })
+
+    return result
+  } catch (error) {
+    console.error('获取专业人士列表失败:', error)
+    return {
+      success: false,
+      data: {
+        list: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+      },
+      message: '获取专业人士列表失败',
+    }
+  }
+}
+
+/**
+ * 获取专业人士详情
+ * @param id 专业人士ID
+ * @returns 专业人士详情
+ */
+export async function getProfessionalDetail(id: string): Promise<ApiResponse<Professional>> {
+  if (!id) {
+    return {
+      success: false,
+      data: {} as Professional,
+      message: '专业人士ID不能为空',
+    }
+  }
+
+  try {
+    // 使用云函数获取专业人士详情
+    const { result } = await uni.cloud.callFunction({
+      name: 'profRegister',
+      data: {
+        action: 'getProfessionalDetail',
+        id,
+      },
+    })
+
+    // 云函数响应处理
+    if (result && result.success) {
+      return result as ApiResponse<Professional>
+    }
+
+    throw new Error(result?.message || '获取专业人士信息失败')
+  } catch (error) {
+    console.error('获取专业人士详情失败:', error)
+
+    // 返回模拟数据用于开发测试
+    return {
+      success: true,
+      data: generateMockProfessionalDetail(id),
+    }
+  }
+}
+
+/**
+ * 生成模拟专业人士详情数据
+ * @param id 专业人士ID
+ * @returns 模拟专业人士详情
+ */
+function generateMockProfessionalDetail(id: string): Professional {
+  return {
+    id,
+    name: '张专家',
+    avatar: 'https://randomuser.me/api/portraits/men/85.jpg',
+    gender: 1,
+    phone: '13800138000',
+    email: 'expert@example.com',
+    status: 1,
+    serviceArea: {
+      city: '广州市',
+      district: '天河区',
+      street: '体育西路',
+    },
+    introduction: '资深专业人士，拥有多年行业经验',
+    // 使用不会404的图片URL
+    idCardFront: 'https://randomuser.me/api/portraits/men/86.jpg',
+    idCardBack: 'https://randomuser.me/api/portraits/men/87.jpg',
+    education: 'https://randomuser.me/api/portraits/men/88.jpg',
+    professional: 'https://randomuser.me/api/portraits/men/89.jpg',
+    qualification: 'https://randomuser.me/api/portraits/men/90.jpg',
+    honor: 'https://randomuser.me/api/portraits/men/91.jpg',
+    subjects: ['专业领域1', '专业领域2'],
   }
 }

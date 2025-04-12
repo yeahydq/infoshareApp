@@ -615,8 +615,25 @@ const renderProfessionalStats = (professional: any) => {
 
 // 跳转到专业人士详情页
 function gotoProfessionalDetail(id) {
+  if (!id) {
+    uni.showToast({
+      title: '专业人士ID不能为空',
+      icon: 'none',
+    })
+    return
+  }
+
+  console.log('跳转到专业人士详情页，ID:', id)
+
   uni.navigateTo({
     url: `/pages/weshares/professional-details/index?id=${id}`,
+    fail: (err) => {
+      console.error('跳转到专业人士详情页失败:', err)
+      uni.showToast({
+        title: '跳转失败，请稍后重试',
+        icon: 'none',
+      })
+    },
   })
 }
 
