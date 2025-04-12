@@ -291,19 +291,19 @@ const handleBannerClick = (banner) => {
 
 const handleCategoryClick = (category) => {
   uni.navigateTo({
-    url: `/pages/weshares/find-teachers/index?category=${encodeURIComponent(category.label)}`,
+    url: `/pages/weshares/find-professionals/index?category=${encodeURIComponent(category.label)}`,
   })
 }
 
 const viewProfessionalDetail = (professional) => {
   uni.navigateTo({
-    url: `/pages/weshares/teacher-details/index?id=${professional.id}`,
+    url: `/pages/weshares/professional-details/index?id=${professional.id}`,
   })
 }
 
 const navigateToFindProfessionals = (type) => {
   uni.navigateTo({
-    url: `/pages/weshares/find-teachers/index?type=${type}`,
+    url: `/pages/weshares/find-professionals/index?type=${type}`,
   })
 }
 
@@ -327,7 +327,7 @@ function navigateToRecommendedProfessionals() {
 
 function navigateToRegister() {
   uni.navigateTo({
-    url: '/pages/weshares/teacher-registration/index',
+    url: '/pages/weshares/professional-registration/index',
   })
 }
 

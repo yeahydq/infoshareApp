@@ -1,12 +1,12 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/weshares/teacher-registration/index",
-    "pages/weshares/teacher-registration/register-page1",
-    "pages/weshares/teacher-registration/register-page2",
-    "pages/weshares/teacher-registration/register-page3",
-    "pages/weshares/teacher-registration/register-page4",
-    "pages/weshares/teacher-registration/success",
+    "pages/weshares/professional-registration/index",
+    "pages/weshares/professional-registration/register-page1",
+    "pages/weshares/professional-registration/register-page2",
+    "pages/weshares/professional-registration/register-page3",
+    "pages/weshares/professional-registration/register-page4",
+    "pages/weshares/professional-registration/success",
     "pages/weshares/upload-documents/index"
   ],
   "window": {
@@ -28,7 +28,7 @@
         "selectedIconPath": "static/images/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/weshares/teacher-registration/index",
+        "pagePath": "pages/weshares/professional-registration/index",
         "text": "注册",
         "iconPath": "static/images/tabbar/register.png",
         "selectedIconPath": "static/images/tabbar/register-active.png"

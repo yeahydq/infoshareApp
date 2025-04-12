@@ -126,8 +126,8 @@ import { login } from '@/service/auth'
 import { checkProfessionalStatus } from '@/service/professional'
 
 const NavigationRoutes = {
-  FIND_PROFESSIONALS: '../find-teachers/index',
-  TEACHER_REGISTRATION: '../teacher-registration/index',
+  FIND_PROFESSIONALS: '../find-professionals/index',
+  PROFESSIONAL_REGISTRATION: '../professional-registration/index',
   PERSONAL_INFO: '../personal-info/index',
   QR_CODE: '../qr-code/index',
   HELP_CENTER: '../help-center/index',
@@ -215,7 +215,7 @@ const navigateToRegister = async () => {
       // 如果有申请记录，直接导航到状态页面
       if (latestStatus === 'pending' || latestStatus === 'approved') {
         console.log('直接导航到专业人士状态页面')
-        uni.navigateTo({ url: '../teacher-registration/status' })
+        uni.navigateTo({ url: '../professional-registration/status' })
         return
       }
     }
@@ -225,7 +225,7 @@ const navigateToRegister = async () => {
   }
 
   // 如果没有申请记录或状态不是pending/approved，则导航到注册页面
-  navigateTo(NavigationRoutes.TEACHER_REGISTRATION)
+  navigateTo(NavigationRoutes.PROFESSIONAL_REGISTRATION)
 }
 
 const navigateToSettings = () => {

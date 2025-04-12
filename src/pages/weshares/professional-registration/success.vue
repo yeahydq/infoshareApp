@@ -34,7 +34,7 @@
 // 查看审核状态
 const handleViewStatus = () => {
   uni.redirectTo({
-    url: '/pages/weshares/teacher-registration/index',
+    url: '/pages/weshares/professional-registration/index',
   })
 }
 

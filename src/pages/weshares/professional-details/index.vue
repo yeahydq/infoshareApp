@@ -1,12 +1,12 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '老师详情' },
+  style: { navigationBarTitleText: '专业人士详情' },
 }
 </route>
 
 <template>
   <view class="container">
-    <page-header title="老师详情" />
+    <page-header title="专业人士详情" />
 
     <view class="teacher-card">
       <view class="teacher-info">
@@ -124,11 +124,11 @@
         </view>
         <view class="modal-body">
           <view class="success-icon">✓</view>
-          <text class="success-message">您已成功预约张三丰老师</text>
-          <text class="success-detail">老师将于24小时内与您联系</text>
+          <text class="success-message">您已成功预约张三丰专业人士</text>
+          <text class="success-detail">专业人士将于24小时内与您联系</text>
         </view>
         <view class="modal-footer">
-          <view class="modal-btn" @click="navigateToFindTeachers">返回老师列表</view>
+          <view class="modal-btn" @click="navigateToFindProfessionals">返回专业人士列表</view>
         </view>
       </view>
     </view>
@@ -142,16 +142,16 @@ import PageHeader from '../../../components/PageHeader/PageHeader.vue'
 // Control modal visibility
 const showBookingModal = ref(false)
 
-// Book teacher function
+// Book professional function
 function bookTeacher() {
-  console.log('Booking teacher...')
+  console.log('Booking professional...')
   showBookingModal.value = true
 }
 
 // Navigation function
-function navigateToFindTeachers() {
-  console.log('Navigating to Find Teachers page')
-  window.location.href = '/pages/find-teachers/index'
+function navigateToFindProfessionals() {
+  console.log('Navigating to Find Professionals page')
+  window.location.href = '/pages/weshares/find-professionals/index'
 }
 </script>
 

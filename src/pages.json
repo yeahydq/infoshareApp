@@ -94,7 +94,7 @@
       }
     },
     {
-      "path": "pages/weshares/find-teachers/index",
+      "path": "pages/weshares/find-professionals/index",
       "type": "page",
       "style": {
         "navigationBarTitleText": "专业人士列表"
@@ -151,10 +151,17 @@
       }
     },
     {
-      "path": "pages/weshares/professional-detail/index",
+      "path": "pages/weshares/professional-details/index",
       "type": "page",
       "style": {
         "navigationBarTitleText": "专业人士详情"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-registration/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人士注册"
       }
     },
     {
@@ -163,6 +170,32 @@
       "style": {
         "navigationBarTitleText": "专业人员注册"
       }
+    },
+    {
+      "path": "pages/weshares/professional-registration/register-page2",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人员注册"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-registration/register-page3",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "专业人才入驻"
+      }
+    },
+    {
+      "path": "pages/weshares/professional-registration/register-page4",
+      "type": "page"
+    },
+    {
+      "path": "pages/weshares/professional-registration/status",
+      "type": "page"
+    },
+    {
+      "path": "pages/weshares/professional-registration/success",
+      "type": "page"
     },
     {
       "path": "pages/weshares/qr-code/index",
@@ -199,53 +232,6 @@
       "style": {
         "navigationBarTitleText": "系统设置"
       }
-    },
-    {
-      "path": "pages/weshares/teacher-details/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "老师详情"
-      }
-    },
-    {
-      "path": "pages/weshares/teacher-registration/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "专业人士注册"
-      }
-    },
-    {
-      "path": "pages/weshares/teacher-registration/register-page1",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "专业人员注册"
-      }
-    },
-    {
-      "path": "pages/weshares/teacher-registration/register-page2",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "专业人员注册"
-      }
-    },
-    {
-      "path": "pages/weshares/teacher-registration/register-page3",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "专业人才入驻"
-      }
-    },
-    {
-      "path": "pages/weshares/teacher-registration/register-page4",
-      "type": "page"
-    },
-    {
-      "path": "pages/weshares/teacher-registration/status",
-      "type": "page"
-    },
-    {
-      "path": "pages/weshares/teacher-registration/success",
-      "type": "page"
     },
     {
       "path": "pages/weshares/upload-documents/index",

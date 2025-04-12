@@ -69,7 +69,7 @@ const handleNext = (step) => {
     case 4:
       // 完成注册，跳转到状态页
       uni.redirectTo({
-        url: '/pages/weshares/teacher-registration/status',
+        url: '/pages/weshares/professional-registration/status',
       })
       break
   }
@@ -136,7 +136,7 @@ const handleEditFromReview = (step) => {
 
 // 完全替换onMounted函数
 onMounted(async () => {
-  console.log('Teacher registration index page mounted')
+  console.log('Professional registration index page mounted')
 
   // 检查修改模式是否过期
   registerStore.checkModifyModeExpired()
@@ -188,7 +188,7 @@ onMounted(async () => {
         console.log('已通过审核状态，直接跳转到状态页面')
         registerStore.setModifyMode(false) // 重置修改模式
         uni.redirectTo({
-          url: '/pages/weshares/teacher-registration/status',
+          url: '/pages/weshares/professional-registration/status',
         })
         return
       }
@@ -202,7 +202,7 @@ onMounted(async () => {
         // 非修改模式，跳转到状态页
         console.log('非修改模式，跳转到状态页')
         uni.redirectTo({
-          url: '/pages/weshares/teacher-registration/status',
+          url: '/pages/weshares/professional-registration/status',
         })
       }
     } else {
@@ -269,7 +269,7 @@ onMounted(async () => {
       } else {
         console.log('使用本地状态: 用户已有申请记录')
         uni.redirectTo({
-          url: '/pages/weshares/teacher-registration/status',
+          url: '/pages/weshares/professional-registration/status',
         })
       }
     } else {

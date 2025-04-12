@@ -182,28 +182,30 @@
     </view>
 
     <!-- 专业人士列表 -->
-    <view class="teacher-list" v-else>
+    <view class="professional-list" v-else>
       <view
         v-for="professional in professionals"
         :key="professional._id"
-        class="teacher-card"
-        @click="gotoTeacherDetail(professional._id)"
+        class="professional-card"
+        @click="gotoProfessionalDetail(professional._id)"
       >
-        <view class="teacher-level-tag" v-if="professional.level">{{ professional.level }}</view>
+        <view class="professional-level-tag" v-if="professional.level">
+          {{ professional.level }}
+        </view>
         <image
-          class="teacher-avatar"
+          class="professional-avatar"
           :src="professional.avatarUrl || defaultAvatarUrl"
           mode="aspectFill"
         />
-        <view class="teacher-info">
-          <view class="teacher-name">
+        <view class="professional-info">
+          <view class="professional-name">
             <text>{{ professional.name || '匿名专家' }}</text>
             <text class="verify-icon" v-if="professional.verified">✓</text>
           </view>
-          <view class="teacher-stats">
+          <view class="professional-stats">
             <text>{{ renderProfessionalStats(professional) }}</text>
           </view>
-          <view class="teacher-rating">
+          <view class="professional-rating">
             <text
               v-for="n in 5"
               :key="n"
@@ -217,10 +219,10 @@
             </text>
           </view>
         </view>
-        <view class="teacher-price" v-if="professional.hourlyRate">
+        <view class="professional-price" v-if="professional.hourlyRate">
           ¥{{ professional.hourlyRate }}/小时
         </view>
-        <view class="teacher-price-hidden" v-else></view>
+        <view class="professional-price-hidden" v-else></view>
         <view class="book-button" @click.stop="gotoBooking(professional._openid)">
           <text>去预约</text>
         </view>
@@ -504,10 +506,9 @@ const renderProfessionalStats = (professional: any) => {
 }
 
 // 跳转到专业人士详情页
-const gotoTeacherDetail = (id) => {
-  console.log('跳转到专业人士详情', id)
+function gotoProfessionalDetail(id) {
   uni.navigateTo({
-    url: '/pages/weshares/teacher-detail/index?id=' + id,
+    url: `/pages/weshares/professional-details/index?id=${id}`,
   })
 }
 
@@ -1113,5 +1114,55 @@ const getEmptyMessage = () => {
   margin-bottom: 5px;
   background-color: #f5f5f5;
   border-radius: 18px;
+}
+
+.professional-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 10px;
+}
+
+.professional-card {
+  position: relative;
+  display: flex;
+  padding: 12px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.professional-level-tag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: white;
+  background: linear-gradient(135deg, #51a8ff, #2b5cff);
+  border-radius: 0 10px 0 10px;
+}
+
+.professional-avatar {
+  width: 80px;
+  height: 80px;
+  margin-right: 12px;
+  border-radius: 50%;
+}
+
+.professional-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.professional-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 18px;
+  font-weight: bold;
 }
 </style>

@@ -160,7 +160,7 @@ const handleModify = async () => {
 
       // 跳转到第四页（预览页）
       uni.navigateTo({
-        url: '/pages/weshares/teacher-registration/index?step=4&from=status',
+        url: '/pages/weshares/professional-registration/index?step=4&from=status',
       })
     } else {
       throw new Error(result.message || '获取申请信息失败')
