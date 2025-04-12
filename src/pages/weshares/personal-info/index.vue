@@ -90,6 +90,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useUserStore } from '@/store'
+import { updateUserDatabase } from '@/service/auth'
 import defaultAvatarUrl from './defaultAvatar.png'
 
 const userStore = useUserStore()
@@ -120,27 +121,62 @@ const onChooseAvatar = (e) => {
 
 const uploadFile = (url) => {
   const fileName = url
-  const dotPosition = fileName.lastIndexOf('.')
-  const extension = fileName.slice(dotPosition)
-  const cloudPath = `${Date.now()}-${Math.floor(Math.random(0, 1) * 10000000)}${extension}`
+  // 从本地文件路径中提取文件名
+  const originalFileName = fileName.split('/').pop()
+  console.log('原始文件名:', originalFileName)
+
+  // 提取文件扩展名
+  const dotPosition = originalFileName.lastIndexOf('.')
+  const extension = originalFileName.slice(dotPosition)
+
+  // 使用原始文件名作为云存储路径，确保本地与云端文件名一致
+  // 但添加时间戳避免重名
+  const cloudPath = `avatars/${Date.now()}_${originalFileName}`
+
+  uni.showLoading({
+    title: '上传中...',
+    mask: true,
+  })
+
   wx.cloud.uploadFile({
     cloudPath,
     filePath: fileName,
     success(res) {
       wx.hideLoading()
-      // console.log('imgs', res, imgPathList.length, that.data.imgList.length)
-      // imgPathList.push(res.fileID)
-      // if (imgPathList.length == that.data.imgList.length) {
-      //   // 保存信息
-      //   that.SubmitEntrust(imgPathList)
-      // }
       console.log('上传成功', res.fileID)
-      // updateDabaseRecord({ avatarUrl: res.fileID })
+
+      // 更新用户头像云存储路径
+      const cloudFileID = res.fileID
       userStore.setUserInfo({
-        avatarUrlCloud: res.fileID,
+        avatarUrlCloud: cloudFileID,
+        avatarUrl: url,
+        avatarFileName: originalFileName, // 保存原始文件名
       })
+
+      // 更新数据库
+      updateUserDatabase(userid.value, {
+        avatarUrlCloud: cloudFileID,
+        avatarUrl: url,
+        avatarFileName: originalFileName, // 保存原始文件名到数据库
+      })
+        .then(() => {
+          console.log('头像路径和文件名已同步到云存储')
+
+          // 保存文件名映射，便于后续比较
+          try {
+            const fileNameMap = uni.getStorageSync('fileNameMap') || {}
+            fileNameMap[url] = originalFileName
+            uni.setStorageSync('fileNameMap', fileNameMap)
+          } catch (err) {
+            console.error('保存文件名映射失败:', err)
+          }
+        })
+        .catch((err) => {
+          console.error('同步头像路径到云存储失败:', err)
+        })
     },
     fail: function (err) {
+      wx.hideLoading()
       console.error('Upload failed', err)
       uni.showToast({
         title: '图片保存失败',
@@ -148,7 +184,6 @@ const uploadFile = (url) => {
         duration: 2000,
       })
     },
-    complete: (res) => {},
   })
 }
 // const uploadAvatar = () => {
@@ -187,11 +222,18 @@ const toggleEdit = () => {
     // manager: manager.value,
   })
 
-  updateDabaseRecord(userStore.userInfo)
-  uni.showToast({
-    title: '信息已更新',
-    icon: 'success',
-  })
+  // 使用公共函数更新数据库
+  updateUserDatabase(userid.value, userStore.userInfo)
+    .then(() => {
+      uni.showToast({
+        title: '信息已更新',
+        icon: 'success',
+      })
+      uni.navigateBack() // 更新成功后返回上一页
+    })
+    .catch((err) => {
+      console.error('更新信息失败:', err)
+    })
   // }
   // else {
   //   // Disable button for 3 seconds
@@ -206,50 +248,6 @@ const toggleEdit = () => {
   //   }, 1000)
   // }
   // isEditing.value = !isEditing.value
-}
-
-const updateDabaseRecord = (userInfo) => {
-  // SubmitRegister(e) {
-  // 保存
-  uni.showLoading({
-    mask: true,
-    title: '正在保存...',
-  })
-  //   const name = userInfo.name
-  //   const phone = userInfo.phone
-  //   const avatarUrl = userInfo.avatarUrl
-  //   const nickName = userInfo.nickName
-  // 保存到数据库
-  const dbname = 'UserList'
-  const db = wx.cloud.database()
-  db.collection(dbname)
-    .doc(userid.value)
-    .update({
-      data: userInfo,
-      success: function (res) {
-        uni.hideLoading()
-        if (res.errMsg === 'document.update:ok') {
-          uni.showToast({
-            title: '更改成功！',
-            icon: 'none',
-            duration: 1000,
-          })
-          // 页面跳转
-          uni.navigateBack()
-        } else {
-          // 提示网络错误
-          uni.showToast({
-            title: '网络错误，更改失败，请检查网络后重试！',
-            icon: 'none',
-            duration: 2000,
-          })
-        }
-      },
-      fail: function (err) {
-        uni.hideLoading()
-        console.error(err)
-      },
-    })
 }
 </script>
 

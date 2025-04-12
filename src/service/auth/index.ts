@@ -15,14 +15,14 @@ export const login = () => {
             success: (res) => {
               const userInfo = res.userInfo
               const nickName = userInfo.nickName
-              const avatarUrl = userInfo.avatarUrl
+              // const avatarUrl = userInfo.avatarUrl // 不能获取微信头像， 需要后面用户自己上传
               const gender = userInfo.gender
               const province = userInfo.province
               const city = userInfo.city
               const country = userInfo.country
               const updatedUserInfo = {
                 nickName,
-                avatarUrl,
+                // avatarUrl,
                 gender,
                 province,
                 city,
@@ -73,7 +73,69 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
           userInfo.id = result[0]._id
           userInfo.nickName = result[0].nickName
           userInfo.avatarUrlCloud = result[0].avatarUrlCloud || ''
-          downloadFile(userInfo.avatarUrlCloud, userInfo)
+
+          // 检查本地avatarUrl是否存在
+          const localAvatarUrl = userInfo.avatarUrl || ''
+
+          // 从云端文件路径提取文件名，或使用已保存的文件名
+          const cloudFileName = result[0].avatarFileName || userInfo.avatarUrlCloud.split('/').pop()
+
+          // 检查本地是否已有相同文件名的文件，通过文件名映射查找
+          let needDownload = true
+
+          // 检查本地是否有相同文件的缓存记录
+          try {
+            const fileNameMap = uni.getStorageSync('fileNameMap') || {}
+            const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+
+            // 检查云文件URL是否已有本地缓存
+            if (tempCloudURLs[userInfo.avatarUrlCloud] && wx.getFileSystemManager().accessSync) {
+              try {
+                // 检查文件是否存在
+                wx.getFileSystemManager().accessSync(tempCloudURLs[userInfo.avatarUrlCloud])
+                console.log('本地已缓存此云端文件:', tempCloudURLs[userInfo.avatarUrlCloud])
+                userInfo.avatarUrl = tempCloudURLs[userInfo.avatarUrlCloud]
+                needDownload = false
+              } catch (e) {
+                console.log('本地缓存文件不存在，需要重新下载')
+              }
+            }
+
+            // 如果未找到缓存，但有文件名记录，则通过文件名查找
+            if (needDownload && cloudFileName) {
+              for (const [localPath, fileName] of Object.entries(fileNameMap)) {
+                if (fileName === cloudFileName) {
+                  try {
+                    // 检查文件是否存在
+                    if (wx.getFileSystemManager().accessSync) {
+                      wx.getFileSystemManager().accessSync(localPath)
+                      console.log('通过文件名找到本地文件:', localPath)
+                      userInfo.avatarUrl = localPath
+                      needDownload = false
+
+                      // 更新映射
+                      tempCloudURLs[userInfo.avatarUrlCloud] = localPath
+                      uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+                      break
+                    }
+                  } catch (e) {
+                    console.log('文件名匹配的本地文件不存在')
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.error('检查本地文件缓存失败:', err)
+          }
+
+          // 如果需要下载，则下载头像
+          if (needDownload && userInfo.avatarUrlCloud) {
+            console.log('需要下载头像:', userInfo.avatarUrlCloud)
+            downloadFile(userInfo.avatarUrlCloud, userInfo)
+          } else {
+            console.log('使用本地头像:', userInfo.avatarUrl)
+          }
+
           userInfo.phone = result[0].phone
           userInfo.address = result[0].address
 
@@ -200,6 +262,60 @@ const SubmitRegister = (userInfo: any) => {
   })
 }
 
+/**
+ * 更新用户数据库记录
+ * @param userId 用户ID
+ * @param userData 需要更新的用户数据
+ * @returns Promise
+ */
+export const updateUserDatabase = (userId: string, userData: any) => {
+  return new Promise((resolve, reject) => {
+    if (!userId) {
+      console.error('更新用户信息失败：缺少用户ID')
+      return reject(new Error('缺少用户ID'))
+    }
+
+    uni.showLoading({
+      mask: true,
+      title: '正在保存...',
+    })
+
+    const dbname = 'UserList'
+    const db = wx.cloud.database()
+
+    db.collection(dbname)
+      .doc(userId)
+      .update({
+        data: userData,
+        success: function (res) {
+          uni.hideLoading()
+          if (res.errMsg === 'document.update:ok') {
+            console.log('用户信息更新成功:', userData)
+            resolve(res)
+          } else {
+            console.error('网络错误，更新失败:', res.errMsg)
+            uni.showToast({
+              title: '网络错误，更新失败，请重试！',
+              icon: 'none',
+              duration: 2000,
+            })
+            reject(new Error(res.errMsg))
+          }
+        },
+        fail: function (err) {
+          uni.hideLoading()
+          console.error('更新用户信息失败:', err)
+          uni.showToast({
+            title: '更新用户信息失败',
+            icon: 'none',
+            duration: 2000,
+          })
+          reject(err)
+        },
+      })
+  })
+}
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const downloadFile = (url: string, userInfo: any) => {
   /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -239,6 +355,15 @@ const downloadFile = (url: string, userInfo: any) => {
         if (res.result.isLocalFile) {
           console.log('文件已是本地路径，无需下载:', res.result.tempFileURL)
 
+          // 更新用户信息avatarUrl为本地路径
+          const userStore = useUserStore()
+          userStore.setUserInfo({
+            avatarUrl: res.result.tempFileURL, // 使用本地路径
+          })
+
+          // 更新本地存储
+          wx.setStorageSync('userInfo', userStore.userInfo)
+
           // 发送下载完成事件
           uni.$emit('cloudFileDownloaded', {
             fileID: url,
@@ -251,31 +376,138 @@ const downloadFile = (url: string, userInfo: any) => {
         const tempFileURL = res.result.tempFileURL
         console.log('获取临时文件链接成功:', url, '->', tempFileURL)
 
-        // 保存临时URL映射
-        try {
-          const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
-          tempCloudURLs[url] = tempFileURL
-          uni.setStorageSync('tempCloudURLs', tempCloudURLs)
-        } catch (err) {
-          console.error('保存临时URL映射失败:', err)
-        }
+        // 下载文件到本地临时目录
+        wx.downloadFile({
+          url: tempFileURL,
+          success: function (res) {
+            if (res.statusCode === 200) {
+              const tempFilePath = res.tempFilePath
+              console.log('文件已下载到临时路径:', tempFilePath)
 
-        // 确保用户头像可见 - 用户信息中保持使用云存储路径
-        const userStore = useUserStore()
-        userStore.setUserInfo({
-          avatarUrl: url, // 保持使用云存储路径，由前端计算属性处理显示
+              // 从云端文件路径提取文件名
+              const cloudFileName = url.split('/').pop() || 'avatar.jpg'
+              console.log('云端文件名:', cloudFileName)
+
+              // 处理临时文件路径的辅助函数
+              const handleTempFilePath = function (localFilePath: string) {
+                const userStore = useUserStore()
+                userStore.setUserInfo({
+                  avatarUrl: localFilePath,
+                  avatarUrlCloud: url,
+                })
+
+                // 更新本地存储
+                wx.setStorageSync('userInfo', userStore.userInfo)
+
+                // 保存临时URL映射
+                try {
+                  const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+                  tempCloudURLs[url] = localFilePath
+                  uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+                } catch (err) {
+                  console.error('保存临时URL映射失败:', err)
+                }
+
+                // 发送下载完成事件
+                uni.$emit('cloudFileDownloaded', {
+                  fileID: url,
+                  tempFilePath: localFilePath,
+                })
+
+                if (userInfo.id) {
+                  updateUserDatabase(userInfo.id, { avatarUrl: localFilePath })
+                    .then(() => console.log('头像临时路径已同步到云存储'))
+                    .catch((err) => console.error('同步头像临时路径失败:', err))
+                }
+
+                resolve(localFilePath)
+              }
+
+              // 保存文件到本地存储，并确保文件名与云端一致
+              try {
+                // 使用 wx.getFileSystemManager().saveFile 将临时文件保存为持久文件
+                const fsm = wx.getFileSystemManager()
+                fsm.saveFile({
+                  tempFilePath: tempFilePath,
+                  success: function (saveRes) {
+                    const savedFilePath = saveRes.savedFilePath
+                    console.log('文件已保存到本地:', savedFilePath)
+
+                    // 更新用户信息中的avatarUrl为本地路径
+                    const userStore = useUserStore()
+                    userStore.setUserInfo({
+                      avatarUrl: savedFilePath, // 使用保存后的本地路径
+                      avatarUrlCloud: url, // 保留云存储路径以便将来对比
+                    })
+
+                    // 更新本地存储
+                    wx.setStorageSync('userInfo', userStore.userInfo)
+
+                    // 保存临时URL映射
+                    try {
+                      const tempCloudURLs = uni.getStorageSync('tempCloudURLs') || {}
+                      tempCloudURLs[url] = savedFilePath
+                      uni.setStorageSync('tempCloudURLs', tempCloudURLs)
+
+                      // 保存文件名映射，便于后续比较
+                      const fileNameMap = uni.getStorageSync('fileNameMap') || {}
+                      fileNameMap[savedFilePath] = cloudFileName
+                      uni.setStorageSync('fileNameMap', fileNameMap)
+                    } catch (err) {
+                      console.error('保存映射失败:', err)
+                    }
+
+                    // 发送下载完成事件
+                    uni.$emit('cloudFileDownloaded', {
+                      fileID: url,
+                      tempFilePath: savedFilePath,
+                      fileName: cloudFileName,
+                    })
+
+                    // 将本地头像路径同步到云存储
+                    if (userInfo.id) {
+                      const userData = {
+                        avatarUrl: savedFilePath,
+                        avatarFileName: cloudFileName, // 保存文件名，便于后续比较
+                      }
+
+                      updateUserDatabase(userInfo.id, userData)
+                        .then(() => {
+                          console.log('头像路径已同步到云存储')
+                        })
+                        .catch((err) => {
+                          console.error('同步头像路径到云存储失败:', err)
+                        })
+                    }
+
+                    resolve(savedFilePath)
+                  },
+                  fail: function (err) {
+                    console.error('保存文件到本地失败:', err)
+                    // 失败时仍使用临时文件路径
+                    handleTempFilePath(tempFilePath)
+                  },
+                })
+              } catch (err) {
+                console.error('尝试保存文件失败:', err)
+                // 出错时仍使用临时文件路径
+                handleTempFilePath(tempFilePath)
+              }
+            } else {
+              console.error('下载文件状态码异常:', res.statusCode)
+              reject(new Error('下载头像失败: ' + res.statusCode))
+            }
+          },
+          fail: function (err) {
+            console.error('下载文件失败:', err)
+            uni.showToast({
+              title: '头像下载失败',
+              icon: 'none',
+              duration: 2000,
+            })
+            reject(err)
+          },
         })
-
-        // 更新本地存储
-        wx.setStorageSync('userInfo', userStore.userInfo)
-
-        // 发送下载完成事件
-        uni.$emit('cloudFileDownloaded', {
-          fileID: url,
-          tempFilePath: tempFileURL,
-        })
-
-        resolve(tempFileURL)
       },
       fail: (err) => {
         console.error('调用cacheFile云函数失败:', err)
