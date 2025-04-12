@@ -29,7 +29,7 @@ interface NavigateToOptions {
        "/pages/weshares/professional-registration/status" |
        "/pages/weshares/professional-registration/success" |
        "/pages/weshares/qr-code/index" |
-       "/pages/weshares/recommended-teacher/index" |
+       "/pages/weshares/recommended-professional/index" |
        "/pages/weshares/registration-complete/index" |
        "/pages/weshares/system-announcement/index" |
        "/pages/weshares/system-settings/index" |

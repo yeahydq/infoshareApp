@@ -321,7 +321,7 @@ function navigateToPersonalCenter() {
 
 function navigateToRecommendedProfessionals() {
   uni.navigateTo({
-    url: '../recommended-teacher/index',
+    url: '../recommended-professional/index',
   })
 }
 

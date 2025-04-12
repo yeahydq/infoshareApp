@@ -206,10 +206,10 @@
       }
     },
     {
-      "path": "pages/weshares/recommended-teacher/index",
+      "path": "pages/weshares/recommended-professional/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "推荐老师"
+        "navigationBarTitleText": "推荐专业人士"
       }
     },
     {

@@ -1,12 +1,12 @@
 <route lang="json5" type="page">
 {
-  style: { navigationBarTitleText: '推荐老师' },
+  style: { navigationBarTitleText: '推荐专业人士' },
 }
 </route>
 
 <template>
   <view class="container">
-    <!-- <page-header title="推荐老师" /> -->
+    <!-- <page-header title="推荐专业人士" /> -->
 
     <view class="form-container">
       <view class="form-item">
@@ -51,13 +51,13 @@
 
       <view class="form-item">
         <text class="required">*</text>
-        <text class="label">教学学科</text>
+        <text class="label">服务领域</text>
         <view
           class="subject-picker"
           :class="{ 'error-input': v$.subject.$error }"
           @click="showSubjectPicker = true"
         >
-          <text class="placeholder">{{ form.subject || '请选择学科:' }}</text>
+          <text class="placeholder">{{ form.subject || '请选择领域:' }}</text>
           <text class="arrow">></text>
         </view>
         <text v-if="v$.subject.$error" class="error-text">
@@ -81,10 +81,10 @@
 
       <view class="form-item">
         <text class="required">*</text>
-        <text class="label">授课方式</text>
+        <text class="label">服务方式</text>
         <view class="teaching-methods">
           <view
-            v-for="(method, index) in teachingMethods"
+            v-for="(method, index) in serviceMethods"
             :key="index"
             class="method-option"
             :class="{ selected: form.teachingMethod === method }"
@@ -132,7 +132,7 @@
     <view class="modal" v-if="showSubjectPicker">
       <view class="modal-content">
         <view class="modal-header">
-          <text class="modal-title">选择学科</text>
+          <text class="modal-title">选择领域</text>
           <text class="modal-close" @click="showSubjectPicker = false">×</text>
         </view>
         <view class="modal-body">
@@ -179,12 +179,12 @@ const form = reactive({
   location: '',
   subject: '',
   education: '',
-  teachingMethod: '上门授课',
+  teachingMethod: '上门服务',
   notes: '',
 })
 
-// 教学方式选项
-const teachingMethods = ['学生上门', '网络授课', '上门授课']
+// 服务方式选项
+const serviceMethods = ['客户上门', '网络服务', '上门服务']
 
 // 位置选项 (模拟数据)
 const locations = ['北京市', '上海市', '广州市', '深圳市', '杭州市', '济南市', '青岛市', '南京市']
@@ -206,9 +206,9 @@ const rules = computed(() => {
       }),
     },
     location: { required: helpers.withMessage('请选择位置', required) },
-    subject: { required: helpers.withMessage('请选择学科', required) },
+    subject: { required: helpers.withMessage('请选择领域', required) },
     education: { required: helpers.withMessage('请输入最高学历', required) },
-    teachingMethod: { required: helpers.withMessage('请选择授课方式', required) },
+    teachingMethod: { required: helpers.withMessage('请选择服务方式', required) },
   }
 })
 
@@ -266,7 +266,7 @@ function closeSuccessModal() {
   // 重置表单数据
   Object.keys(form).forEach((key) => {
     if (key === 'teachingMethod') {
-      form[key] = '上门授课'
+      form[key] = '上门服务'
     } else {
       form[key] = ''
     }
