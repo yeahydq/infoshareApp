@@ -389,301 +389,201 @@ async function clearProfessionals() {
   }
 }
 
-// 初始化专业人士时间安排数据
-async function initTimeSchedules() {
+// 格式化日期为YYYY-MM-DD格式
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 初始化时间安排测试数据
+async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
   try {
-    // 检查是否已有时间安排数据
-    const { total } = await db
-      .collection('timeSchedules')
-      .where({
-        professionalId: db.RegExp({
-          regexp: '^test_openid_',
-          options: 'i',
-        }),
-      })
-      .count()
+    const startTime = new Date() // 为函数添加本地计时器
+    console.log(`开始初始化时间安排测试数据... 从时间批次${startBatch}和日期批次${startDateBatch}开始`)
 
-    if (total > 0) {
-      console.log(`数据库中已存在${total}条时间安排测试数据`)
-      return {
-        success: true,
-        message: `数据库中已存在${total}条时间安排测试数据`,
-        count: total,
-      }
-    }
-
-    // 获取所有测试专业人士ID
-    const { data: professionals } = await db
+    // 查询所有测试专业人士
+    const professionalResult = await db
       .collection('professionals')
       .where({
-        _id: db.RegExp({
-          regexp: '^test_professional_',
-          options: 'i',
-        }),
+        isTestData: true,
       })
       .field({
         _id: true,
         _openid: true,
+        name: true,
+        professionalTypes: true,
+        city: true,
+        district: true,
+        province: true,
       })
       .get()
 
-    if (!professionals || professionals.length === 0) {
+    if (!professionalResult.data || professionalResult.data.length === 0) {
       return {
         success: false,
-        message: '没有找到专业人士测试数据',
-        count: 0,
+        message: '未找到测试专业人士，请先初始化专业人士数据',
       }
     }
 
-    console.log(`找到${professionals.length}条专业人士测试数据，为其创建时间安排`)
+    // 生成当前日期和未来90天的日期范围
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dateRange = []
+    for (let i = 0; i < 90; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dateRange.push(formatDate(date))
+    }
 
-    // 创建时间安排数据
-    const now = new Date()
-    now.setHours(0, 0, 0, 0) // 重置时间为当天0点，确保日期比较准确
+    // 时间段设置
+    const timeSlots = [
+      '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+    ]
+
+    // 生成时间安排数据
     const timeSchedules = []
+    // 生成日期索引数据
+    const dateIndexes = []
 
-    // 获取当前日期（只保留年月日）
-    const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    console.log('当前日期:', nowStr)
+    // 每个专业人士生成随机时间安排
+    professionalResult.data.forEach(professional => {
+      // 为每个专业人士创建日期哈希映射，跟踪哪些日期有可用时间
+      const availableDatesMap = {}
 
-    // 计算未来7天的最后一天日期
-    const maxDate = new Date(now)
-    maxDate.setDate(now.getDate() + 6) // 设置为今天+6天
-    const maxDateStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`
-    console.log('最大日期:', maxDateStr)
+      // 生成未来30-60天内随机10-20天的时间安排
+      const randomDaysCount = Math.floor(Math.random() * 11) + 10 // 10-20
+      const startOffset = Math.floor(Math.random() * 10) // 0-9
+      const endOffset = startOffset + 60
 
-    // 为每个专业人士生成时间段
-    for (const professional of professionals) {
-      const slots = []
-
-      // 随机决定这个专业人士是否有近期可用时间，提高比例到85%
-      const hasRecentAvailability = Math.random() > 0.15 // 约85%的专业人士有近期可用时间
-
-      // 为未来7天的每一天生成时间段
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(now)
-        date.setDate(now.getDate() + i)
-
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-
-        // 定义上午和下午的时间段数组
-        const morningSlots = []
-        const afternoonSlots = []
-
-        // 上午9:00-12:00，每30分钟一个时间段
-        for (let hour = 9; hour < 12; hour++) {
-          morningSlots.push(`${String(hour).padStart(2, '0')}:00`)
-          morningSlots.push(`${String(hour).padStart(2, '0')}:30`)
-        }
-
-        // 下午14:00-18:00，每30分钟一个时间段
-        for (let hour = 14; hour < 18; hour++) {
-          afternoonSlots.push(`${String(hour).padStart(2, '0')}:00`)
-          afternoonSlots.push(`${String(hour).padStart(2, '0')}:30`)
-        }
-
-        // 所有可能的时间段
-        const allTimeSlots = [...morningSlots, ...afternoonSlots]
-
-        // 确定当天的可用时间逻辑
-        if (hasRecentAvailability) {
-          // 这类专业人士在7天内一定会有可用时间
-
-          // 随机决定当天有多少个可用时间段 (3-8个)
-          const availableSlotsCount = Math.floor(Math.random() * 6) + 3
-
-          // 确保上午和下午都有时间段
-          let morningCount = Math.min(Math.ceil(availableSlotsCount / 2), morningSlots.length)
-          let afternoonCount = Math.min(availableSlotsCount - morningCount, afternoonSlots.length)
-
-          // 如果数字不对，调整一下
-          if (morningCount + afternoonCount < availableSlotsCount) {
-            morningCount = Math.min(morningCount + 1, morningSlots.length)
-          }
-
-          // 随机选择上午时间段
-          const selectedMorningSlots = []
-          const tempMorningSlots = [...morningSlots]
-          for (let j = 0; j < morningCount; j++) {
-            if (tempMorningSlots.length === 0) break
-            const randomIndex = Math.floor(Math.random() * tempMorningSlots.length)
-            selectedMorningSlots.push(tempMorningSlots.splice(randomIndex, 1)[0])
-          }
-
-          // 随机选择下午时间段
-          const selectedAfternoonSlots = []
-          const tempAfternoonSlots = [...afternoonSlots]
-          for (let j = 0; j < afternoonCount; j++) {
-            if (tempAfternoonSlots.length === 0) break
-            const randomIndex = Math.floor(Math.random() * tempAfternoonSlots.length)
-            selectedAfternoonSlots.push(tempAfternoonSlots.splice(randomIndex, 1)[0])
-          }
-
-          // 合并所有选择的时间段
-          const selectedTimeSlots = [...selectedMorningSlots, ...selectedAfternoonSlots]
-
-          // 添加到slots数组
-          for (const startTime of selectedTimeSlots) {
-            const [hours, minutes] = startTime.split(':').map(Number)
-            const endDate = new Date(2000, 0, 1, hours, minutes)
-            endDate.setMinutes(endDate.getMinutes() + 30)
-            const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-
-            slots.push({
-              date: dateStr,
-              startTime,
-              endTime,
-              isBooked: false, // 明确标记为未预约
-            })
-          }
-
-          console.log(
-            `专业人士 ${professional._openid} 在 ${dateStr} 创建了 ${selectedTimeSlots.length} 个可用时间段`,
-          )
-        } else {
-          // 这类专业人士在前5天内不可预约，但6-7天可能有预约
-          if (i < 5) {
-            // 前5天内，要么没有时间段，要么全部已被预约
-            if (Math.random() > 0.5) {
-              // 没有时间段
-              console.log(`专业人士 ${professional._openid} 在 ${dateStr} 没有设置时间段`)
-            } else {
-              // 有时间段但全部已被预约
-              const bookedSlotsCount = Math.floor(Math.random() * 4) + 2 // 2-5个已预约时间段
-              const randomSlots = []
-
-              // 随机选择时间段
-              const tempAllSlots = [...allTimeSlots]
-              for (let j = 0; j < bookedSlotsCount; j++) {
-                if (tempAllSlots.length === 0) break
-                const randomIndex = Math.floor(Math.random() * tempAllSlots.length)
-                randomSlots.push(tempAllSlots.splice(randomIndex, 1)[0])
-              }
-
-              // 添加已预约的时间段
-              for (const startTime of randomSlots) {
-                const [hours, minutes] = startTime.split(':').map(Number)
-                const endDate = new Date(2000, 0, 1, hours, minutes)
-                endDate.setMinutes(endDate.getMinutes() + 30)
-                const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-
-                slots.push({
-                  date: dateStr,
-                  startTime,
-                  endTime,
-                  isBooked: true, // 标记为已预约
-                })
-              }
-
-              console.log(
-                `专业人士 ${professional._openid} 在 ${dateStr} 有 ${randomSlots.length} 个已预约时间段`,
-              )
-            }
-          } else {
-            // 第6、7天可能有可预约时间
-            if (Math.random() > 0.3) {
-              // 70%概率有空闲时间
-              // 随机决定当天有多少个可用时间段 (2-5个)
-              const availableSlotsCount = Math.floor(Math.random() * 4) + 2
-              const randomSlots = []
-
-              // 随机选择时间段
-              const tempAllSlots = [...allTimeSlots]
-              for (let j = 0; j < availableSlotsCount; j++) {
-                if (tempAllSlots.length === 0) break
-                const randomIndex = Math.floor(Math.random() * tempAllSlots.length)
-                randomSlots.push(tempAllSlots.splice(randomIndex, 1)[0])
-              }
-
-              // 添加未预约的时间段
-              for (const startTime of randomSlots) {
-                const [hours, minutes] = startTime.split(':').map(Number)
-                const endDate = new Date(2000, 0, 1, hours, minutes)
-                endDate.setMinutes(endDate.getMinutes() + 30)
-                const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-
-                slots.push({
-                  date: dateStr,
-                  startTime,
-                  endTime,
-                  isBooked: false, // 标记为未预约
-                })
-              }
-
-              console.log(
-                `专业人士 ${professional._openid} 在 ${dateStr} 有 ${randomSlots.length} 个可用时间段`,
-              )
-            } else {
-              console.log(`专业人士 ${professional._openid} 在 ${dateStr} 没有设置时间段`)
-            }
-          }
+      // 随机选择日期
+      const selectedDates = []
+      while (selectedDates.length < randomDaysCount && (startOffset + selectedDates.length) < endOffset) {
+        const index = startOffset + selectedDates.length
+        if (index < dateRange.length) {
+          selectedDates.push(dateRange[index])
         }
       }
 
-      // 输出统计信息，便于调试
-      const availableCount = slots.filter((slot) => !slot.isBooked).length
-      const next5DaysAvailableCount = slots.filter((slot) => {
-        const slotDate = slot.date
-        // 使用字符串比较，与getProfessionalList查询保持一致
-        const isAfterToday = slotDate >= nowStr
-        const isBeforeMax = slotDate <= maxDateStr
-        const isNotBooked = slot.isBooked !== true
+      // 为每个选定的日期生成时间段
+      selectedDates.forEach(date => {
+        // 为日期添加记录到可用日期映射
+        availableDatesMap[date] = true
+        
+        // 随机选择3-8个时间段
+        const slotsCount = Math.floor(Math.random() * 6) + 3 // 3-8
+        const selectedSlots = timeSlots
+          .sort(() => 0.5 - Math.random()) // 随机打乱
+          .slice(0, slotsCount) // 取前几个
+          .sort() // 重新排序
 
-        // 使用与getProfessionalList相同的逻辑
-        return isAfterToday && isBeforeMax && isNotBooked
-      }).length
-
-      console.log(
-        `专业人士 ${professional._openid} 共有 ${slots.length} 个时间段，其中可预约 ${availableCount} 个，7天内可预约 ${next5DaysAvailableCount} 个`,
-      )
-
-      // 创建时间安排记录
-      timeSchedules.push({
-        professionalId: professional._openid,
-        slots,
-        updateTime: db.serverDate(),
-        hasRecentAvailability, // 添加标记，便于后续查询
-        isTestData: true, // 标记为测试数据，便于后续清理
+        // 创建时间安排记录
+        selectedSlots.forEach(timeSlot => {
+          timeSchedules.push({
+            professionalId: professional._openid,
+            professionalName: professional.name,
+            date,
+            timeSlot,
+            status: 'available', // 可用状态
+            isTestData: true,
+            createTime: new Date(),
+          })
+        })
       })
+
+      // 为此专业人士创建日期索引记录
+      Object.keys(availableDatesMap).forEach(date => {
+        dateIndexes.push({
+          professionalId: professional._openid,
+          date,
+          professionalTypes: professional.professionalTypes || ['其他'],
+          city: professional.city || '未知',
+          district: professional.district || '未知',
+          province: professional.province || '未知',
+          isTestData: true,
+          createTime: new Date(),
+        })
+      })
+    })
+
+    if (timeSchedules.length === 0) {
+      return {
+        success: false,
+        message: '未生成任何时间安排数据',
+      }
     }
 
-    // 批量导入数据
-    let importedCount = 0
+    // 批量导入数据（分批导入，每批最多20条，减少每批数据量）
     const batchSize = 20
-    const batches = []
+    const timeScheduleBatches = []
+    const dateIndexBatches = []
 
-    // 将数据分成若干批次
     for (let i = 0; i < timeSchedules.length; i += batchSize) {
-      batches.push(timeSchedules.slice(i, i + batchSize))
+      timeScheduleBatches.push(timeSchedules.slice(i, i + batchSize))
     }
 
-    // 批量导入
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i]
-      console.log(`正在导入第${i + 1}批时间安排数据(${batch.length}条)`)
-
-      // 使用Promise.all处理一批数据的插入
-      const importResults = await Promise.all(
-        batch.map((data) => db.collection('timeSchedules').add({ data })),
-      )
-
-      const batchSuccess = importResults.filter((res) => res._id).length
-      importedCount += batchSuccess
-
-      console.log(`第${i + 1}批导入完成，成功${batchSuccess}条`)
+    for (let i = 0; i < dateIndexes.length; i += batchSize) {
+      dateIndexBatches.push(dateIndexes.slice(i, i + batchSize))
     }
 
-    // 统计有近期可用时间的专业人士比例
-    const availableCount = timeSchedules.filter((ts) => ts.hasRecentAvailability).length
-    console.log(
-      `共生成 ${timeSchedules.length} 条时间安排数据，其中 ${availableCount} 条(${Math.round((availableCount / timeSchedules.length) * 100)}%)有7天内可预约时间段`,
-    )
+    console.log(`将分${timeScheduleBatches.length}批导入${timeSchedules.length}条时间安排数据`)
+    console.log(`将分${dateIndexBatches.length}批导入${dateIndexes.length}条日期索引数据`)
+
+    // 导入时间安排数据
+    let timeCompletedBatches = 0
+    for (let i = startBatch; i < timeScheduleBatches.length; i++) {
+      await db.collection('timeSchedules').add({
+        data: timeScheduleBatches[i]
+      })
+      timeCompletedBatches++
+      console.log(`完成第${i + 1}/${timeScheduleBatches.length}批时间安排数据导入`)
+      
+      // 每3批检查一次是否接近超时（只给2秒运行时间）
+      if (timeCompletedBatches % 3 === 0 && (new Date().getTime() - startTime.getTime() > 2000)) {
+        return {
+          success: true,
+          message: '成功导入部分数据，需要继续',
+          completed: false,
+          nextTimeScheduleBatch: i + 1,
+          nextDateIndexBatch: startDateBatch,
+          totalTimeBatches: timeScheduleBatches.length,
+          totalDateBatches: dateIndexBatches.length,
+          progress: `时间安排数据: ${i + 1}/${timeScheduleBatches.length}, 日期索引数据: ${startDateBatch}/${dateIndexBatches.length}`
+        }
+      }
+    }
+
+    // 导入日期索引数据
+    let dateCompletedBatches = 0
+    for (let i = startDateBatch; i < dateIndexBatches.length; i++) {
+      await db.collection('professionalDateIndex').add({
+        data: dateIndexBatches[i]
+      })
+      dateCompletedBatches++
+      console.log(`完成第${i + 1}/${dateIndexBatches.length}批日期索引数据导入`)
+      
+      // 每3批检查一次是否接近超时（只给2秒运行时间）
+      if (dateCompletedBatches % 3 === 0 && (new Date().getTime() - startTime.getTime() > 2000)) {
+        return {
+          success: true,
+          message: '成功导入部分数据，需要继续',
+          completed: false,
+          nextTimeScheduleBatch: timeScheduleBatches.length,
+          nextDateIndexBatch: i + 1,
+          totalTimeBatches: timeScheduleBatches.length,
+          totalDateBatches: dateIndexBatches.length,
+          progress: `时间安排数据: ${timeScheduleBatches.length}/${timeScheduleBatches.length}, 日期索引数据: ${i + 1}/${dateIndexBatches.length}`
+        }
+      }
+    }
 
     return {
       success: true,
-      message: `成功导入${importedCount}条时间安排测试数据，其中${availableCount}条有7天内可预约时间段`,
-      count: importedCount,
-      availableCount,
+      message: `成功初始化${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
+      completed: true,
+      count: timeSchedules.length,
+      indexCount: dateIndexes.length
     }
   } catch (error) {
     console.error('初始化时间安排测试数据失败:', error)
@@ -745,10 +645,88 @@ async function clearTimeSchedules() {
   }
 }
 
+// 清理专业人士日期索引测试数据
+async function clearProfessionalDateIndex() {
+  try {
+    // 删除所有标记为测试数据的索引记录
+    const result = await db
+      .collection('professionalDateIndex')
+      .where({
+        isTestData: true,
+      })
+      .remove()
+
+    const removedCount = result.stats.removed || 0
+
+    // 如果没有删除记录，尝试使用professionalId匹配
+    if (removedCount === 0) {
+      console.log('没有找到标记为isTestData的索引记录，尝试使用professionalId匹配')
+      const resultByProfId = await db
+        .collection('professionalDateIndex')
+        .where({
+          professionalId: db.RegExp({
+            regexp: '^test_openid_',
+            options: 'i',
+          }),
+        })
+        .remove()
+
+      const removedByProfId = resultByProfId.stats.removed || 0
+
+      return {
+        success: true,
+        message: `成功清理${removedByProfId}条日期索引测试数据（通过professionalId匹配）`,
+        count: removedByProfId,
+      }
+    }
+
+    return {
+      success: true,
+      message: `成功清理${removedCount}条日期索引测试数据`,
+      count: removedCount,
+    }
+  } catch (error) {
+    console.error('清理日期索引测试数据失败:', error)
+    return {
+      success: false,
+      message: `清理日期索引测试数据失败: ${error.message}`,
+      error: error,
+    }
+  }
+}
+
+/**
+ * 辅助函数：处理继续导入逻辑
+ * 将本函数复制到小程序客户端使用
+ * @param {Object} result 云函数返回结果
+ * @returns {Promise} 完成所有导入的Promise
+ */
+function handleContinue(result) {
+  // 如果导入已完成或发生错误，直接返回结果
+  if (!result || !result.success || result.completed === true) {
+    return Promise.resolve(result);
+  }
+
+  // 如果需要继续导入，构造参数进行下一次调用
+  console.log(`继续导入数据: ${result.progress}`);
+  const callParams = {
+    action: result.action,
+    collection: result.collection,
+    timeScheduleBatch: result.nextTimeScheduleBatch,
+    dateIndexBatch: result.nextDateIndexBatch
+  };
+
+  // 调用云函数并递归处理结果
+  return wx.cloud.callFunction({
+    name: 'initTestData',
+    data: callParams
+  }).then(res => handleContinue(res.result));
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   // 获取操作类型
-  const { action = 'init', collection = 'all' } = event
+  const { action = 'init', collection = 'all', timeScheduleBatch = 0, dateIndexBatch = 0 } = event
 
   // 执行操作
   switch (action) {
@@ -760,7 +738,17 @@ exports.main = async (event, context) => {
 
         // 如果初始化专业人士成功，同时初始化时间安排
         if (profResult.success && (collection === 'all' || collection === 'timeSchedules')) {
-          timeResult = await initTimeSchedules()
+          timeResult = await initTimeSchedules(timeScheduleBatch, dateIndexBatch)
+          
+          // 如果需要继续导入，返回后续批次信息
+          if (timeResult.success && !timeResult.completed) {
+            return {
+              ...timeResult,
+              professionals: profResult,
+              action: 'init',
+              collection: 'timeSchedules'
+            }
+          }
         }
 
         return {
@@ -768,7 +756,17 @@ exports.main = async (event, context) => {
           timeSchedules: timeResult,
         }
       } else if (collection === 'timeSchedules') {
-        const timeResult = await initTimeSchedules()
+        const timeResult = await initTimeSchedules(timeScheduleBatch, dateIndexBatch)
+        
+        // 如果需要继续导入，返回后续批次信息
+        if (timeResult.success && !timeResult.completed) {
+          return {
+            ...timeResult,
+            action: 'init',
+            collection: 'timeSchedules'
+          }
+        }
+        
         return {
           timeSchedules: timeResult,
         }
@@ -782,20 +780,27 @@ exports.main = async (event, context) => {
       if (collection === 'all' || collection === 'professionals') {
         const profResult = await clearProfessionals()
         let timeResult = null
+        let dateIndexResult = null
 
         // 同时清理时间安排数据
         if (collection === 'all' || collection === 'timeSchedules') {
           timeResult = await clearTimeSchedules()
+          // 同时清理专业人士日期索引数据
+          dateIndexResult = await clearProfessionalDateIndex()
         }
 
         return {
           professionals: profResult,
           timeSchedules: timeResult,
+          professionalDateIndex: dateIndexResult
         }
       } else if (collection === 'timeSchedules') {
         const timeResult = await clearTimeSchedules()
+        // 同时清理专业人士日期索引数据
+        const dateIndexResult = await clearProfessionalDateIndex()
         return {
           timeSchedules: timeResult,
+          professionalDateIndex: dateIndexResult
         }
       }
       return {

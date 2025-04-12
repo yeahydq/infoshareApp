@@ -463,7 +463,21 @@ const fetchProfessionals = async (refresh = true) => {
     }
 
     // 构建查询条件，添加日期和时间段
-    const queryParams = {
+    const queryParams: {
+      page: number
+      pageSize: number
+      keyword: string
+      category: string
+      city: string
+      district: string
+      sortType: string
+      sortOrder: string
+      onlyAvailable: boolean
+      professionalIds?: string[]
+      preserveIdOrder?: boolean
+      date?: string
+      timeSlot?: string
+    } = {
       page: page.value,
       pageSize: pageSize.value,
       keyword: searchKeyword.value,
@@ -473,11 +487,60 @@ const fetchProfessionals = async (refresh = true) => {
       sortType: sortType.value,
       sortOrder: sortOrder.value,
       onlyAvailable: onlyAvailable.value,
-      date: selectedDate.value,
-      timeSlot: selectedTimeSlot.value,
     }
 
     console.log('查询参数:', queryParams)
+
+    // 如果选择了日期，优先通过时间查找专业人士
+    let professionalIds = []
+    if (selectedDate.value) {
+      try {
+        // 调用优化后的API获取指定日期有空的专业人士列表
+        const timeResult = await uni.cloud.callFunction({
+          name: 'TimeSchedule',
+          data: {
+            type: 'findProfessionalsByTime',
+            date: selectedDate.value,
+            timeSlot: selectedTimeSlot.value,
+            serviceArea: {
+              city: selectedCity.value || '', // 确保至少传递空字符串而非undefined
+              district: selectedDistrict.value || '',
+            },
+            professionalTypes: selectedCategory.value ? [selectedCategory.value] : [],
+          },
+        })
+
+        if (timeResult.result && timeResult.result.code === 0) {
+          professionalIds = timeResult.result.data || []
+          console.log(`通过索引查找到${professionalIds.length}个专业人士`)
+
+          // 如果找不到任何专业人士，直接返回空结果
+          if (professionalIds.length === 0 && onlyAvailable.value) {
+            console.log('指定日期无可用专业人士')
+            professionals.value = []
+            loading.value = false
+            return
+          }
+        }
+      } catch (timeError) {
+        console.error('通过时间查找专业人士出错:', timeError)
+        // 出错时继续使用常规方式查询
+      }
+    }
+
+    // 如果通过时间查找到了专业人士ID列表，添加到查询条件中
+    if (professionalIds.length > 0) {
+      queryParams.professionalIds = professionalIds
+
+      // 使用新索引时，结果已按updateTime排序
+      queryParams.preserveIdOrder = true
+      queryParams.sortType = 'update'
+      sortType.value = 'update'
+    } else if (selectedDate.value) {
+      // 如果使用日期搜索但没有使用索引，则使用常规参数
+      queryParams.date = selectedDate.value
+      queryParams.timeSlot = selectedTimeSlot.value
+    }
 
     // 调用云函数获取专业人士列表
     const { result } = await uni.cloud.callFunction({
