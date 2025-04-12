@@ -21,9 +21,17 @@
   <view class="container">
     <view class="search-bar">
       <view class="location">
-        <picker @change="onRegionChange" mode="region">
+        <picker @change="onCityChange" mode="selector" :range="cityList">
           <view class="location-picker">
-            {{ selectedRegion[1] || '全部' }}
+            {{ selectedCity || '全部城市' }}
+            <text class="down-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+      <view class="location" v-if="selectedCity && districtList.length > 0">
+        <picker @change="onDistrictChange" mode="selector" :range="districtList">
+          <view class="location-picker">
+            {{ selectedDistrict || '全部区域' }}
             <text class="down-arrow">▼</text>
           </view>
         </picker>
@@ -253,11 +261,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { cityAreaData } from '@/config/areaData'
 
 // 使用内联默认头像，避免依赖外部文件
 const defaultAvatarUrl =
   'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'
+
+// 城市列表
+const cityList = computed(() => cityAreaData.map((city) => city.name))
 
 // 专业人士数据
 const professionals = ref<any[]>([])
@@ -269,7 +281,7 @@ const pageSize = ref(10)
 // 搜索和筛选条件
 const searchKeyword = ref('')
 const selectedCategory = ref('')
-const selectedRegion = ref(['', '', ''])
+const selectedCity = ref('')
 const sortType = ref('default')
 const sortOrder = ref('desc')
 
@@ -300,6 +312,14 @@ const timeSlotLabels = {
   afternoon: '下午 (14:00-18:00)',
   all: '全天',
 }
+
+// 添加区域（区）选择功能
+const districtList = computed(() => {
+  if (!selectedCity.value) return []
+  const cityData = cityAreaData.find((city) => city.name === selectedCity.value)
+  return cityData ? cityData.districts.map((district) => district.name) : []
+})
+const selectedDistrict = ref('')
 
 // 生成未来7天的日期数组
 function generateDateRangeArray() {
@@ -350,8 +370,8 @@ const fetchProfessionals = async (refresh = true) => {
       pageSize: pageSize.value,
       keyword: searchKeyword.value,
       category: selectedCategory.value,
-      province: selectedRegion.value[0],
-      city: selectedRegion.value[1],
+      city: selectedCity.value,
+      district: selectedDistrict.value,
       sortType: sortType.value,
       sortOrder: sortOrder.value,
       onlyAvailable: onlyAvailable.value,
@@ -424,8 +444,14 @@ const selectCategory = (categoryId: string) => {
 }
 
 // 区域选择变更
-const onRegionChange = (e: any) => {
-  selectedRegion.value = e.detail.value
+const onCityChange = (e: any) => {
+  selectedCity.value = cityList.value[e.detail.value]
+  selectedDistrict.value = ''
+  fetchProfessionals()
+}
+
+const onDistrictChange = (e: any) => {
+  selectedDistrict.value = districtList.value[e.detail.value]
   fetchProfessionals()
 }
 
@@ -744,6 +770,18 @@ const getEmptyMessage = () => {
   color: #999;
 }
 
+.search-input {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 120px;
+  height: 36px;
+  padding: 0 10px;
+  margin-right: 10px;
+  background-color: #f5f5f5;
+  border-radius: 18px;
+}
+
 .search-icon {
   margin-right: 5px;
   font-size: 14px;
@@ -754,6 +792,20 @@ const getEmptyMessage = () => {
   flex: 1;
   height: 36px;
   font-size: 14px;
+  background-color: transparent;
+  border: none;
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 36px;
+  font-size: 14px;
+  color: #fff;
+  background-color: #007aff;
+  border-radius: 18px;
 }
 
 .sort-icon {
@@ -784,6 +836,17 @@ const getEmptyMessage = () => {
 .location-picker {
   display: flex;
   align-items: center;
+  overflow: hidden;
+  font-size: 14px;
+  color: #333;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.down-arrow {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #999;
 }
 /* 开发工具样式 */
 .dev-tools {
@@ -1031,5 +1094,24 @@ const getEmptyMessage = () => {
   padding: 8rpx 16rpx;
   font-size: 24rpx;
   color: #999;
+}
+
+.search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px;
+  background-color: #fff;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  max-width: 120px;
+  height: 36px;
+  padding: 0 10px;
+  margin-right: 10px;
+  margin-bottom: 5px;
+  background-color: #f5f5f5;
+  border-radius: 18px;
 }
 </style>

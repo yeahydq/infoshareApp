@@ -119,10 +119,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { simpleCityList } from '@/config/areaData'
 
 const { safeAreaInsets } = uni.getSystemInfoSync()
 
-const currentLocation = ref('济南市')
+const currentLocation = ref(simpleCityList[0] || '济南市')
 const bannerList = ref([
   {
     image: '/static/image/banner1.png',
@@ -219,9 +220,9 @@ const featuredProfessionals = ref([
 // 方法定义
 const showLocationPicker = () => {
   uni.showActionSheet({
-    itemList: ['济南市', '青岛市', '烟台市'],
+    itemList: simpleCityList,
     success: (res) => {
-      currentLocation.value = ['济南市', '青岛市', '烟台市'][res.tapIndex]
+      currentLocation.value = simpleCityList[res.tapIndex]
     },
   })
 }
