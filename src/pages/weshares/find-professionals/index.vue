@@ -289,12 +289,22 @@ const sortOrder = ref('desc')
 // 添加onlyAvailable控制参数
 const onlyAvailable = ref(true) // 默认只显示有可用时间段的专业人士
 
-// 分类列表
+// 添加用户当前城市变量
+const userCurrentCity = ref('广州市') // 默认设置为广州市
+
+// 分类列表以及英文到中文的映射
 const categories = ref([
   { id: 'education', name: '教育' },
   { id: 'repair', name: '维修服务' },
   { id: 'other', name: '其他服务' },
 ])
+
+// 分类英文ID到中文名称的映射
+const categoryMap = {
+  education: '教育',
+  repair: '维修服务',
+  other: '其他服务',
+}
 
 // 定义是否显示开发工具，始终显示测试按钮以方便开发
 const showDevTools = ref(true)
@@ -316,6 +326,24 @@ const districtList = computed(() => {
   return cityData ? cityData.districts.map((district) => district.name) : []
 })
 const selectedDistrict = ref('')
+
+// 添加缓存相关变量
+const professionalCache = ref<{
+  data: any[]
+  timestamp: number
+  searchParams: any
+  hasMore: boolean
+  page: number
+}>({
+  data: [],
+  timestamp: 0,
+  searchParams: null,
+  hasMore: true,
+  page: 1,
+})
+
+// 缓存过期时间（30分钟）
+const CACHE_EXPIRATION = 30 * 60 * 1000
 
 // 生成未来7天的日期数组
 function generateDateRangeArray() {
@@ -351,92 +379,115 @@ function generateDateRangeArray() {
  * @returns 处理后的数据
  */
 const batchProcessCloudUrls = async (items: any[]) => {
-  if (!items || items.length === 0) {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    console.log('传入的专业人士数据为空或无效')
     return []
   }
 
-  // 深拷贝数据，避免修改原始数据
-  const cleanedItems = JSON.parse(JSON.stringify(items))
+  try {
+    // 深拷贝数据，避免修改原始数据
+    const cleanedItems = JSON.parse(JSON.stringify(items))
 
-  // 清理显示字段中的云存储链接
-  cleanedItems.forEach((item) => {
-    // 遍历所有字段，处理可能包含云存储链接的字段
-    Object.keys(item).forEach((key) => {
-      if (typeof item[key] === 'string' && item[key].includes('cloud://')) {
-        if (key !== 'avatarUrl') {
-          // 对于非头像字段，如果包含云存储链接，设置为适当的替代文本
-          if (key === 'experience') {
-            // 尝试从经验字段提取年份信息
-            const yearMatch = item[key].match(/(\d+)年/)
-            if (yearMatch && yearMatch[1]) {
-              item[key] = `${yearMatch[1]}年专业经验`
+    // 清理显示字段中的云存储链接
+    cleanedItems.forEach((item) => {
+      if (!item) return // 跳过无效项
+
+      // 遍历所有字段，处理可能包含云存储链接的字段
+      Object.keys(item).forEach((key) => {
+        if (!item[key]) return // 跳过null或undefined值
+
+        if (typeof item[key] === 'string' && item[key].includes('cloud://')) {
+          if (key !== 'avatarUrl') {
+            // 对于非头像字段，如果包含云存储链接，设置为适当的替代文本
+            if (key === 'experience') {
+              // 尝试从经验字段提取年份信息
+              const yearMatch = item[key].match(/(\d+)年/)
+              if (yearMatch && yearMatch[1]) {
+                item[key] = `${yearMatch[1]}年专业经验`
+              } else {
+                item[key] = '专业经验丰富'
+              }
+            } else if (key === 'education') {
+              item[key] = '专业教育背景'
             } else {
-              item[key] = '专业经验丰富'
+              // 其他字段设置为空字符串
+              item[key] = ''
             }
-          } else if (key === 'education') {
-            item[key] = '专业教育背景'
-          } else {
-            // 其他字段设置为空字符串
-            item[key] = ''
           }
+        }
+      })
+    })
+
+    // 收集所有需要处理的云存储URL
+    const cloudUrls: string[] = []
+    const urlMapping: Record<string, number[]> = {}
+
+    cleanedItems.forEach((item, itemIndex) => {
+      // 仅处理有效项和有效的头像URL
+      if (!item || !item.avatarUrl) return
+
+      // 仅处理头像URL
+      if (
+        typeof item.avatarUrl === 'string' &&
+        item.avatarUrl.trim() !== '' &&
+        item.avatarUrl.startsWith('cloud://')
+      ) {
+        const cloudPath = item.avatarUrl.trim()
+        if (!cloudUrls.includes(cloudPath)) {
+          cloudUrls.push(cloudPath)
+          urlMapping[cloudPath] = [itemIndex]
+        } else {
+          urlMapping[cloudPath].push(itemIndex)
         }
       }
     })
-  })
 
-  // 收集所有需要处理的云存储URL
-  const cloudUrls: string[] = []
-  const urlMapping: Record<string, number[]> = {}
-
-  cleanedItems.forEach((item, itemIndex) => {
-    // 仅处理头像URL
-    if (
-      item.avatarUrl &&
-      typeof item.avatarUrl === 'string' &&
-      item.avatarUrl.startsWith('cloud://')
-    ) {
-      if (!cloudUrls.includes(item.avatarUrl)) {
-        cloudUrls.push(item.avatarUrl)
-        urlMapping[item.avatarUrl] = [itemIndex]
-      } else {
-        urlMapping[item.avatarUrl].push(itemIndex)
-      }
+    if (cloudUrls.length === 0) {
+      console.log('没有需要转换的云存储链接')
+      return cleanedItems
     }
-  })
 
-  if (cloudUrls.length === 0) {
-    console.log('没有需要转换的云存储链接')
-    return cleanedItems
-  }
+    console.log(`需要转换${cloudUrls.length}个云存储链接`)
 
-  console.log(`需要转换${cloudUrls.length}个云存储链接`)
+    try {
+      const res = await uni.cloud.callFunction({
+        name: 'getTemporaryUrl',
+        data: { cloudPaths: cloudUrls },
+      })
 
-  try {
-    const res = await uni.cloud.callFunction({
-      name: 'getTemporaryUrl',
-      data: { cloudPaths: cloudUrls },
-    })
-
-    // 安全地处理返回结果
-    const resultData = res?.result && typeof res.result === 'object' ? res.result : {}
-    const urlData = resultData.data && typeof resultData.data === 'object' ? resultData.data : {}
-
-    // 使用返回的临时URL更新数据
-    Object.keys(urlData).forEach((cloudPath) => {
-      const tempUrl = urlData[cloudPath]
-      const itemIndices = urlMapping[cloudPath]
-
-      if (itemIndices && tempUrl) {
-        itemIndices.forEach((idx) => {
-          cleanedItems[idx].avatarUrl = tempUrl
-        })
+      // 安全地处理返回结果
+      if (!res || !res.result) {
+        console.warn('获取临时URL返回结果为空')
+        return cleanedItems
       }
-    })
-  } catch (error) {
-    console.error('获取临时URL失败:', error)
-  }
 
-  return cleanedItems
+      const resultData = typeof res.result === 'object' ? res.result : {}
+      const urlData = resultData.data && typeof resultData.data === 'object' ? resultData.data : {}
+
+      // 使用返回的临时URL更新数据
+      Object.keys(urlData).forEach((cloudPath) => {
+        const tempUrl = urlData[cloudPath]
+        const itemIndices = urlMapping[cloudPath]
+
+        if (itemIndices && Array.isArray(itemIndices) && tempUrl) {
+          itemIndices.forEach((idx) => {
+            if (cleanedItems[idx]) {
+              cleanedItems[idx].avatarUrl = tempUrl
+            }
+          })
+        }
+      })
+
+      return cleanedItems
+    } catch (error) {
+      console.error('获取临时URL失败:', error)
+      return cleanedItems // 即使失败也返回清理过的数据
+    }
+  } catch (error) {
+    console.error('处理云存储链接时发生错误:', error)
+    // 发生错误时返回原始数据，避免完全失败
+    return items || []
+  }
 }
 
 /**
@@ -448,10 +499,191 @@ const isValidField = (field: any): boolean => {
   return !field.includes('cloud://')
 }
 
-// 页面加载时获取专业人士列表
+// 在组件挂载时获取用户当前城市
 onMounted(() => {
+  // 尝试获取当前用户城市
+  try {
+    const locationSetting = uni.getStorageSync('userLocationSetting')
+    if (locationSetting && locationSetting.city) {
+      userCurrentCity.value = locationSetting.city
+      console.log('获取到用户当前城市:', userCurrentCity.value)
+    } else {
+      console.log('未找到用户城市设置，使用默认值广州市')
+    }
+  } catch (error) {
+    console.error('获取用户城市设置出错:', error)
+    console.log('使用默认值广州市')
+  }
+
+  // 尝试读取缓存
+  try {
+    const cachedData = uni.getStorageSync('professionalSearchCache')
+    if (cachedData && cachedData.data && cachedData.timestamp) {
+      // 检查缓存是否过期
+      const cacheAge = Date.now() - cachedData.timestamp
+      if (cacheAge < CACHE_EXPIRATION) {
+        console.log(
+          '使用缓存的专业人士数据，缓存时间:',
+          new Date(cachedData.timestamp).toLocaleString(),
+        )
+
+        // 恢复缓存数据
+        professionalCache.value = cachedData
+        professionals.value = cachedData.data
+        hasMore.value = cachedData.hasMore
+        page.value = cachedData.page
+
+        // 恢复搜索条件
+        if (cachedData.searchParams) {
+          searchKeyword.value = cachedData.searchParams.keyword || ''
+
+          // 恢复分类选择
+          selectedCategory.value = cachedData.searchParams.category || ''
+
+          // 恢复城市和区域
+          selectedCity.value = cachedData.searchParams.city || userCurrentCity.value
+          if (selectedCity.value) {
+            // 如果有区域，需要先恢复城市才能显示区域列表
+            selectedDistrict.value = cachedData.searchParams.district || ''
+          }
+
+          // 恢复日期和时间段
+          selectedDate.value = cachedData.searchParams.date || ''
+          selectedTimeSlot.value = cachedData.searchParams.timeSlot || ''
+
+          // 恢复排序和可用性过滤
+          sortType.value = cachedData.searchParams.sortType || 'default'
+          sortOrder.value = cachedData.searchParams.sortOrder || 'desc'
+          onlyAvailable.value = cachedData.searchParams.onlyAvailable !== false // 默认为true
+        }
+
+        console.log('已从缓存恢复搜索条件:', cachedData.searchParams)
+        return // 有有效缓存则不进行网络请求
+      } else {
+        console.log('缓存已过期，需要重新获取数据')
+      }
+    } else {
+      console.log('未找到有效缓存')
+    }
+  } catch (error) {
+    console.error('读取专业人士缓存出错:', error)
+  }
+
+  // 无缓存或缓存已过期，加载专业人士列表
   fetchProfessionals()
 })
+
+// 获取最近一周的日期范围
+const getNextWeekDateRange = () => {
+  const today = new Date()
+  const weekLater = new Date()
+  weekLater.setDate(today.getDate() + 6) // 获取未来一周（含今天，共7天）
+
+  // 格式化为YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  return {
+    startDate: formatDate(today),
+    endDate: formatDate(weekLater),
+  }
+}
+
+// 判断搜索条件是否发生实质变化
+const searchParamsChanged = (oldParams: any, newParams: any): boolean => {
+  if (!oldParams) return true
+
+  const keysToCompare = [
+    'keyword',
+    'category',
+    'city',
+    'district',
+    'date',
+    'timeSlot',
+    'dateRange',
+    'sortType',
+    'sortOrder',
+    'onlyAvailable',
+  ]
+
+  for (const key of keysToCompare) {
+    // 特殊处理关键词（忽略空格和大小写）
+    if (key === 'keyword') {
+      const oldKeyword = (oldParams[key] || '').trim().toLowerCase()
+      const newKeyword = (newParams[key] || '').trim().toLowerCase()
+      if (oldKeyword !== newKeyword) {
+        console.log(`搜索条件变化: ${key} 从 "${oldKeyword}" 变为 "${newKeyword}"`)
+        return true
+      }
+      continue
+    }
+
+    // 其他参数直接比较
+    if (JSON.stringify(oldParams[key]) !== JSON.stringify(newParams[key])) {
+      console.log(`搜索条件变化: ${key} 从 "${oldParams[key]}" 变为 "${newParams[key]}"`)
+      return true
+    }
+  }
+
+  console.log('搜索条件没有变化')
+  return false
+}
+
+// 构建当前搜索参数对象
+const buildSearchParams = () => {
+  // 计算日期范围标志 - 未选择具体日期时为true
+  const dateRangeFlag = !selectedDate.value
+
+  // 将分类ID（英文）转换为分类名称（中文）
+  const categoryName = selectedCategory.value
+    ? categoryMap[selectedCategory.value] || selectedCategory.value
+    : ''
+
+  // 确定日期
+  let targetDate = selectedDate.value
+  if (!targetDate) {
+    const { startDate } = getNextWeekDateRange()
+    targetDate = startDate
+  }
+
+  return {
+    page: page.value,
+    pageSize: pageSize.value,
+    keyword: searchKeyword.value,
+    category: selectedCategory.value, // 保存英文ID，方便UI恢复
+    categoryName, // 中文名称，用于实际查询
+    city: selectedCity.value || userCurrentCity.value,
+    district: selectedDistrict.value,
+    sortType: sortType.value,
+    sortOrder: sortOrder.value,
+    onlyAvailable: onlyAvailable.value,
+    date: targetDate,
+    timeSlot: selectedTimeSlot.value || '',
+    dateRange: dateRangeFlag,
+  }
+}
+
+// 保存搜索结果到缓存
+const saveToCache = (data: any[], currentParams: any) => {
+  professionalCache.value = {
+    data,
+    timestamp: Date.now(),
+    searchParams: currentParams,
+    hasMore: hasMore.value,
+    page: page.value,
+  }
+
+  try {
+    uni.setStorageSync('professionalSearchCache', professionalCache.value)
+    console.log('已保存搜索结果到缓存, 数据量:', data.length)
+  } catch (error) {
+    console.error('保存缓存失败:', error)
+  }
+}
 
 // 获取专业人士列表
 const fetchProfessionals = async (refresh = true) => {
@@ -463,133 +695,111 @@ const fetchProfessionals = async (refresh = true) => {
       professionals.value = []
     }
 
-    // 构建查询条件，添加日期和时间段
-    const queryParams: {
-      page: number
-      pageSize: number
-      keyword: string
-      category: string
-      city: string
-      district: string
-      sortType: string
-      sortOrder: string
-      onlyAvailable: boolean
-      professionalIds?: string[]
-      preserveIdOrder?: boolean
-      date?: string
-      timeSlot?: string
-    } = {
-      page: page.value,
-      pageSize: pageSize.value,
-      keyword: searchKeyword.value,
-      category: selectedCategory.value,
-      city: selectedCity.value,
-      district: selectedDistrict.value,
-      sortType: sortType.value,
-      sortOrder: sortOrder.value,
-      onlyAvailable: onlyAvailable.value,
+    // 构建查询参数
+    const queryParams = buildSearchParams()
+
+    // 如果不是刷新操作，检查缓存是否有效
+    if (!refresh && professionalCache.value.data.length > 0) {
+      const cachedParams = professionalCache.value.searchParams
+
+      // 检查搜索条件是否变化
+      if (!searchParamsChanged(cachedParams, queryParams)) {
+        console.log('使用缓存数据，不发起网络请求')
+        professionals.value = professionalCache.value.data
+        hasMore.value = professionalCache.value.hasMore
+        page.value = professionalCache.value.page
+        loading.value = false
+        return
+      }
+
+      console.log('搜索条件已变化，需要重新获取数据')
     }
 
     console.log('查询参数:', queryParams)
+    console.log(
+      `日期查询模式: ${queryParams.dateRange ? '一周范围' : '单日'}, 日期: ${queryParams.date || '无'}, 时间段: ${queryParams.timeSlot || '全天'}`,
+    )
 
-    // 如果选择了日期，优先通过时间查找专业人士
-    let professionalIds = []
-    if (selectedDate.value) {
-      try {
-        // 调用优化后的API获取指定日期有空的专业人士列表
-        const timeResult = await uni.cloud.callFunction({
-          name: 'TimeSchedule',
-          data: {
-            type: 'findProfessionalsByTime',
-            date: selectedDate.value,
-            timeSlot: selectedTimeSlot.value,
-            serviceArea: {
-              city: selectedCity.value || '', // 确保至少传递空字符串而非undefined
-              district: selectedDistrict.value || '',
-            },
-            professionalTypes: selectedCategory.value ? [selectedCategory.value] : [],
+    // 使用TimeSchedule云函数查询
+    console.log('使用TimeSchedule云函数查询专业人士详情')
+
+    try {
+      const timeScheduleResult = await uni.cloud.callFunction({
+        name: 'TimeSchedule',
+        data: {
+          type: 'findProfessionalsByIndex',
+          date: queryParams.date || '',
+          timeSlot: queryParams.timeSlot || '',
+          professionalTypes: queryParams.categoryName ? [queryParams.categoryName] : [], // 使用中文分类名称
+          serviceArea: {
+            city: (queryParams.city || '').trim(),
+            district: (queryParams.district || '').trim(),
           },
-        })
+          page: queryParams.page || 1,
+          pageSize: queryParams.pageSize || 10,
+          dateRange: queryParams.dateRange,
+          sortType: queryParams.sortType || 'default',
+          sortOrder: queryParams.sortOrder || 'desc',
+          keyword: (queryParams.keyword || '').trim(),
+        },
+      })
 
-        if (timeResult.result && timeResult.result.code === 0) {
-          professionalIds = timeResult.result.data || []
-          console.log(`通过索引查找到${professionalIds.length}个专业人士`)
+      console.log('TimeSchedule查询结果:', timeScheduleResult)
 
-          // 如果找不到任何专业人士，直接返回空结果
-          if (professionalIds.length === 0 && onlyAvailable.value) {
-            console.log('指定日期无可用专业人士')
-            professionals.value = []
-            loading.value = false
-            return
+      if (timeScheduleResult.result && timeScheduleResult.result.code === 0) {
+        if (timeScheduleResult.result.success) {
+          let processedData = timeScheduleResult.result.data || []
+          console.log(`通过TimeSchedule直接获取到${processedData.length}个专业人士详情`)
+
+          // 更新分页信息
+          hasMore.value = timeScheduleResult.result.hasMore || false
+
+          // 批量处理云存储链接
+          processedData = await batchProcessCloudUrls(processedData)
+
+          if (refresh) {
+            professionals.value = processedData
+          } else {
+            professionals.value = [...professionals.value, ...processedData]
           }
+
+          // 保存到缓存
+          saveToCache(professionals.value, queryParams)
+
+          // 如果没有数据，显示提示
+          if (professionals.value.length === 0) {
+            uni.showToast({
+              title: getEmptyMessage(),
+              icon: 'none',
+            })
+          }
+        } else {
+          console.error('TimeSchedule查询失败:', timeScheduleResult.result.message)
+          uni.showToast({
+            title: '获取专业人士列表失败',
+            icon: 'none',
+          })
         }
-      } catch (timeError) {
-        console.error('通过时间查找专业人士出错:', timeError)
-        // 出错时继续使用常规方式查询
-      }
-    }
-
-    // 如果通过时间查找到了专业人士ID列表，添加到查询条件中
-    if (professionalIds.length > 0) {
-      queryParams.professionalIds = professionalIds
-
-      // 使用新索引时，结果已按updateTime排序
-      queryParams.preserveIdOrder = true
-      queryParams.sortType = 'update'
-      sortType.value = 'update'
-    } else if (selectedDate.value) {
-      // 如果使用日期搜索但没有使用索引，则使用常规参数
-      queryParams.date = selectedDate.value
-      queryParams.timeSlot = selectedTimeSlot.value
-    }
-
-    // 调用云函数获取专业人士列表
-    const { result } = await uni.cloud.callFunction({
-      name: 'profRegister',
-      data: {
-        action: 'getProfessionalList',
-        ...queryParams,
-      },
-    })
-
-    console.log('获取专业人士列表结果:', result)
-
-    if (result.success) {
-      // 处理云存储图片链接
-      let processedData = result.data || []
-
-      // 批量处理云存储链接
-      processedData = await batchProcessCloudUrls(processedData)
-
-      if (refresh) {
-        professionals.value = processedData
       } else {
-        professionals.value = [...professionals.value, ...processedData]
-      }
-
-      hasMore.value = result.hasMore || false
-
-      if (result.data && result.data.length < pageSize.value) {
-        hasMore.value = false
-      }
-
-      // 如果没有数据，显示提示
-      if (professionals.value.length === 0) {
+        console.error('TimeSchedule查询失败:', timeScheduleResult)
         uni.showToast({
-          title: getEmptyMessage(),
+          title: '获取专业人士列表失败',
           icon: 'none',
         })
       }
-    } else {
+    } catch (timeScheduleError) {
+      console.error('调用TimeSchedule云函数出错:', timeScheduleError)
       uni.showToast({
-        title: result.message || '获取专业人士列表失败',
+        title: '获取专业人士列表失败',
         icon: 'none',
       })
     }
+
+    page.value++
   } catch (error) {
     console.error('获取专业人士列表出错:', error)
     uni.showToast({
-      title: '网络错误，请稍后重试',
+      title: '获取专业人士列表失败',
       icon: 'none',
     })
   } finally {
@@ -608,6 +818,17 @@ const loadMore = () => {
 // 选择分类
 const selectCategory = (categoryId: string) => {
   selectedCategory.value = categoryId
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('分类选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
@@ -615,11 +836,33 @@ const selectCategory = (categoryId: string) => {
 const onCityChange = (e: any) => {
   selectedCity.value = cityList.value[e.detail.value]
   selectedDistrict.value = ''
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('城市选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 const onDistrictChange = (e: any) => {
   selectedDistrict.value = districtList.value[e.detail.value]
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('区域选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
@@ -631,10 +874,35 @@ const toggleSortOrder = (type: string) => {
     sortType.value = type
     sortOrder.value = 'desc'
   }
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('排序选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
+  fetchProfessionals()
 }
 
 // 搜索
 const onSearch = () => {
+  const queryParams = buildSearchParams()
+
+  // 检查缓存条件是否变化
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('搜索条件未变化，使用缓存')
+    professionals.value = professionalCache.value.data
+    hasMore.value = professionalCache.value.hasMore
+    return
+  }
+
   fetchProfessionals()
 }
 
@@ -790,30 +1058,85 @@ async function clearTestData() {
 // 添加切换可用性方法
 const toggleAvailability = () => {
   onlyAvailable.value = !onlyAvailable.value
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('可用性切换未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 // 选择日期
 const selectDate = (date) => {
   selectedDate.value = date
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('日期选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 // 选择时间段
 const selectTimeSlot = (slot) => {
   selectedTimeSlot.value = slot
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('时间段选择未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 // 清除日期筛选
 const clearDateFilter = () => {
   selectedDate.value = ''
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('清除日期未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 // 清除时间段筛选
 const clearTimeSlotFilter = () => {
   selectedTimeSlot.value = ''
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('清除时间段未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
@@ -821,25 +1144,67 @@ const clearTimeSlotFilter = () => {
 const clearAllDateFilters = () => {
   selectedDate.value = ''
   selectedTimeSlot.value = ''
+
+  // 判断缓存是否有效
+  const queryParams = buildSearchParams()
+  if (
+    professionalCache.value.data.length > 0 &&
+    !searchParamsChanged(professionalCache.value.searchParams, queryParams)
+  ) {
+    console.log('清除所有日期筛选未导致搜索条件实质变化，使用缓存')
+    return
+  }
+
   fetchProfessionals()
 }
 
 // 格式化选中的日期，便于展示
-const formatSelectedDate = (dateStr) => {
-  const date = availableDates.value.find((d) => d.value === dateStr)
+const formatSelectedDate = (dateStr: string): string => {
+  if (!dateStr) return '未选择日期'
+
+  const date = availableDates.value.find((d) => d && d.value === dateStr)
   if (date) {
-    return `${date.month}月${date.day}日${date.isToday ? '(今天)' : date.weekday}`
+    const monthStr = date.month ? `${date.month}月` : ''
+    const dayStr = date.day ? `${date.day}日` : ''
+    const weekdayStr = date.isToday ? '(今天)' : date.weekday || ''
+    return `${monthStr}${dayStr}${weekdayStr}`.trim() || dateStr
   }
+
+  // 尝试将日期字符串格式化为更易读的形式
+  try {
+    const parsedDate = new Date(dateStr)
+    if (!isNaN(parsedDate.getTime())) {
+      const month = parsedDate.getMonth() + 1
+      const day = parsedDate.getDate()
+      const today = new Date()
+      const isToday =
+        parsedDate.getDate() === today.getDate() &&
+        parsedDate.getMonth() === today.getMonth() &&
+        parsedDate.getFullYear() === today.getFullYear()
+
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      const weekday = weekdays[parsedDate.getDay()]
+
+      return `${month}月${day}日${isToday ? '(今天)' : weekday}`
+    }
+  } catch (e) {
+    console.error('日期格式化错误:', e)
+  }
+
+  // 如果无法解析，返回原始字符串
   return dateStr
 }
 
 // 根据当前筛选条件生成空数据提示信息
 const getEmptyMessage = () => {
   if (selectedDate.value) {
+    const formattedDate = formatSelectedDate(selectedDate.value) || selectedDate.value
+
     if (selectedTimeSlot.value) {
-      return `没有符合条件的专业人士在${formatSelectedDate(selectedDate.value)}的${timeSlotLabels[selectedTimeSlot.value]}有空`
+      const timeSlotText = timeSlotLabels[selectedTimeSlot.value] || '选定时间段'
+      return `没有符合条件的专业人士在${formattedDate}的${timeSlotText}有空`
     }
-    return `没有符合条件的专业人士在${formatSelectedDate(selectedDate.value)}有空`
+    return `没有符合条件的专业人士在${formattedDate}有空`
   }
 
   return onlyAvailable.value ? '暂无可预约的专业人士' : '暂无符合条件的专业人士'
@@ -848,66 +1213,111 @@ const getEmptyMessage = () => {
 /**
  * 根据服务区域字符串获取区域名称
  */
-const getAreaName = (serviceAreaStr: string) => {
+const getAreaName = (serviceAreaStr: string | any): string => {
   if (!serviceAreaStr) return '未设置服务区域'
 
-  // 如果是JSON字符串，尝试解析
-  try {
-    if (serviceAreaStr.startsWith('{') || serviceAreaStr.startsWith('[')) {
-      const areaObj = JSON.parse(serviceAreaStr)
-      // 根据解析出的结构提取区域名称
-      if (Array.isArray(areaObj)) {
-        return areaObj
-          .map((area) => area.fullName || area.name || '')
+  // 对于对象类型直接尝试获取属性
+  if (typeof serviceAreaStr === 'object' && serviceAreaStr !== null) {
+    // 如果是数组
+    if (Array.isArray(serviceAreaStr)) {
+      return (
+        serviceAreaStr
+          .map((area) => area && (area.fullName || area.name || ''))
           .filter(Boolean)
-          .join(', ')
-      } else if (areaObj.fullName || areaObj.name) {
-        return areaObj.fullName || areaObj.name
-      }
+          .join(', ') || '未设置服务区域'
+      )
     }
 
-    // 如果只是普通字符串，直接返回
-    return serviceAreaStr
-  } catch (e) {
-    // 解析失败时，直接返回原字符串
-    return serviceAreaStr
+    // 如果是对象
+    return (
+      serviceAreaStr.fullName ||
+      serviceAreaStr.name ||
+      (serviceAreaStr.city
+        ? `${serviceAreaStr.city} ${serviceAreaStr.district || ''}`.trim()
+        : '未设置服务区域')
+    )
   }
+
+  // 如果是JSON字符串，尝试解析
+  if (typeof serviceAreaStr === 'string') {
+    try {
+      if (serviceAreaStr.trim() === '') return '未设置服务区域'
+
+      if (serviceAreaStr.startsWith('{') || serviceAreaStr.startsWith('[')) {
+        const areaObj = JSON.parse(serviceAreaStr)
+
+        // 根据解析出的结构提取区域名称
+        if (Array.isArray(areaObj)) {
+          return (
+            areaObj
+              .map((area) => area && (area.fullName || area.name || ''))
+              .filter(Boolean)
+              .join(', ') || '未设置服务区域'
+          )
+        } else if (areaObj && typeof areaObj === 'object') {
+          return (
+            areaObj.fullName ||
+            areaObj.name ||
+            (areaObj.city ? `${areaObj.city} ${areaObj.district || ''}`.trim() : '未设置服务区域')
+          )
+        }
+      }
+
+      // 如果只是普通字符串，直接返回
+      return serviceAreaStr
+    } catch (e) {
+      // 解析失败时，先尝试检查是否包含城市名称格式
+      if (typeof serviceAreaStr === 'string' && serviceAreaStr.includes(' ')) {
+        // 可能是"城市 区域"格式
+        return serviceAreaStr.trim()
+      }
+
+      // 否则返回原始字符串
+      return serviceAreaStr || '未设置服务区域'
+    }
+  }
+
+  // 对于其他类型，尝试转换为字符串
+  return String(serviceAreaStr) || '未设置服务区域'
 }
 
-// 添加加载日期索引数据的方法
+// 加载日期索引
 async function loadTimeIndex() {
   try {
     uni.showLoading({
-      title: '加载日期索引数据中...',
+      title: '加载日期索引中...',
     })
 
     const result = await uni.cloud.callFunction({
       name: 'fixDateIndex',
+      data: {
+        limit: 50, // 限制处理的专业人士数量，避免过多数据导致处理时间过长
+        batchSize: 50, // 每批次导入的数据量
+      },
     })
 
-    console.log('加载日期索引数据结果:', result)
+    console.log('日期索引修复结果:', result)
 
-    const cloudResult = result.result as any
+    const cloudResult = result.result
 
     if (cloudResult && cloudResult.success) {
       uni.showToast({
-        title: `成功导入${cloudResult.count}条索引数据`,
+        title: `成功生成${cloudResult.count}条索引数据`,
         icon: 'success',
       })
 
-      // 刷新列表以显示新数据
+      // 刷新列表以显示最新数据
       fetchProfessionals()
     } else {
-      const errorMsg = cloudResult?.message || '加载日期索引数据失败'
       uni.showToast({
-        title: errorMsg,
+        title: cloudResult?.message || '日期索引修复失败',
         icon: 'none',
       })
     }
-  } catch (error: any) {
-    console.error('加载日期索引数据出错:', error)
+  } catch (error) {
+    console.error('加载日期索引出错:', error)
     uni.showToast({
-      title: '加载出错: ' + (error.message || error),
+      title: '加载日期索引出错: ' + (error.message || JSON.stringify(error)),
       icon: 'none',
     })
   } finally {

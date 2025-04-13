@@ -446,6 +446,10 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       dateRange.push(formatDate(date))
     }
 
+    // 提取未来7天的日期范围
+    const nextWeekRange = dateRange.slice(0, 7)
+    console.log(`当前日期: ${dateRange[0]}, 未来一周日期范围: ${nextWeekRange[0]} 到 ${nextWeekRange[6]}`)
+
     // 时间段设置
     const timeSlots = [
       '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
@@ -457,13 +461,55 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
     const dateIndexes = []
 
     // 每个专业人士生成随机时间安排
-    professionalResult.data.forEach(professional => {
+    professionalResult.data.forEach((professional, index) => {
       // 为每个专业人士创建日期哈希映射，跟踪哪些日期有可用时间
       const availableDatesMap = {}
 
-      // 生成未来30-60天内随机10-20天的时间安排
+      // 确定是否该专业人士应在未来一周内可预约 (50%的专业人士会在一周内可预约)
+      const shouldBeAvailableInNextWeek = index % 2 === 0
+      
+      if (shouldBeAvailableInNextWeek) {
+        // 为该专业人士在未来一周内随机选择1-3天
+        const daysInNextWeekCount = Math.floor(Math.random() * 3) + 1 // 1-3天
+        console.log(`专业人士${professional.name}(ID:${professional._openid})将在未来一周内有${daysInNextWeekCount}天可预约`)
+        
+        // 随机选择未来一周内的几天
+        const selectedWeekDays = []
+        while (selectedWeekDays.length < daysInNextWeekCount && selectedWeekDays.length < nextWeekRange.length) {
+          const randomIndex = Math.floor(Math.random() * nextWeekRange.length)
+          const date = nextWeekRange[randomIndex]
+          if (!selectedWeekDays.includes(date)) {
+            selectedWeekDays.push(date)
+            // 为日期添加记录到可用日期映射
+            availableDatesMap[date] = true
+            
+            // 为每个日期随机选择3-8个时间段
+            const slotsCount = Math.floor(Math.random() * 6) + 3 // 3-8
+            const selectedSlots = timeSlots
+              .sort(() => 0.5 - Math.random()) // 随机打乱
+              .slice(0, slotsCount) // 取前几个
+              .sort() // 重新排序
+
+            // 创建时间安排记录
+            selectedSlots.forEach(timeSlot => {
+              timeSchedules.push({
+                professionalId: professional._openid,
+                professionalName: professional.name,
+                date,
+                timeSlot,
+                status: 'available', // 可用状态
+                isTestData: true,
+                createTime: new Date(),
+              })
+            })
+          }
+        }
+      }
+
+      // 为所有专业人士生成未来30-60天内随机10-20天的时间安排
+      // 这样既保留原有的生成逻辑，又确保部分专业人士在一周内有预约时间
       const randomDaysCount = Math.floor(Math.random() * 11) + 10 // 10-20
-      const startOffset = Math.floor(Math.random() * 10) // 0-9
+      const startOffset = Math.floor(Math.random() * 10) + 7 // 7-16天后开始，避开第一周
       const endOffset = startOffset + 60
 
       // 随机选择日期
@@ -471,35 +517,34 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       while (selectedDates.length < randomDaysCount && (startOffset + selectedDates.length) < endOffset) {
         const index = startOffset + selectedDates.length
         if (index < dateRange.length) {
-          selectedDates.push(dateRange[index])
+          const date = dateRange[index]
+          if (!availableDatesMap[date]) { // 避免重复添加已选择的日期
+            selectedDates.push(date)
+            // 为日期添加记录到可用日期映射
+            availableDatesMap[date] = true
+            
+            // 随机选择3-8个时间段
+            const slotsCount = Math.floor(Math.random() * 6) + 3 // 3-8
+            const selectedSlots = timeSlots
+              .sort(() => 0.5 - Math.random()) // 随机打乱
+              .slice(0, slotsCount) // 取前几个
+              .sort() // 重新排序
+
+            // 创建时间安排记录
+            selectedSlots.forEach(timeSlot => {
+              timeSchedules.push({
+                professionalId: professional._openid,
+                professionalName: professional.name,
+                date,
+                timeSlot,
+                status: 'available', // 可用状态
+                isTestData: true,
+                createTime: new Date(),
+              })
+            })
+          }
         }
       }
-
-      // 为每个选定的日期生成时间段
-      selectedDates.forEach(date => {
-        // 为日期添加记录到可用日期映射
-        availableDatesMap[date] = true
-        
-        // 随机选择3-8个时间段
-        const slotsCount = Math.floor(Math.random() * 6) + 3 // 3-8
-        const selectedSlots = timeSlots
-          .sort(() => 0.5 - Math.random()) // 随机打乱
-          .slice(0, slotsCount) // 取前几个
-          .sort() // 重新排序
-
-        // 创建时间安排记录
-        selectedSlots.forEach(timeSlot => {
-          timeSchedules.push({
-            professionalId: professional._openid,
-            professionalName: professional.name,
-            date,
-            timeSlot,
-            status: 'available', // 可用状态
-            isTestData: true,
-            createTime: new Date(),
-          })
-        })
-      })
 
       // 为此专业人士创建日期索引记录
       Object.keys(availableDatesMap).forEach(date => {
@@ -1084,6 +1129,10 @@ async function quickImportTestData() {
       dateRange.push(formatDate(date))
     }
     
+    // 提取未来7天的日期范围
+    const nextWeekRange = dateRange.slice(0, 7)
+    console.log(`当前日期: ${dateRange[0]}, 未来一周日期范围: ${nextWeekRange[0]} 到 ${nextWeekRange[6]}`)
+    
     // 时间段设置（简化为4个时间段）
     const timeSlots = ['09:00', '11:00', '14:00', '16:00']
     
@@ -1092,36 +1141,84 @@ async function quickImportTestData() {
     const dateIndexes = []
     
     // 为每个专业人士生成时间安排和日期索引
-    professionals.data.forEach(prof => {
+    professionals.data.forEach((prof, index) => {
+      // 确定是否该专业人士应在未来一周内可预约 (50%的专业人士会在一周内可预约)
+      const shouldBeAvailableInNextWeek = index % 2 === 0
+      
       // 每个专业人士随机选择5-10天
       const daysCount = Math.floor(Math.random() * 6) + 5
       const availableDatesMap = {}
       
-      // 随机选择日期
-      for (let i = 0; i < daysCount; i++) {
-        const dateIndex = Math.floor(Math.random() * dateRange.length)
-        const date = dateRange[dateIndex]
-        availableDatesMap[date] = true
+      if (shouldBeAvailableInNextWeek) {
+        // 为该专业人士在未来一周内随机选择1-2天
+        const daysInNextWeekCount = Math.floor(Math.random() * 2) + 1 // 1-2天
+        console.log(`专业人士${prof.name}(ID:${prof._openid})将在未来一周内有${daysInNextWeekCount}天可预约`)
         
-        // 每天随机选择2-3个时间段
-        const slotsCount = Math.floor(Math.random() * 2) + 2
-        const selectedSlots = timeSlots
-          .sort(() => 0.5 - Math.random())
-          .slice(0, slotsCount)
-          .sort()
-        
-        // 创建时间安排记录
-        selectedSlots.forEach(timeSlot => {
-          timeSchedules.push({
-            professionalId: prof._openid,
-            professionalName: prof.name,
-            date,
-            timeSlot,
-            status: 'available',
-            isTestData: true,
-            createTime: new Date()
-          })
-        })
+        // 随机选择未来一周内的几天
+        const selectedWeekDays = []
+        while (selectedWeekDays.length < daysInNextWeekCount && selectedWeekDays.length < nextWeekRange.length) {
+          const randomIndex = Math.floor(Math.random() * nextWeekRange.length)
+          const date = nextWeekRange[randomIndex]
+          if (!selectedWeekDays.includes(date)) {
+            selectedWeekDays.push(date)
+            // 为日期添加记录到可用日期映射
+            availableDatesMap[date] = true
+            
+            // 为每个日期随机选择2-3个时间段
+            const slotsCount = Math.floor(Math.random() * 2) + 2 // 2-3
+            const selectedSlots = timeSlots
+              .sort(() => 0.5 - Math.random())
+              .slice(0, slotsCount)
+              .sort()
+            
+            // 创建时间安排记录
+            selectedSlots.forEach(timeSlot => {
+              timeSchedules.push({
+                professionalId: prof._openid,
+                professionalName: prof.name,
+                date,
+                timeSlot,
+                status: 'available',
+                isTestData: true,
+                createTime: new Date()
+              })
+            })
+          }
+        }
+      }
+      
+      // 随机选择日期（避开已选择的一周内日期）
+      const remainingDaysCount = daysCount - Object.keys(availableDatesMap).length
+      if (remainingDaysCount > 0) {
+        for (let i = 0; i < remainingDaysCount; i++) {
+          const dateIndex = Math.floor(Math.random() * dateRange.length)
+          const date = dateRange[dateIndex]
+          
+          // 避免重复添加已选择的日期
+          if (!availableDatesMap[date]) {
+            availableDatesMap[date] = true
+            
+            // 每天随机选择2-3个时间段
+            const slotsCount = Math.floor(Math.random() * 2) + 2
+            const selectedSlots = timeSlots
+              .sort(() => 0.5 - Math.random())
+              .slice(0, slotsCount)
+              .sort()
+            
+            // 创建时间安排记录
+            selectedSlots.forEach(timeSlot => {
+              timeSchedules.push({
+                professionalId: prof._openid,
+                professionalName: prof.name,
+                date,
+                timeSlot,
+                status: 'available',
+                isTestData: true,
+                createTime: new Date()
+              })
+            })
+          }
+        }
       }
       
       // 创建日期索引记录
