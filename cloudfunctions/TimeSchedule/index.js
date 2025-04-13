@@ -17,6 +17,29 @@ function getEndTime(startTime) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+// 添加一个工具函数，用于移除对象中的空值
+function removeEmptyValues(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const result = {};
+  Object.keys(obj).forEach(key => {
+    const value = obj[key];
+    // 检查值是否为空（空字符串、null、undefined）
+    if (value !== '' && value !== null && value !== undefined) {
+      // 如果值是对象且不是日期或正则表达式等特殊对象，递归处理
+      if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof RegExp) && !(value._internalType)) {
+        result[key] = removeEmptyValues(value);
+      } else {
+        result[key] = value;
+      }
+    } else {
+      console.log(`[查询优化] 移除空值属性: ${key}`);
+    }
+  });
+  
+  return result;
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
@@ -571,18 +594,22 @@ exports.main = async (event, context) => {
         console.log(`[优化查询] 添加区域筛选: ${validDistrict}`)
       }
       
-      console.log('[优化查询] 执行查询:', JSON.stringify(query))
+      // 移除查询条件中的空值
+      const cleanedQuery = removeEmptyValues(query);
+      console.log('[优化查询] 清理后的查询条件:', JSON.stringify(cleanedQuery));
+      
+      console.log('[优化查询] 执行查询:', JSON.stringify(cleanedQuery))
       
       // 计算分页参数
       const skipCount = (validPage - 1) * validPageSize
       
       // 从索引表中查询符合条件的专业人士ID，并使用分页
       const countResult = await db.collection('professionalDateIndex')
-        .where(query)
+        .where(cleanedQuery)
         .count()
       
       const indexResult = await db.collection('professionalDateIndex')
-        .where(query)
+        .where(cleanedQuery)
         .skip(skipCount)
         .limit(validPageSize)
         .orderBy('updateTime', 'desc')  // 按更新时间降序排列

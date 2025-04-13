@@ -11,6 +11,14 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
+// 计算结束时间（30分钟后）
+function getEndTime(startTime) {
+  const [hours, minutes] = startTime.split(':').map(Number)
+  const date = new Date(2000, 0, 1, hours, minutes)
+  date.setMinutes(date.getMinutes() + 30)
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 // 生成专业人士测试数据
 function generateProfessionals(count = 100) {
   // 专业类别列表
@@ -455,8 +463,8 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
     ]
 
-    // 生成时间安排数据
-    const timeSchedules = []
+    // 新结构：每个专业人士一条记录，包含所有时间slots
+    const timeSchedulesData = []
     // 生成日期索引数据
     const dateIndexes = []
 
@@ -464,6 +472,14 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
     professionalResult.data.forEach((professional, index) => {
       // 为每个专业人士创建日期哈希映射，跟踪哪些日期有可用时间
       const availableDatesMap = {}
+      
+      // 新结构：为每个专业人士创建一条记录，包含所有slots
+      const professionalSchedule = {
+        professionalId: professional._openid,
+        slots: [],
+        updateTime: new Date(),
+        isTestData: true
+      }
 
       // 确定是否该专业人士应在未来一周内可预约 (50%的专业人士会在一周内可预约)
       const shouldBeAvailableInNextWeek = index % 2 === 0
@@ -490,16 +506,14 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
               .slice(0, slotsCount) // 取前几个
               .sort() // 重新排序
 
-            // 创建时间安排记录
-            selectedSlots.forEach(timeSlot => {
-              timeSchedules.push({
-                professionalId: professional._openid,
-                professionalName: professional.name,
+            // 创建时间安排记录 - 新结构
+            selectedSlots.forEach(startTime => {
+              const endTime = getEndTime(startTime)
+              professionalSchedule.slots.push({
                 date,
-                timeSlot,
-                status: 'available', // 可用状态
-                isTestData: true,
-                createTime: new Date(),
+                startTime,
+                endTime,
+                isBooked: false
               })
             })
           }
@@ -507,7 +521,6 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       }
 
       // 为所有专业人士生成未来30-60天内随机10-20天的时间安排
-      // 这样既保留原有的生成逻辑，又确保部分专业人士在一周内有预约时间
       const randomDaysCount = Math.floor(Math.random() * 11) + 10 // 10-20
       const startOffset = Math.floor(Math.random() * 10) + 7 // 7-16天后开始，避开第一周
       const endOffset = startOffset + 60
@@ -530,16 +543,14 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
               .slice(0, slotsCount) // 取前几个
               .sort() // 重新排序
 
-            // 创建时间安排记录
-            selectedSlots.forEach(timeSlot => {
-              timeSchedules.push({
-                professionalId: professional._openid,
-                professionalName: professional.name,
+            // 创建时间安排记录 - 新结构
+            selectedSlots.forEach(startTime => {
+              const endTime = getEndTime(startTime)
+              professionalSchedule.slots.push({
                 date,
-                timeSlot,
-                status: 'available', // 可用状态
-                isTestData: true,
-                createTime: new Date(),
+                startTime,
+                endTime,
+                isBooked: false
               })
             })
           }
@@ -557,31 +568,37 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
           province: professional.province || '未知',
           isTestData: true,
           createTime: new Date(),
+          updateTime: new Date()
         })
       })
+      
+      // 只有当有时间段时才添加该专业人士的记录
+      if (professionalSchedule.slots.length > 0) {
+        timeSchedulesData.push(professionalSchedule)
+      }
     })
 
-    if (timeSchedules.length === 0) {
+    if (timeSchedulesData.length === 0) {
       return {
         success: false,
         message: '未生成任何时间安排数据',
       }
     }
 
-    // 批量导入数据（分批导入，每批最多10条，进一步减少每批数据量以确保能完成）
+    // 批量导入数据（分批导入，每批最多10条）
     const batchSize = 10
     const timeScheduleBatches = []
     const dateIndexBatches = []
 
-    for (let i = 0; i < timeSchedules.length; i += batchSize) {
-      timeScheduleBatches.push(timeSchedules.slice(i, i + batchSize))
+    for (let i = 0; i < timeSchedulesData.length; i += batchSize) {
+      timeScheduleBatches.push(timeSchedulesData.slice(i, i + batchSize))
     }
 
     for (let i = 0; i < dateIndexes.length; i += batchSize) {
       dateIndexBatches.push(dateIndexes.slice(i, i + batchSize))
     }
 
-    console.log(`将分${timeScheduleBatches.length}批导入${timeSchedules.length}条时间安排数据`)
+    console.log(`将分${timeScheduleBatches.length}批导入${timeSchedulesData.length}条时间安排数据`)
     console.log(`将分${dateIndexBatches.length}批导入${dateIndexes.length}条日期索引数据`)
 
     // 如果已经完成时间安排数据的导入，直接开始导入日期索引数据
@@ -614,9 +631,9 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       
       return {
         success: true,
-        message: `成功初始化${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
+        message: `成功初始化${timeSchedulesData.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
         completed: true,
-        count: timeSchedules.length,
+        count: timeSchedulesData.length,
         indexCount: dateIndexes.length
       }
     }
@@ -688,9 +705,9 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
 
     return {
       success: true,
-      message: `成功初始化${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
+      message: `成功初始化${timeSchedulesData.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
       completed: true,
-      count: timeSchedules.length,
+      count: timeSchedulesData.length,
       indexCount: dateIndexes.length
     }
   } catch (error) {
@@ -1136,14 +1153,22 @@ async function quickImportTestData() {
     // 时间段设置（简化为4个时间段）
     const timeSlots = ['09:00', '11:00', '14:00', '16:00']
     
-    // 存储所有要插入的数据
-    const timeSchedules = []
+    // 存储所有要插入的数据 - 新结构
+    const timeSchedulesData = []
     const dateIndexes = []
     
     // 为每个专业人士生成时间安排和日期索引
     professionals.data.forEach((prof, index) => {
       // 确定是否该专业人士应在未来一周内可预约 (50%的专业人士会在一周内可预约)
       const shouldBeAvailableInNextWeek = index % 2 === 0
+      
+      // 每个专业人士一条记录，包含所有slots
+      const professionalSchedule = {
+        professionalId: prof._openid,
+        slots: [],
+        updateTime: new Date(),
+        isTestData: true
+      }
       
       // 每个专业人士随机选择5-10天
       const daysCount = Math.floor(Math.random() * 6) + 5
@@ -1171,16 +1196,14 @@ async function quickImportTestData() {
               .slice(0, slotsCount)
               .sort()
             
-            // 创建时间安排记录
-            selectedSlots.forEach(timeSlot => {
-              timeSchedules.push({
-                professionalId: prof._openid,
-                professionalName: prof.name,
+            // 创建时间安排记录 - 新结构
+            selectedSlots.forEach(startTime => {
+              const endTime = getEndTime(startTime)
+              professionalSchedule.slots.push({
                 date,
-                timeSlot,
-                status: 'available',
-                isTestData: true,
-                createTime: new Date()
+                startTime,
+                endTime,
+                isBooked: false
               })
             })
           }
@@ -1198,30 +1221,28 @@ async function quickImportTestData() {
           if (!availableDatesMap[date]) {
             availableDatesMap[date] = true
             
-            // 每天随机选择2-3个时间段
-            const slotsCount = Math.floor(Math.random() * 2) + 2
+            // 为每个日期随机选择2-3个时间段
+            const slotsCount = Math.floor(Math.random() * 2) + 2 // 2-3
             const selectedSlots = timeSlots
               .sort(() => 0.5 - Math.random())
               .slice(0, slotsCount)
               .sort()
             
-            // 创建时间安排记录
-            selectedSlots.forEach(timeSlot => {
-              timeSchedules.push({
-                professionalId: prof._openid,
-                professionalName: prof.name,
+            // 创建时间安排记录 - 新结构
+            selectedSlots.forEach(startTime => {
+              const endTime = getEndTime(startTime)
+              professionalSchedule.slots.push({
                 date,
-                timeSlot,
-                status: 'available',
-                isTestData: true,
-                createTime: new Date()
+                startTime,
+                endTime,
+                isBooked: false
               })
             })
           }
         }
       }
       
-      // 创建日期索引记录
+      // 为此专业人士创建日期索引记录
       Object.keys(availableDatesMap).forEach(date => {
         dateIndexes.push({
           professionalId: prof._openid,
@@ -1229,92 +1250,67 @@ async function quickImportTestData() {
           professionalTypes: prof.professionalTypes || ['其他'],
           city: prof.city || '未知',
           district: prof.district || '未知',
-          province: prof.province || '未知',
-          isTestData: true,
-          createTime: new Date()
+          updateTime: new Date(),
+          isTestData: true
         })
       })
+      
+      // 只有当有时间段时才添加该专业人士的记录
+      if (professionalSchedule.slots.length > 0) {
+        timeSchedulesData.push(professionalSchedule)
+      }
     })
     
-    console.log(`生成了${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`)
+    // 批量导入数据
+    console.log(`将导入${timeSchedulesData.length}个专业人士的时间安排数据，共${timeSchedulesData.reduce((total, item) => total + item.slots.length, 0)}个时间段`)
+    console.log(`将导入${dateIndexes.length}条日期索引数据`)
     
-    // 一次性导入时间安排数据
-    console.log('导入时间安排数据...')
-    let timeResult
-    try {
-      timeResult = await db.collection('timeSchedules').add({ data: timeSchedules })
-      console.log(`成功导入${timeSchedules.length}条时间安排数据`)
-    } catch (err) {
-      console.error('导入时间安排数据失败:', err)
-      // 如果一次性导入失败，尝试分批导入
-      console.log('尝试分批导入时间安排数据')
-      const batchSize = 100
-      const batches = []
-      for (let i = 0; i < timeSchedules.length; i += batchSize) {
-        batches.push(timeSchedules.slice(i, i + batchSize))
+    // 清理现有测试数据
+    await clearTimeSchedules()
+    await clearProfessionalDateIndex()
+    
+    // 导入时间安排数据
+    for (const schedule of timeSchedulesData) {
+      try {
+        await db.collection('timeSchedules').add({
+          data: schedule
+        })
+        console.log(`成功导入专业人士${schedule.professionalId}的时间安排，包含${schedule.slots.length}个时间段`)
+      } catch (err) {
+        console.error(`导入专业人士${schedule.professionalId}的时间安排失败:`, err)
       }
-      
-      let importedCount = 0
-      for (let i = 0; i < batches.length; i++) {
-        try {
-          await db.collection('timeSchedules').add({ data: batches[i] })
-          importedCount += batches[i].length
-          console.log(`导入时间安排数据批次${i+1}/${batches.length}完成`)
-        } catch (batchErr) {
-          console.error(`批次${i+1}导入失败:`, batchErr)
-        }
-      }
-      console.log(`分批导入完成，成功导入${importedCount}条时间安排数据`)
     }
     
-    // 一次性导入日期索引数据
-    console.log('导入日期索引数据...')
-    let dateResult
-    try {
-      dateResult = await db.collection('professionalDateIndex').add({ data: dateIndexes })
-      console.log(`成功导入${dateIndexes.length}条日期索引数据`)
-    } catch (err) {
-      console.error('导入日期索引数据失败:', err)
-      // 如果一次性导入失败，尝试分批导入
-      console.log('尝试分批导入日期索引数据')
-      const batchSize = 100
-      const batches = []
-      for (let i = 0; i < dateIndexes.length; i += batchSize) {
-        batches.push(dateIndexes.slice(i, i + batchSize))
-      }
-      
-      let importedCount = 0
-      for (let i = 0; i < batches.length; i++) {
-        try {
-          await db.collection('professionalDateIndex').add({ data: batches[i] })
-          importedCount += batches[i].length
-          console.log(`导入日期索引数据批次${i+1}/${batches.length}完成`)
-        } catch (batchErr) {
-          console.error(`批次${i+1}导入失败:`, batchErr)
-        }
-      }
-      console.log(`分批导入完成，成功导入${importedCount}条日期索引数据`)
+    // 分批导入日期索引数据
+    const indexBatchSize = 100
+    const indexBatches = []
+    
+    for (let i = 0; i < dateIndexes.length; i += indexBatchSize) {
+      indexBatches.push(dateIndexes.slice(i, i + indexBatchSize))
     }
     
-    // 验证数据
-    const finalTimeCount = await db
-      .collection('timeSchedules')
-      .where({ isTestData: true })
-      .count()
-    
-    const finalDateCount = await db
-      .collection('professionalDateIndex')
-      .where({ isTestData: true })
-      .count()
+    let importedIndexes = 0
+    for (let i = 0; i < indexBatches.length; i++) {
+      try {
+        await db.collection('professionalDateIndex').add({
+          data: indexBatches[i]
+        })
+        importedIndexes += indexBatches[i].length
+        console.log(`完成第${i + 1}/${indexBatches.length}批日期索引数据导入，已导入${importedIndexes}/${dateIndexes.length}条`)
+      } catch (err) {
+        console.error(`导入第${i + 1}批日期索引数据失败:`, err)
+      }
+    }
     
     return {
       success: true,
-      message: '快速导入测试数据完成',
+      message: `成功导入${timeSchedulesData.length}条时间安排数据和${importedIndexes}条日期索引数据`,
       timeSchedules: {
-        count: finalTimeCount.total
+        count: timeSchedulesData.length,
+        totalSlots: timeSchedulesData.reduce((total, item) => total + item.slots.length, 0)
       },
       dateIndexes: {
-        count: finalDateCount.total
+        count: importedIndexes
       }
     }
   } catch (error) {

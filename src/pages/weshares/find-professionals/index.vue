@@ -11,6 +11,9 @@
     <button class="dev-button clear-data" @click="clearTestData">清理测试数据</button>
     <button class="dev-button load-time" @click="loadTimeIndex">加载日期索引</button>
     <button class="dev-button load-quick" @click="loadQuickTestData">快速导入数据</button>
+    <button :class="['dev-button', useCache ? 'cache-on' : 'cache-off']" @click="toggleCacheUsage">
+      {{ useCache ? '缓存: 开' : '缓存: 关' }}
+    </button>
   </view>
   <!-- <view class="header">
     <text class="header-title">找老师</text>
@@ -345,6 +348,9 @@ const professionalCache = ref<{
 // 缓存过期时间（30分钟）
 const CACHE_EXPIRATION = 30 * 60 * 1000
 
+// 添加使用缓存的标志
+const useCache = ref(true) // 默认开启缓存
+
 // 生成未来7天的日期数组
 function generateDateRangeArray() {
   const dates = []
@@ -515,61 +521,65 @@ onMounted(() => {
     console.log('使用默认值广州市')
   }
 
-  // 尝试读取缓存
-  try {
-    const cachedData = uni.getStorageSync('professionalSearchCache')
-    if (cachedData && cachedData.data && cachedData.timestamp) {
-      // 检查缓存是否过期
-      const cacheAge = Date.now() - cachedData.timestamp
-      if (cacheAge < CACHE_EXPIRATION) {
-        console.log(
-          '使用缓存的专业人士数据，缓存时间:',
-          new Date(cachedData.timestamp).toLocaleString(),
-        )
+  // 仅在启用缓存时尝试读取缓存
+  if (useCache.value) {
+    try {
+      const cachedData = uni.getStorageSync('professionalSearchCache')
+      if (cachedData && cachedData.data && cachedData.timestamp) {
+        // 检查缓存是否过期
+        const cacheAge = Date.now() - cachedData.timestamp
+        if (cacheAge < CACHE_EXPIRATION) {
+          console.log(
+            '使用缓存的专业人士数据，缓存时间:',
+            new Date(cachedData.timestamp).toLocaleString(),
+          )
 
-        // 恢复缓存数据
-        professionalCache.value = cachedData
-        professionals.value = cachedData.data
-        hasMore.value = cachedData.hasMore
-        page.value = cachedData.page
+          // 恢复缓存数据
+          professionalCache.value = cachedData
+          professionals.value = cachedData.data
+          hasMore.value = cachedData.hasMore
+          page.value = cachedData.page
 
-        // 恢复搜索条件
-        if (cachedData.searchParams) {
-          searchKeyword.value = cachedData.searchParams.keyword || ''
+          // 恢复搜索条件
+          if (cachedData.searchParams) {
+            searchKeyword.value = cachedData.searchParams.keyword || ''
 
-          // 恢复分类选择
-          selectedCategory.value = cachedData.searchParams.category || ''
+            // 恢复分类选择
+            selectedCategory.value = cachedData.searchParams.category || ''
 
-          // 恢复城市和区域
-          selectedCity.value = cachedData.searchParams.city || userCurrentCity.value
-          if (selectedCity.value) {
-            // 如果有区域，需要先恢复城市才能显示区域列表
-            selectedDistrict.value = cachedData.searchParams.district || ''
+            // 恢复城市和区域
+            selectedCity.value = cachedData.searchParams.city || userCurrentCity.value
+            if (selectedCity.value) {
+              // 如果有区域，需要先恢复城市才能显示区域列表
+              selectedDistrict.value = cachedData.searchParams.district || ''
+            }
+
+            // 恢复日期和时间段
+            selectedDate.value = cachedData.searchParams.date || ''
+            selectedTimeSlot.value = cachedData.searchParams.timeSlot || ''
+
+            // 恢复排序和可用性过滤
+            sortType.value = cachedData.searchParams.sortType || 'default'
+            sortOrder.value = cachedData.searchParams.sortOrder || 'desc'
+            onlyAvailable.value = cachedData.searchParams.onlyAvailable !== false // 默认为true
           }
 
-          // 恢复日期和时间段
-          selectedDate.value = cachedData.searchParams.date || ''
-          selectedTimeSlot.value = cachedData.searchParams.timeSlot || ''
-
-          // 恢复排序和可用性过滤
-          sortType.value = cachedData.searchParams.sortType || 'default'
-          sortOrder.value = cachedData.searchParams.sortOrder || 'desc'
-          onlyAvailable.value = cachedData.searchParams.onlyAvailable !== false // 默认为true
+          console.log('已从缓存恢复搜索条件:', cachedData.searchParams)
+          return // 有有效缓存则不进行网络请求
+        } else {
+          console.log('缓存已过期，需要重新获取数据')
         }
-
-        console.log('已从缓存恢复搜索条件:', cachedData.searchParams)
-        return // 有有效缓存则不进行网络请求
       } else {
-        console.log('缓存已过期，需要重新获取数据')
+        console.log('未找到有效缓存')
       }
-    } else {
-      console.log('未找到有效缓存')
+    } catch (error) {
+      console.error('读取专业人士缓存出错:', error)
     }
-  } catch (error) {
-    console.error('读取专业人士缓存出错:', error)
+  } else {
+    console.log('缓存功能已关闭，将直接获取最新数据')
   }
 
-  // 无缓存或缓存已过期，加载专业人士列表
+  // 无缓存或缓存已过期或缓存功能关闭，加载专业人士列表
   fetchProfessionals()
 })
 
@@ -698,8 +708,8 @@ const fetchProfessionals = async (refresh = true) => {
     // 构建查询参数
     const queryParams = buildSearchParams()
 
-    // 如果不是刷新操作，检查缓存是否有效
-    if (!refresh && professionalCache.value.data.length > 0) {
+    // 仅在启用缓存且不是刷新操作时检查缓存
+    if (useCache.value && !refresh && professionalCache.value.data.length > 0) {
       const cachedParams = professionalCache.value.searchParams
 
       // 检查搜索条件是否变化
@@ -724,24 +734,25 @@ const fetchProfessionals = async (refresh = true) => {
     console.log('使用TimeSchedule云函数查询专业人士详情')
 
     try {
+      const jsonData = {
+        type: 'findProfessionalsByIndex',
+        date: queryParams.date || '',
+        timeSlot: queryParams.timeSlot || '',
+        professionalTypes: queryParams.categoryName ? [queryParams.categoryName] : [], // 使用中文分类名称
+        serviceArea: {
+          city: (queryParams.city || '').trim(),
+          district: (queryParams.district || '').trim(),
+        },
+        page: queryParams.page || 1,
+        pageSize: queryParams.pageSize || 10,
+        dateRange: queryParams.dateRange,
+        sortType: queryParams.sortType || 'default',
+        sortOrder: queryParams.sortOrder || 'desc',
+        keyword: (queryParams.keyword || '').trim(),
+      }
       const timeScheduleResult = await uni.cloud.callFunction({
         name: 'TimeSchedule',
-        data: {
-          type: 'findProfessionalsByIndex',
-          date: queryParams.date || '',
-          timeSlot: queryParams.timeSlot || '',
-          professionalTypes: queryParams.categoryName ? [queryParams.categoryName] : [], // 使用中文分类名称
-          serviceArea: {
-            city: (queryParams.city || '').trim(),
-            district: (queryParams.district || '').trim(),
-          },
-          page: queryParams.page || 1,
-          pageSize: queryParams.pageSize || 10,
-          dateRange: queryParams.dateRange,
-          sortType: queryParams.sortType || 'default',
-          sortOrder: queryParams.sortOrder || 'desc',
-          keyword: (queryParams.keyword || '').trim(),
-        },
+        data: jsonData,
       })
 
       console.log('TimeSchedule查询结果:', timeScheduleResult)
@@ -763,8 +774,10 @@ const fetchProfessionals = async (refresh = true) => {
             professionals.value = [...professionals.value, ...processedData]
           }
 
-          // 保存到缓存
-          saveToCache(professionals.value, queryParams)
+          // 仅在启用缓存时保存到缓存
+          if (useCache.value) {
+            saveToCache(professionals.value, queryParams)
+          }
 
           // 如果没有数据，显示提示
           if (professionals.value.length === 0) {
@@ -819,9 +832,10 @@ const loadMore = () => {
 const selectCategory = (categoryId: string) => {
   selectedCategory.value = categoryId
 
-  // 判断缓存是否有效
+  // 判断缓存是否有效（仅在启用缓存时）
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -840,6 +854,7 @@ const onCityChange = (e: any) => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -856,6 +871,7 @@ const onDistrictChange = (e: any) => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -878,6 +894,7 @@ const toggleSortOrder = (type: string) => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -892,8 +909,9 @@ const toggleSortOrder = (type: string) => {
 const onSearch = () => {
   const queryParams = buildSearchParams()
 
-  // 检查缓存条件是否变化
+  // 检查缓存条件是否变化（仅在启用缓存时）
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1062,6 +1080,7 @@ const toggleAvailability = () => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1079,6 +1098,7 @@ const selectDate = (date) => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1096,6 +1116,7 @@ const selectTimeSlot = (slot) => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1113,6 +1134,7 @@ const clearDateFilter = () => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1130,6 +1152,7 @@ const clearTimeSlotFilter = () => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1148,6 +1171,7 @@ const clearAllDateFilters = () => {
   // 判断缓存是否有效
   const queryParams = buildSearchParams()
   if (
+    useCache.value &&
     professionalCache.value.data.length > 0 &&
     !searchParamsChanged(professionalCache.value.searchParams, queryParams)
   ) {
@@ -1373,6 +1397,30 @@ async function loadQuickTestData() {
     uni.hideLoading()
   }
 }
+
+// 切换缓存使用状态
+const toggleCacheUsage = () => {
+  useCache.value = !useCache.value
+  console.log(`${useCache.value ? '开启' : '关闭'}专业人士搜索缓存`)
+
+  // 如果关闭缓存，清除现有缓存
+  if (!useCache.value) {
+    try {
+      uni.removeStorageSync('professionalSearchCache')
+      console.log('已清除专业人士搜索缓存')
+    } catch (e) {
+      console.error('清除缓存失败:', e)
+    }
+    // 刷新数据
+    fetchProfessionals()
+  } else {
+    uni.showToast({
+      title: '已开启缓存',
+      icon: 'none',
+      duration: 1500,
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -1571,6 +1619,26 @@ async function loadQuickTestData() {
 .clear-data {
   color: white;
   background-color: #f44336;
+}
+
+.load-time {
+  color: white;
+  background-color: #9c27b0;
+}
+
+.load-quick {
+  color: white;
+  background-color: #009688;
+}
+
+.cache-on {
+  color: white;
+  background-color: #2196f3;
+}
+
+.cache-off {
+  color: white;
+  background-color: #ff9800;
 }
 
 .filter-item {
