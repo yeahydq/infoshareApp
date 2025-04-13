@@ -4,5 +4,6 @@
   },
   "timeout": 20,
   "envVariables": {},
-  "vpc": false
+  "vpc": false,
+  "memorySize": 512
 }

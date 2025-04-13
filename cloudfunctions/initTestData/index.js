@@ -204,6 +204,13 @@ function generateProfessionals(count = 100) {
       return shuffled.slice(0, size)
     }
 
+    // 生成随机街道名称
+    function generateStreetName() {
+      const streets = ['滨江', '江南', '珠江', '新港', '沙园', '盈丰', '东风', '新城', '西城', '富康']
+      const suffix = ['街道', '社区', '镇']
+      return `${streets[Math.floor(Math.random() * streets.length)]}${suffix[Math.floor(Math.random() * suffix.length)]}`
+    }
+
     // 创建专业人士对象
     return {
       _id: `test_professional_${id}`,
@@ -231,6 +238,7 @@ function generateProfessionals(count = 100) {
       province: city.province,
       city: city.city,
       district,
+      street: Math.random() > 0.3 ? generateStreetName() : '',
       serviceName,
       serviceDescription: `提供专业的${serviceName}，${experience}年从业经验，服务过${serviceCount}位客户。`,
       status: 'approved',
@@ -417,6 +425,7 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
         city: true,
         district: true,
         province: true,
+        street: true, // 新增街道字段
       })
       .get()
 
@@ -514,8 +523,8 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       }
     }
 
-    // 批量导入数据（分批导入，每批最多20条，减少每批数据量）
-    const batchSize = 20
+    // 批量导入数据（分批导入，每批最多10条，进一步减少每批数据量以确保能完成）
+    const batchSize = 10
     const timeScheduleBatches = []
     const dateIndexBatches = []
 
@@ -530,6 +539,43 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
     console.log(`将分${timeScheduleBatches.length}批导入${timeSchedules.length}条时间安排数据`)
     console.log(`将分${dateIndexBatches.length}批导入${dateIndexes.length}条日期索引数据`)
 
+    // 如果已经完成时间安排数据的导入，直接开始导入日期索引数据
+    if (startBatch >= timeScheduleBatches.length) {
+      console.log('时间安排数据已导入完成，开始导入日期索引数据')
+      
+      // 导入日期索引数据
+      let dateCompletedBatches = 0
+      for (let i = startDateBatch; i < dateIndexBatches.length; i++) {
+        await db.collection('professionalDateIndex').add({
+          data: dateIndexBatches[i]
+        })
+        dateCompletedBatches++
+        console.log(`完成第${i + 1}/${dateIndexBatches.length}批日期索引数据导入`)
+        
+        // 每2批检查一次是否接近超时（只给1.5秒运行时间）
+        if (dateCompletedBatches % 2 === 0 && (new Date().getTime() - startTime.getTime() > 1500)) {
+          return {
+            success: true,
+            message: '成功导入部分日期索引数据，需要继续',
+            completed: false,
+            nextTimeScheduleBatch: timeScheduleBatches.length,
+            nextDateIndexBatch: i + 1,
+            totalTimeBatches: timeScheduleBatches.length,
+            totalDateBatches: dateIndexBatches.length,
+            progress: `时间安排数据: ${timeScheduleBatches.length}/${timeScheduleBatches.length}, 日期索引数据: ${i + 1}/${dateIndexBatches.length}`
+          }
+        }
+      }
+      
+      return {
+        success: true,
+        message: `成功初始化${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`,
+        completed: true,
+        count: timeSchedules.length,
+        indexCount: dateIndexes.length
+      }
+    }
+    
     // 导入时间安排数据
     let timeCompletedBatches = 0
     for (let i = startBatch; i < timeScheduleBatches.length; i++) {
@@ -539,11 +585,11 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       timeCompletedBatches++
       console.log(`完成第${i + 1}/${timeScheduleBatches.length}批时间安排数据导入`)
       
-      // 每3批检查一次是否接近超时（只给2秒运行时间）
-      if (timeCompletedBatches % 3 === 0 && (new Date().getTime() - startTime.getTime() > 2000)) {
+      // 每2批检查一次是否接近超时（只给1.5秒运行时间）
+      if (timeCompletedBatches % 2 === 0 && (new Date().getTime() - startTime.getTime() > 1500)) {
         return {
           success: true,
-          message: '成功导入部分数据，需要继续',
+          message: '成功导入部分时间安排数据，需要继续',
           completed: false,
           nextTimeScheduleBatch: i + 1,
           nextDateIndexBatch: startDateBatch,
@@ -554,8 +600,25 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       }
     }
 
-    // 导入日期索引数据
+    // 如果时间允许，开始导入日期索引数据
+    console.log('时间安排数据导入完成，开始导入日期索引数据')
     let dateCompletedBatches = 0
+    
+    // 检查是否还有足够时间开始导入日期索引数据
+    if ((new Date().getTime() - startTime.getTime() > 1800)) {
+      return {
+        success: true,
+        message: '成功导入时间安排数据，需要继续导入日期索引数据',
+        completed: false,
+        nextTimeScheduleBatch: timeScheduleBatches.length, // 标记时间安排数据已完成
+        nextDateIndexBatch: 0, // 从第一批日期索引开始
+        totalTimeBatches: timeScheduleBatches.length,
+        totalDateBatches: dateIndexBatches.length,
+        progress: `时间安排数据: ${timeScheduleBatches.length}/${timeScheduleBatches.length}, 日期索引数据: 0/${dateIndexBatches.length}`
+      }
+    }
+    
+    // 尝试导入一些日期索引数据
     for (let i = startDateBatch; i < dateIndexBatches.length; i++) {
       await db.collection('professionalDateIndex').add({
         data: dateIndexBatches[i]
@@ -563,11 +626,11 @@ async function initTimeSchedules(startBatch = 0, startDateBatch = 0) {
       dateCompletedBatches++
       console.log(`完成第${i + 1}/${dateIndexBatches.length}批日期索引数据导入`)
       
-      // 每3批检查一次是否接近超时（只给2秒运行时间）
-      if (dateCompletedBatches % 3 === 0 && (new Date().getTime() - startTime.getTime() > 2000)) {
+      // 每批检查一次是否接近超时（给云函数留出足够时间返回）
+      if ((new Date().getTime() - startTime.getTime() > 1500)) {
         return {
           success: true,
-          message: '成功导入部分数据，需要继续',
+          message: '成功导入部分日期索引数据，需要继续',
           completed: false,
           nextTimeScheduleBatch: timeScheduleBatches.length,
           nextDateIndexBatch: i + 1,
@@ -695,6 +758,257 @@ async function clearProfessionalDateIndex() {
   }
 }
 
+// 一次性加载专业人士日期索引数据
+async function loadProfessionalDateIndex() {
+  try {
+    console.log('开始一次性加载专业人士日期索引数据')
+
+    // 检查timeSchedules集合是否有测试数据
+    const timeSchedulesCount = await db
+      .collection('timeSchedules')
+      .where({ isTestData: true })
+      .count()
+    
+    console.log(`找到${timeSchedulesCount.total}条时间安排测试数据`)
+    
+    let generationMode = 'fromExisting'
+    if (timeSchedulesCount.total === 0) {
+      console.log('没有找到时间安排测试数据，将直接生成日期索引数据')
+      generationMode = 'generateNew'
+    }
+
+    // 查询所有测试专业人士
+    const professionalResult = await db
+      .collection('professionals')
+      .where({
+        isTestData: true,
+      })
+      .field({
+        _id: true,
+        _openid: true,
+        name: true,
+        professionalTypes: true,
+        city: true,
+        district: true,
+        province: true,
+      })
+      .get()
+
+    if (!professionalResult.data || professionalResult.data.length === 0) {
+      console.error('未找到测试专业人士，请先初始化专业人士数据')
+      return {
+        success: false,
+        message: '错误：未找到测试专业人士，请先初始化专业人士数据',
+      }
+    }
+
+    console.log(`找到${professionalResult.data.length}个测试专业人士`)
+
+    // 生成当前日期和未来90天的日期范围
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dateRange = []
+    for (let i = 0; i < 90; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dateRange.push(formatDate(date))
+    }
+
+    const allDateIndexes = []
+    // 专业人士ID到信息的映射
+    const professionalMap = {}
+    professionalResult.data.forEach(p => {
+      professionalMap[p._openid] = p
+    })
+    
+    if (generationMode === 'fromExisting') {
+      // 从已有时间安排数据生成
+      console.log('从已有时间安排数据生成日期索引')
+      
+      // 由于数据可能很多，我们采用按专业人士ID分组查询
+      const professionalIds = professionalResult.data.map(p => p._openid)
+      console.log(`将处理${professionalIds.length}个专业人士ID`)
+
+      // 为每个专业人士查询时间安排数据
+      for (const profId of professionalIds) {
+        try {
+          console.log(`处理专业人士ID: ${profId}`)
+          
+          // 查询该专业人士的所有时间安排
+          const timeSchedules = await db
+            .collection('timeSchedules')
+            .where({
+              professionalId: profId,
+              isTestData: true
+            })
+            .field({
+              date: true
+            })
+            .get()
+          
+          if (!timeSchedules.data || timeSchedules.data.length === 0) {
+            console.log(`专业人士 ${profId} 没有时间安排数据`)
+            continue
+          }
+          
+          console.log(`找到${timeSchedules.data.length}条时间安排数据`)
+          
+          // 提取不重复的日期
+          const availableDatesMap = {}
+          timeSchedules.data.forEach(ts => {
+            if (ts && ts.date) {
+              availableDatesMap[ts.date] = true
+            }
+          })
+          
+          const uniqueDatesCount = Object.keys(availableDatesMap).length
+          console.log(`找到${uniqueDatesCount}个不重复日期`)
+          
+          // 获取专业人士信息
+          const prof = professionalMap[profId]
+          if (!prof) {
+            console.error(`未找到专业人士信息: ${profId}`)
+            continue
+          }
+          
+          // 为此专业人士创建日期索引记录
+          Object.keys(availableDatesMap).forEach(date => {
+            allDateIndexes.push({
+              professionalId: profId,
+              date,
+              professionalTypes: prof.professionalTypes || ['其他'],
+              city: prof.city || '未知',
+              district: prof.district || '未知',
+              province: prof.province || '未知',
+              isTestData: true,
+              createTime: new Date(),
+            })
+          })
+        } catch (err) {
+          console.error(`处理专业人士${profId}时出错:`, err)
+        }
+      }
+    } else {
+      // 直接生成新数据
+      console.log('直接生成新的日期索引数据')
+      
+      // 为每个专业人士生成随机日期
+      for (const prof of professionalResult.data) {
+        try {
+          const profId = prof._openid
+          console.log(`为专业人士${profId}生成日期索引数据`)
+          
+          // 随机挑选未来10-20天的日期
+          const daysCount = Math.floor(Math.random() * 11) + 10 // 10-20天
+          const startOffset = Math.floor(Math.random() * 10) // 0-9天后开始
+          
+          const selectedDates = new Set()
+          for (let i = 0; i < daysCount; i++) {
+            const dateIndex = startOffset + i
+            if (dateIndex < dateRange.length) {
+              selectedDates.add(dateRange[dateIndex])
+            }
+          }
+          
+          console.log(`为专业人士${profId}生成了${selectedDates.size}个日期`)
+          
+          // 创建日期索引记录
+          selectedDates.forEach(date => {
+            allDateIndexes.push({
+              professionalId: profId,
+              date,
+              professionalTypes: prof.professionalTypes || ['其他'],
+              city: prof.city || '未知',
+              district: prof.district || '未知',
+              province: prof.province || '未知',
+              isTestData: true,
+              createTime: new Date(),
+            })
+          })
+        } catch (err) {
+          console.error(`生成专业人士${prof._openid}的日期索引时出错:`, err)
+        }
+      }
+    }
+    
+    // 检查是否已有professionalDateIndex数据
+    const existingCount = await db
+      .collection('professionalDateIndex')
+      .where({ isTestData: true })
+      .count()
+    
+    console.log(`已存在${existingCount.total}条专业人士日期索引数据`)
+    
+    if (existingCount.total > 0) {
+      console.log(`清除已存在的${existingCount.total}条专业人士日期索引数据`)
+      const clearResult = await clearProfessionalDateIndex()
+      console.log('清除结果:', clearResult)
+    }
+
+    if (allDateIndexes.length === 0) {
+      console.error('未能生成任何日期索引数据')
+      return {
+        success: false,
+        message: '错误：未能生成任何日期索引数据',
+      }
+    }
+
+    console.log(`准备一次性导入${allDateIndexes.length}条专业人士日期索引数据`)
+    
+    // 考虑到云数据库限制，我们需要分批导入，但每批数量可以较大
+    const batchSize = 100
+    const batches = []
+    
+    for (let i = 0; i < allDateIndexes.length; i += batchSize) {
+      batches.push(allDateIndexes.slice(i, i + batchSize))
+    }
+    
+    console.log(`将分${batches.length}批导入数据`)
+    
+    // 批量导入数据
+    let imported = 0
+    for (let i = 0; i < batches.length; i++) {
+      try {
+        const batch = batches[i]
+        const result = await db.collection('professionalDateIndex').add({ data: batch })
+        
+        if (result && result._id) {
+          imported += batch.length
+          console.log(`完成第${i + 1}/${batches.length}批，已导入${imported}/${allDateIndexes.length}条`)
+        } else {
+          console.error(`第${i + 1}批导入失败:`, result)
+        }
+      } catch (err) {
+        console.error(`第${i + 1}批导入出错:`, err)
+      }
+    }
+
+    // 导入完成后验证数据
+    const finalCount = await db
+      .collection('professionalDateIndex')
+      .where({ isTestData: true })
+      .count()
+    
+    console.log(`验证结果: 数据库中有${finalCount.total}条专业人士日期索引数据`)
+
+    return {
+      success: true,
+      message: `成功导入${imported}条专业人士日期索引数据 (验证结果: ${finalCount.total})`,
+      count: imported,
+      verifiedCount: finalCount.total,
+      generationMode
+    }
+  } catch (error) {
+    console.error('一次性加载专业人士日期索引数据失败:', error)
+    return {
+      success: false,
+      message: `一次性加载专业人士日期索引数据失败: ${error.message}`,
+      error: error.toString(),
+      stack: error.stack
+    }
+  }
+}
+
 /**
  * 辅助函数：处理继续导入逻辑
  * 将本函数复制到小程序客户端使用
@@ -723,14 +1037,212 @@ function handleContinue(result) {
   }).then(res => handleContinue(res.result));
 }
 
+// 快速导入少量测试数据（时间安排和日期索引）
+async function quickImportTestData() {
+  try {
+    console.log('开始快速导入少量测试数据')
+    
+    // 检查是否有专业人士测试数据
+    const professionalsCount = await db
+      .collection('professionals')
+      .where({ isTestData: true })
+      .count()
+    
+    if (professionalsCount.total === 0) {
+      console.log('没有找到专业人士测试数据，先初始化专业人士数据')
+      await initProfessionals()
+    }
+    
+    // 查询专业人士数据（限制为20个以提高速度）
+    const professionals = await db
+      .collection('professionals')
+      .where({ isTestData: true })
+      .limit(20)
+      .get()
+    
+    if (!professionals.data || professionals.data.length === 0) {
+      return {
+        success: false,
+        message: '找不到专业人士数据，无法生成测试数据'
+      }
+    }
+    
+    console.log(`找到${professionals.data.length}个专业人士，准备生成测试数据`)
+    
+    // 清理已有的时间安排和日期索引数据
+    console.log('清理已有的测试数据')
+    await clearTimeSchedules()
+    await clearProfessionalDateIndex()
+    
+    // 生成日期范围（仅生成未来30天）
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dateRange = []
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dateRange.push(formatDate(date))
+    }
+    
+    // 时间段设置（简化为4个时间段）
+    const timeSlots = ['09:00', '11:00', '14:00', '16:00']
+    
+    // 存储所有要插入的数据
+    const timeSchedules = []
+    const dateIndexes = []
+    
+    // 为每个专业人士生成时间安排和日期索引
+    professionals.data.forEach(prof => {
+      // 每个专业人士随机选择5-10天
+      const daysCount = Math.floor(Math.random() * 6) + 5
+      const availableDatesMap = {}
+      
+      // 随机选择日期
+      for (let i = 0; i < daysCount; i++) {
+        const dateIndex = Math.floor(Math.random() * dateRange.length)
+        const date = dateRange[dateIndex]
+        availableDatesMap[date] = true
+        
+        // 每天随机选择2-3个时间段
+        const slotsCount = Math.floor(Math.random() * 2) + 2
+        const selectedSlots = timeSlots
+          .sort(() => 0.5 - Math.random())
+          .slice(0, slotsCount)
+          .sort()
+        
+        // 创建时间安排记录
+        selectedSlots.forEach(timeSlot => {
+          timeSchedules.push({
+            professionalId: prof._openid,
+            professionalName: prof.name,
+            date,
+            timeSlot,
+            status: 'available',
+            isTestData: true,
+            createTime: new Date()
+          })
+        })
+      }
+      
+      // 创建日期索引记录
+      Object.keys(availableDatesMap).forEach(date => {
+        dateIndexes.push({
+          professionalId: prof._openid,
+          date,
+          professionalTypes: prof.professionalTypes || ['其他'],
+          city: prof.city || '未知',
+          district: prof.district || '未知',
+          province: prof.province || '未知',
+          isTestData: true,
+          createTime: new Date()
+        })
+      })
+    })
+    
+    console.log(`生成了${timeSchedules.length}条时间安排数据和${dateIndexes.length}条日期索引数据`)
+    
+    // 一次性导入时间安排数据
+    console.log('导入时间安排数据...')
+    let timeResult
+    try {
+      timeResult = await db.collection('timeSchedules').add({ data: timeSchedules })
+      console.log(`成功导入${timeSchedules.length}条时间安排数据`)
+    } catch (err) {
+      console.error('导入时间安排数据失败:', err)
+      // 如果一次性导入失败，尝试分批导入
+      console.log('尝试分批导入时间安排数据')
+      const batchSize = 100
+      const batches = []
+      for (let i = 0; i < timeSchedules.length; i += batchSize) {
+        batches.push(timeSchedules.slice(i, i + batchSize))
+      }
+      
+      let importedCount = 0
+      for (let i = 0; i < batches.length; i++) {
+        try {
+          await db.collection('timeSchedules').add({ data: batches[i] })
+          importedCount += batches[i].length
+          console.log(`导入时间安排数据批次${i+1}/${batches.length}完成`)
+        } catch (batchErr) {
+          console.error(`批次${i+1}导入失败:`, batchErr)
+        }
+      }
+      console.log(`分批导入完成，成功导入${importedCount}条时间安排数据`)
+    }
+    
+    // 一次性导入日期索引数据
+    console.log('导入日期索引数据...')
+    let dateResult
+    try {
+      dateResult = await db.collection('professionalDateIndex').add({ data: dateIndexes })
+      console.log(`成功导入${dateIndexes.length}条日期索引数据`)
+    } catch (err) {
+      console.error('导入日期索引数据失败:', err)
+      // 如果一次性导入失败，尝试分批导入
+      console.log('尝试分批导入日期索引数据')
+      const batchSize = 100
+      const batches = []
+      for (let i = 0; i < dateIndexes.length; i += batchSize) {
+        batches.push(dateIndexes.slice(i, i + batchSize))
+      }
+      
+      let importedCount = 0
+      for (let i = 0; i < batches.length; i++) {
+        try {
+          await db.collection('professionalDateIndex').add({ data: batches[i] })
+          importedCount += batches[i].length
+          console.log(`导入日期索引数据批次${i+1}/${batches.length}完成`)
+        } catch (batchErr) {
+          console.error(`批次${i+1}导入失败:`, batchErr)
+        }
+      }
+      console.log(`分批导入完成，成功导入${importedCount}条日期索引数据`)
+    }
+    
+    // 验证数据
+    const finalTimeCount = await db
+      .collection('timeSchedules')
+      .where({ isTestData: true })
+      .count()
+    
+    const finalDateCount = await db
+      .collection('professionalDateIndex')
+      .where({ isTestData: true })
+      .count()
+    
+    return {
+      success: true,
+      message: '快速导入测试数据完成',
+      timeSchedules: {
+        count: finalTimeCount.total
+      },
+      dateIndexes: {
+        count: finalDateCount.total
+      }
+    }
+  } catch (error) {
+    console.error('快速导入测试数据失败:', error)
+    return {
+      success: false,
+      message: `快速导入测试数据失败: ${error.message}`,
+      error: error.toString()
+    }
+  }
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   // 获取操作类型
-  const { action = 'init', collection = 'all', timeScheduleBatch = 0, dateIndexBatch = 0 } = event
+  const { action = 'init', collection = 'all', timeScheduleBatch = 0, dateIndexBatch = 0, quickMode = false } = event
 
   // 执行操作
   switch (action) {
     case 'init':
+      // 快速模式，一次性导入少量数据
+      if (quickMode === true) {
+        return await quickImportTestData()
+      }
+      
       // 初始化测试数据
       if (collection === 'all' || collection === 'professionals') {
         const profResult = await initProfessionals()
@@ -769,6 +1281,12 @@ exports.main = async (event, context) => {
         
         return {
           timeSchedules: timeResult,
+        }
+      } else if (collection === 'professionalDateIndex') {
+        // 直接加载专业人士日期索引数据
+        const dateIndexResult = await loadProfessionalDateIndex()
+        return {
+          professionalDateIndex: dateIndexResult
         }
       }
       return {

@@ -9,6 +9,8 @@
   <view v-if="showDevTools" class="dev-tools">
     <button class="dev-button load-data" @click="loadTestData">加载测试数据</button>
     <button class="dev-button clear-data" @click="clearTestData">清理测试数据</button>
+    <button class="dev-button load-time" @click="loadTimeIndex">加载日期索引</button>
+    <button class="dev-button load-quick" @click="loadQuickTestData">快速导入数据</button>
   </view>
   <!-- <view class="header">
     <text class="header-title">找老师</text>
@@ -261,8 +263,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { cityAreaData, simpleCityList } from '@/config/areaData'
-import allCategories from '@/config/categoryData'
+import { cityAreaData } from '@/config/areaData'
 
 // 使用内联默认头像，避免依赖外部文件
 const defaultAvatarUrl =
@@ -637,12 +638,13 @@ const onSearch = () => {
   fetchProfessionals()
 }
 
+// 搜索框点击事件
 const onSearchClick = () => {
   console.log('搜索框点击')
 }
 
-// 渲染专业人士统计信息
-const renderProfessionalStats = (professional: any) => {
+// 返回专业人士统计信息用于显示
+const getProfessionalStats = (professional: any) => {
   const parts = []
 
   if (professional.experience) {
@@ -869,6 +871,96 @@ const getAreaName = (serviceAreaStr: string) => {
   } catch (e) {
     // 解析失败时，直接返回原字符串
     return serviceAreaStr
+  }
+}
+
+// 添加加载日期索引数据的方法
+async function loadTimeIndex() {
+  try {
+    uni.showLoading({
+      title: '加载日期索引数据中...',
+    })
+
+    const result = await uni.cloud.callFunction({
+      name: 'fixDateIndex',
+    })
+
+    console.log('加载日期索引数据结果:', result)
+
+    const cloudResult = result.result as any
+
+    if (cloudResult && cloudResult.success) {
+      uni.showToast({
+        title: `成功导入${cloudResult.count}条索引数据`,
+        icon: 'success',
+      })
+
+      // 刷新列表以显示新数据
+      fetchProfessionals()
+    } else {
+      const errorMsg = cloudResult?.message || '加载日期索引数据失败'
+      uni.showToast({
+        title: errorMsg,
+        icon: 'none',
+      })
+    }
+  } catch (error: any) {
+    console.error('加载日期索引数据出错:', error)
+    uni.showToast({
+      title: '加载出错: ' + (error.message || error),
+      icon: 'none',
+    })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
+// 添加快速导入测试数据的方法
+async function loadQuickTestData() {
+  try {
+    uni.showLoading({
+      title: '快速导入测试数据中...',
+    })
+
+    const result = await uni.cloud.callFunction({
+      name: 'initTestData',
+      data: {
+        action: 'init',
+        quickMode: true,
+      },
+    })
+
+    console.log('快速导入测试数据结果:', result)
+
+    const cloudResult = result.result as any
+
+    if (cloudResult && cloudResult.success) {
+      const timeCount = cloudResult.timeSchedules?.count || 0
+      const dateCount = cloudResult.dateIndexes?.count || 0
+
+      uni.showToast({
+        title: `成功导入${timeCount}条时间数据和${dateCount}条索引数据`,
+        icon: 'success',
+        duration: 2000,
+      })
+
+      // 刷新列表以显示新数据
+      fetchProfessionals()
+    } else {
+      const errorMsg = cloudResult?.message || '快速导入测试数据失败'
+      uni.showToast({
+        title: errorMsg,
+        icon: 'none',
+      })
+    }
+  } catch (error: any) {
+    console.error('快速导入测试数据出错:', error)
+    uni.showToast({
+      title: '导入出错: ' + (error.message || error),
+      icon: 'none',
+    })
+  } finally {
+    uni.hideLoading()
   }
 }
 </script>

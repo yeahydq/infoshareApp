@@ -191,30 +191,8 @@ exports.main = async (event, context) => {
           // 从数据库记录中提取专业类型 - 始终使用数据库中的完整类型
           types = professionalInfo.professionalTypes || []
           console.log(`专业人士类型(来自数据库): ${JSON.stringify(types)}`)
-          
-          // 从数据库记录中提取服务区域 - 始终使用数据库中的完整区域信息
-          if (professionalInfo.serviceArea) {
-            if (typeof professionalInfo.serviceArea === 'object') {
-              // 如果是对象格式
-              city = (professionalInfo.serviceArea.city || '').trim()
-              district = (professionalInfo.serviceArea.district || '').trim()
-            } else if (typeof professionalInfo.serviceArea === 'string') {
-              // 如果是字符串格式，尝试解析
-              try {
-                const areaObj = JSON.parse(professionalInfo.serviceArea)
-                if (areaObj && typeof areaObj === 'object') {
-                  city = (areaObj.city || '').trim()
-                  district = (areaObj.district || '').trim()
-                } else {
-                  city = professionalInfo.serviceArea.trim()
-                }
-              } catch (e) {
-                // 如果解析失败，直接使用字符串
-                city = professionalInfo.serviceArea.trim()
-              }
-            }
-          }
-          
+          city = professionalInfo.selectedCity
+          district=professionalInfo.selectedDistrict
           console.log(`专业人士服务区域(来自数据库): 城市='${city}', 区域='${district}'`)
         } else {
           console.log('未找到专业人士信息')

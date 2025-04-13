@@ -246,3 +246,23 @@
 .active .nav-text {
   color: #5bbdca;
 }
+
+.load-data {
+  color: white;
+  background-color: #4caf50;
+}
+
+.clear-data {
+  color: white;
+  background-color: #f44336;
+}
+
+.load-time {
+  color: white;
+  background-color: #2196f3;
+}
+
+.load-quick {
+  color: white;
+  background-color: #ff9800;
+}

@@ -192,10 +192,8 @@
 </template>
 
 <script>
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { ref, reactive, onMounted, computed } from 'vue'
 import NavigationBar from '@/components/navigation-bar/navigation-bar.vue'
-import { cities } from '@/config/areaData'
 import { getProfessionalDetail } from '@/service/professional'
 import { processCloudUrls } from '@/utils/cloudStorage'
 
