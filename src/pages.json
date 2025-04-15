@@ -30,6 +30,12 @@
         "text": "首页"
       },
       {
+        "pagePath": "pages/weshares/search/ai-assistant",
+        "iconPath": "/static/tabbar/home.png",
+        "selectedIconPath": "/static/tabbar/home-active.png",
+        "text": "AI搜索"
+      },
+      {
         "pagePath": "pages/weshares/orders/index",
         "iconPath": "/static/tabbar/message.png",
         "selectedIconPath": "/static/tabbar/message-active.png",
@@ -217,6 +223,15 @@
       "type": "page",
       "style": {
         "navigationBarTitleText": "专业人员注册"
+      }
+    },
+    {
+      "path": "pages/weshares/search/ai-assistant",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "AI助手",
+        "navigationBarBackgroundColor": "#4C84FF",
+        "navigationBarTextStyle": "white"
       }
     },
     {

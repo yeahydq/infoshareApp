@@ -33,6 +33,12 @@ export default defineUniPages({
         text: '首页',
       },
       {
+        pagePath: 'pages/weshares/search/ai-assistant',
+        iconPath: '/static/tabbar/home.png',
+        selectedIconPath: '/static/tabbar/home-active.png',
+        text: 'AI搜索',
+      },
+      {
         pagePath: 'pages/weshares/orders/index',
         iconPath: '/static/tabbar/message.png',
         selectedIconPath: '/static/tabbar/message-active.png',

@@ -102,6 +102,7 @@
     "@dcloudio/uni-mp-weixin": "3.0.0-4020920240930001",
     "@dcloudio/uni-mp-xhs": "3.0.0-4020920240930001",
     "@dcloudio/uni-quickapp-webview": "3.0.0-4020920240930001",
+    "@dcloudio/uni-ui": "^1.5.7",
     "@tanstack/vue-query": "^5.62.16",
     "@vuelidate/core": "^2.0.3",
     "@vuelidate/validators": "^2.0.4",

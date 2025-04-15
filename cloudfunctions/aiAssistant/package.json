@@ -1,0 +1,16 @@
+{
+  "name": "aiAssistant",
+  "version": "1.0.0",
+  "description": "AI助手云函数，用于处理文本对话和图片识别",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "openai": "^3.2.1"
+  }
+}

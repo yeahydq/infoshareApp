@@ -31,6 +31,7 @@ interface NavigateToOptions {
        "/pages/weshares/qr-code/index" |
        "/pages/weshares/recommended-professional/index" |
        "/pages/weshares/registration-complete/index" |
+       "/pages/weshares/search/ai-assistant" |
        "/pages/weshares/system-announcement/index" |
        "/pages/weshares/system-settings/index" |
        "/pages/weshares/upload-documents/index";
@@ -38,7 +39,7 @@ interface NavigateToOptions {
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/weshares/index/index" | "/pages/weshares/orders/index" | "/pages/weshares/personal-center/index"
+  url: "/pages/weshares/index/index" | "/pages/weshares/search/ai-assistant" | "/pages/weshares/orders/index" | "/pages/weshares/personal-center/index"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;
