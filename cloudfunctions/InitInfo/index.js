@@ -1,4 +1,5 @@
 // 云函数入口文件
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const cloud = require('wx-server-sdk')
 
 cloud.init({
@@ -8,7 +9,7 @@ cloud.init({
 const db = cloud.database()
 
 // 云函数入口函数
-exports.main = async (event, context) => {
+exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const openId = wxContext.OPENID
 
@@ -33,6 +34,7 @@ exports.main = async (event, context) => {
         gender: true,
         professionalStatus: true,
         professionalId: true,
+        userType: true,
       })
       .get()
   }

@@ -11,6 +11,7 @@ interface IUserInfo {
   address?: string
   professionalStatus?: 'pending' | 'approved' | 'rejected' | '' // 专业人员审核状态
   professionalId?: string // 专业人员ID
+  userType?: 'unknown' | 'normal' | 'professional' | 'admin' // 用户类型
   [key: string]: any
 }
 
@@ -19,6 +20,7 @@ const initState: IUserInfo = {
   avatar: '',
   professionalStatus: '', // 空字符串是有效的值，符合类型定义
   professionalId: '',
+  userType: 'unknown', // 默认为unknown
 }
 
 export const useUserStore = defineStore(
@@ -47,6 +49,18 @@ export const useUserStore = defineStore(
     // 判断用户是否已登录
     const isLogined = computed(() => !!userInfo.value.openid)
 
+    // 计算用户是否是有限制的用户
+    const isLimitedUser = computed(() => userInfo.value.userType === 'unknown')
+
+    // 计算用户是否是完整权限用户
+    const isFullAccessUser = computed(() => {
+      return (
+        userInfo.value.userType === 'normal' ||
+        userInfo.value.userType === 'professional' ||
+        userInfo.value.userType === 'admin'
+      )
+    })
+
     return {
       userInfo,
       setUserInfo,
@@ -54,6 +68,8 @@ export const useUserStore = defineStore(
       isLogined,
       isProfessional,
       professionalStatus,
+      isLimitedUser,
+      isFullAccessUser,
       reset,
     }
   },

@@ -74,6 +74,9 @@ const InitInfo = (userInfo: any, registerIdc: boolean) => {
           userInfo.nickName = result[0].nickName
           userInfo.avatarUrlCloud = result[0].avatarUrlCloud || ''
 
+          // 确保设置用户类型，默认为unknown
+          userInfo.userType = result[0].userType || 'unknown'
+
           // 检查本地avatarUrl是否存在
           const localAvatarUrl = userInfo.avatarUrl || ''
 
